@@ -1,6 +1,6 @@
-# Ma'at: System Overview
+# Neo: System Overview
 
-**Ma'at** (Egyptian goddess of order, balance, and coordination) is an event-driven coordination framework that prevents merge conflicts **before code is written**, enabling distributed AI agents and developers to work safely on shared codebases.
+**Neo** is an event-driven coordination framework that prevents merge conflicts **before code is written**, enabling distributed AI agents and developers to work safely on shared codebases. Like "The One" in The Matrix, Neo orchestrates harmony between agents before conflicts emerge.
 
 ## The Problem
 
@@ -20,14 +20,14 @@ This wastes tokens, time, and causes developers to manually resolve conflicts af
 
 ## The Solution
 
-Ma'at introduces a **shared activity log** and **event-driven state machine** that agents check **before** generating code:
+Neo introduces a **shared activity log** and **event-driven state machine** that agents check **before** generating code:
 
 ```
 Developer A announces: "I'm working on src/auth.py (lines 40-80)"
   ↓
 Developer B asks: "Is it safe to work here?"
   ↓
-Ma'at checks: "HIGH RISK - Developer A is overlapping"
+Neo checks: "HIGH RISK - Developer A is overlapping"
   ↓
 Developer B gets options: Wait / Collaborate / Request wrap-up
   ↓
@@ -209,11 +209,11 @@ codeNinja/
 └── README.md                           # Quick start guide
 ```
 
-## How to Use Ma'at
+## How to Use Neo
 
 ### For Developers Using Claude/Devin/Copilot
 
-1. **During Setup:** Connect your agent to Ma'at's coordination service
+1. **During Setup:** Connect your agent to Neo's coordination service
 2. **Before Generating Code:** System automatically checks for conflicts
 3. **If Conflict Detected:** Agent shows you options (wait/collaborate/request wrap-up)
 4. **If Waiting:** Agent saves context and sleeps (no token waste)
@@ -259,7 +259,7 @@ See framework-specific guides in `docs/ENTERPRISE_SCALING_*.md`.
 
 ### For Platform Teams
 
-Deploy Ma'at's coordination service:
+Deploy Neo's coordination service:
 
 ```python
 from coordination_service import CoordinationService
@@ -358,7 +358,7 @@ Agents → Local Cache + Background Sync → Cloud Service
 
 ## Framework-Specific Integration
 
-Ma'at provides adapters for:
+Neo provides adapters for:
 
 | Framework | Integration Point | Status | Docs |
 |-----------|-------------------|--------|------|
@@ -412,4 +412,4 @@ Ma'at provides adapters for:
 
 ---
 
-**Built for distributed teams. Powered by coordination. Enabled by Ma'at. 🧵**
+**Built for distributed teams. Powered by coordination. Enabled by Neo. 🧵**

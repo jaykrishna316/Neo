@@ -2,7 +2,7 @@
 
 ## Our Commitment
 
-We are committed to providing a welcoming and inspiring community for all. We pledge that everyone who participates in the Ma'at community will experience an environment free from harassment and discrimination.
+We are committed to providing a welcoming and inspiring community for all. We pledge that everyone who participates in the Neo community will experience an environment free from harassment and discrimination.
 
 Everyone is expected to uphold this code of conduct when participating, including but not limited to:
 - Using project spaces

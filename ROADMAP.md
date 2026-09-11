@@ -1,4 +1,4 @@
-# Ma'at: Multi-Agent Coordination - Development Roadmap
+# Neo: Multi-Agent Coordination - Development Roadmap
 
 > **Vision:** A pluggable coordination framework for distributed AI agents and developers working on shared codebases, preventing merge conflicts before code is written.
 

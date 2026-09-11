@@ -1,4 +1,4 @@
-# Ma'at: Multi-Agent Coordination Framework
+# Neo: Multi-Agent Coordination Framework
 
 > **Prevent merge conflicts before code is written.**
 >
@@ -30,14 +30,14 @@ Git merge conflict → Manual resolution → Wasted tokens → Broken build
 
 ### Our Solution
 
-Ma'at introduces a **shared activity log** and **event-driven state machine** that agents check **before generating code**—preventing conflicts at the source:
+Neo introduces a **shared activity log** and **event-driven state machine** that agents check **before generating code**—preventing conflicts at the source:
 
 ```
 Developer A announces: "I'm working on src/auth.py (lines 40-80)"
   ↓
 Developer B asks: "Is it safe to work here?"
   ↓
-Ma'at checks: "HIGH RISK - Developer A is overlapping"
+Neo checks: "HIGH RISK - Developer A is overlapping"
   ↓
 Developer B gets options: Wait / Collaborate / Request wrap-up
   ↓
@@ -58,7 +58,7 @@ Sequential commits, clean merge, zero manual work
 
 ### Interactive Visualizations
 
-**1. State Machine Scenarios** — How Ma'at handles conflicts at different risk levels
+**1. State Machine Scenarios** — How Neo handles conflicts at different risk levels
 ```bash
 open docs/state-machine-scenarios.html
 ```
@@ -69,13 +69,13 @@ Shows three parallel scenarios:
 
 Each scenario displays what agents see in their terminals, state transitions, and decisions.
 
-**2. Git Workflow Comparison** — Traditional vs. Ma'at coordinated approach
+**2. Git Workflow Comparison** — Traditional vs. Neo coordinated approach
 ```bash
 open docs/git-workflow-comparison.html
 ```
 Side-by-side git graph showing:
 - **Traditional:** Agent A + Agent B → Diverging commits → **MERGE CONFLICT** (20 min manual work)
-- **Ma'at:** Shared activity log → Agent B checks → Waits → Agent A finishes → **CLEAN MERGE** (0 min)
+- **Neo:** Shared activity log → Agent B checks → Waits → Agent A finishes → **CLEAN MERGE** (0 min)
 
 ---
 
@@ -404,13 +404,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines and development s
 ## ❓ FAQ
 
 ### Q: Do I need to change my existing workflow?
-**A:** No. Ma'at works alongside your current setup—add the pre-generation check, and you're coordinated.
+**A:** No. Neo works alongside your current setup—add the pre-generation check, and you're coordinated.
 
 ### Q: Can I use this with my framework?
 **A:** Likely yes. We support Claude, OpenAI, Devin, and GitHub Copilot. See `docs/ENTERPRISE_SCALING_*.md` for your framework.
 
 ### Q: What if I'm already getting merge conflicts?
-**A:** Ma'at prevents *future* conflicts by coordinating before code generation. Existing conflicts still need manual resolution, but Ma'at stops them from happening again.
+**A:** Neo prevents *future* conflicts by coordinating before code generation. Existing conflicts still need manual resolution, but Neo stops them from happening again.
 
 ### Q: What's the difference between WAIT and COLLABORATE?
 **A:** **WAIT** = one agent pauses, other completes, then resumes (simple). **COLLABORATE** = both agents work together in real-time, communicating and coordinating (complex). Use WAIT for most cases.
@@ -488,6 +488,6 @@ You can:
 
 ---
 
-**Built for distributed teams. Powered by coordination. Enabled by Ma'at. 🧵**
+**Built for distributed teams. Powered by coordination. Enabled by Neo. 🧵**
 
-> *"Ma'at was the ancient Egyptian goddess of truth, justice, harmony, and balance. In this spirit, we build coordination systems that prevent chaos before it happens."*
+> *"In The Matrix, Neo is 'The One' who can see beyond the system and orchestrate change. In this spirit, Neo is a coordination system that orchestrates harmony between agents before conflicts happen."*

@@ -1,10 +1,10 @@
-# Contributing to Ma'at
+# Contributing to Neo
 
-Thank you for your interest in contributing to Ma'at! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Neo! This document provides guidelines and instructions for contributing to the project.
 
 ## 🎯 Vision
 
-Ma'at is a coordination framework for distributed AI agents and developers working on shared codebases. We're building a system that prevents merge conflicts before code is written by enabling agents to coordinate their work automatically.
+Neo is a coordination framework for distributed AI agents and developers working on shared codebases. We're building a system that prevents merge conflicts before code is written by enabling agents to coordinate their work automatically.
 
 ## 🚀 Getting Started
 
@@ -340,7 +340,7 @@ See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## 🙏 Thank You
 
-Thank you for contributing to Ma'at. Every contribution—whether code, docs, bug reports, or feature ideas—helps build better coordination for distributed teams and AI agents.
+Thank you for contributing to Neo. Every contribution—whether code, docs, bug reports, or feature ideas—helps build better coordination for distributed teams and AI agents.
 
 ---
 
