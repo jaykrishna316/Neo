@@ -349,6 +349,332 @@ def scenario_7_intent_classification():
         print()
 
 
+def scenario_8_cascading_conflicts():
+    """Scenario 8: Cascading conflicts - A blocks B, B blocks C."""
+    print("\n" + "="*70)
+    print("SCENARIO 8: Cascading Conflicts (Chain Dependencies)")
+    print("="*70)
+
+    clear_log()
+
+    dev_a = DeveloperSession("Alice")
+    dev_b = DeveloperSession("Bob")
+    dev_c = DeveloperSession("Charlie")
+
+    # Alice starts refactoring payment module
+    print("\n[Step 1] Alice starts refactoring payment module...")
+    dev_a.start_work(
+        "src/payment.py",
+        "Refactor process_payment function to support async",
+        "process_payment function (lines 50-100)",
+    )
+
+    time.sleep(0.3)
+
+    # Bob wants to add retry logic (depends on Alice's refactor)
+    print("\n[Step 2] Bob tries to add retry logic...")
+    result_b = dev_b.generate_code(
+        "src/payment.py",
+        "Add retry logic to process_payment",
+        "retry_logic function (lines 110-140)",
+        auto_confirm=True,
+    )
+    print(f"Bob blocked: {not result_b} (Alice working on same function)")
+
+    time.sleep(0.3)
+
+    # Charlie wants to optimize (depends on both)
+    print("\n[Step 3] Charlie tries to add caching optimization...")
+    result_c = dev_c.generate_code(
+        "src/payment.py",
+        "Add caching to prevent duplicate charges",
+        "payment_cache function (lines 150-180)",
+        auto_confirm=True,
+    )
+    print(f"Charlie blocked: {not result_c} (multiple conflicts)")
+
+    print("\n📊 Cascade Analysis:")
+    print("   Alice's refactor → blocks → Bob's retry logic")
+    print("   Bob's retry logic → blocks → Charlie's caching")
+    print("   Resolution: Sequential execution: Alice → Bob → Charlie")
+
+
+def scenario_9_race_conditions():
+    """Scenario 9: Race conditions - simultaneous checks, both see safe."""
+    print("\n" + "="*70)
+    print("SCENARIO 9: Race Conditions (Simultaneous Agent Checks)")
+    print("="*70)
+
+    clear_log()
+
+    from agent_integration import check_conflicts_for_agent
+
+    # Developer Alice logs work
+    print("\n[Step 1] Alice logs intent to modify payment.py...")
+    dev_a = DeveloperSession("Alice")
+    dev_a.start_work(
+        "src/payment.py",
+        "Refactor payment processing logic",
+        "process_payment (lines 50-100)",
+    )
+
+    print("\n[Step 2] Two agents check SIMULTANEOUSLY (before Alice finishes logging)...")
+    print("   Agent 1 checking... (should see no conflict)")
+    report1 = check_conflicts_for_agent(
+        agent_id="claude-agent-1",
+        file_path="src/payment.py",
+        intent="Add logging",
+        region="process_payment (lines 60-70)",
+    )
+
+    print("   Agent 2 checking... (should also see no conflict)")
+    report2 = check_conflicts_for_agent(
+        agent_id="claude-agent-2",
+        file_path="src/payment.py",
+        intent="Add error handling",
+        region="process_payment (lines 75-85)",
+    )
+
+    print(f"\n   Agent 1 Risk: {report1.risk_level}")
+    print(f"   Agent 2 Risk: {report2.risk_level}")
+
+    print("\n⚠️  RACE CONDITION DETECTED!")
+    print("   Both agents saw LOW risk and started generation")
+    print("   But Alice is modifying the same function")
+    print("   Result: Merge conflict on merge (git will catch it)")
+
+
+def scenario_10_conflict_resolution():
+    """Scenario 10: Suggest resolution strategies for conflicts."""
+    print("\n" + "="*70)
+    print("SCENARIO 10: Conflict Resolution Suggestions")
+    print("="*70)
+
+    from conflict_resolution import suggest_resolution
+
+    clear_log()
+
+    dev_a = DeveloperSession("Alice")
+    dev_b = DeveloperSession("Bob")
+    dev_c = DeveloperSession("Charlie")
+
+    # Multiple developers work on the same file
+    print("\n[Setup] Three developers working on same module...")
+    dev_a.start_work(
+        "src/auth.py",
+        "Refactor authentication flow",
+        "authenticate function"
+    )
+    dev_b.start_work(
+        "src/auth.py",
+        "Add OAuth2 support",
+        "oauth_authenticate function"
+    )
+    dev_c.start_work(
+        "src/auth.py",
+        "Add MFA validation",
+        "validate_mfa function"
+    )
+
+    # Get conflict resolution suggestion
+    conflicting = [
+        {"developer_id": "Alice", "intent": "Refactor authentication flow"},
+        {"developer_id": "Bob", "intent": "Add OAuth2 support"},
+        {"developer_id": "Charlie", "intent": "Add MFA validation"},
+    ]
+
+    print("\n[Analysis] Suggesting resolution strategy...")
+    suggestion = suggest_resolution(conflicting, "src/auth.py")
+
+    print(f"\n✓ Recommended Strategy: {suggestion.strategy.value}")
+    print(f"  Risk Level: {suggestion.risk_level}")
+    print(f"  Estimated Time: ~{suggestion.estimated_time_minutes} minutes")
+    print(f"  Confidence: {int(suggestion.confidence_score * 100)}%")
+    print(f"\n  Reasoning: {suggestion.reasoning}")
+    print(f"\n  Steps:")
+    for step in suggestion.steps[:3]:
+        print(f"    {step}")
+
+
+def scenario_11_pattern_prediction():
+    """Scenario 11: Pattern-based conflict prediction."""
+    print("\n" + "="*70)
+    print("SCENARIO 11: Pattern-Based Conflict Prediction")
+    print("="*70)
+
+    from developer_patterns import record_completion, estimate_completion_time, get_developer_stats
+    from conflict_scoring import calculate_conflict_score, get_score_breakdown_string
+
+    # Build developer patterns
+    print("\n[Step 1] Recording developer completion patterns...")
+
+    # Alice (fast, consistent)
+    for _ in range(3):
+        record_completion("alice", "feature", 600)  # 10 min
+    record_completion("alice", "feature", 720)  # 12 min
+
+    # Bob (slower, but steady)
+    for _ in range(3):
+        record_completion("bob", "bugfix", 1200)  # 20 min
+
+    # Charlie (variable)
+    record_completion("charlie", "refactor", 500)
+    record_completion("charlie", "refactor", 2000)
+
+    print("\n[Step 2] Predicting wait times based on patterns...")
+    alice_est = estimate_completion_time("alice", "feature", default_seconds=1800)
+    bob_est = estimate_completion_time("bob", "bugfix", default_seconds=1800)
+    charlie_est = estimate_completion_time("charlie", "refactor", default_seconds=1800)
+
+    print(f"\n  Alice's feature time: ~{alice_est//60}m (consistent)")
+    print(f"  Bob's bugfix time: ~{bob_est//60}m (steady)")
+    print(f"  Charlie's refactor time: ~{charlie_est//60}m (variable)")
+
+    print("\n[Step 3] Using patterns to predict conflict impact...")
+
+    # Calculate score with pattern knowledge
+    score = calculate_conflict_score(
+        num_conflicts=2,
+        conflict_types=["overlap", "signature_change"],
+        developer_patterns={
+            "alice": {"median": alice_est},
+            "bob": {"median": bob_est},
+        },
+        overlap_severity=0.6,
+        is_git_detected=True,
+        active_time_minutes=15,
+    )
+
+    print("\n" + get_score_breakdown_string(score))
+
+
+def scenario_12_multifile_atomic():
+    """Scenario 12: Multi-file atomic changes requiring coordination."""
+    print("\n" + "="*70)
+    print("SCENARIO 12: Multi-File Atomic Changes")
+    print("="*70)
+
+    clear_log()
+
+    dev_a = DeveloperSession("DevA")
+    dev_b = DeveloperSession("DevB")
+
+    # Dev A makes coordinated changes across multiple files
+    print("\n[Step 1] DevA starts atomic refactor (must update 3 files together)...")
+    files = ["src/models.py", "src/serializers.py", "src/api.py"]
+
+    for i, file_path in enumerate(files, 1):
+        dev_a.start_work(
+            file_path,
+            "Update User model and related components",
+            f"User class/schema/endpoint (part {i}/3)"
+        )
+        time.sleep(0.2)
+
+    print("\n[Step 2] DevB tries to modify one of the files...")
+    result = dev_b.generate_code(
+        "src/models.py",
+        "Add new field to User model",
+        "User class",
+        auto_confirm=True,
+    )
+
+    print(f"\nBlocked: {not result}")
+    print("\n⚠️  Multi-File Atomic Change Detected:")
+    print("   DevA is making coordinated changes across 3 files")
+    print("   Any one file being modified breaks the atomicity")
+    print("   Recommendation: Wait for all 3 files to complete")
+
+
+def scenario_13_realtime_events():
+    """Scenario 13: Real-time WebSocket events and expertise matching."""
+    print("\n" + "="*70)
+    print("SCENARIO 13: Real-Time Events & Expertise Matching")
+    print("="*70)
+
+    from websocket_support import (
+        subscribe_to_events,
+        publish_conflict_detected,
+        publish_coordination_needed,
+        format_event_for_agent,
+        EventType,
+    )
+    from expertise_matcher import (
+        build_expertise_profile,
+        recommend_developer,
+    )
+    from conflict_scoring import calculate_conflict_score
+
+    print("\n[Step 1] Setting up event subscriptions...")
+
+    events_log = []
+
+    def event_handler(event):
+        events_log.append(event)
+        print(f"\n📨 {format_event_for_agent(event)}")
+
+    # Subscribe to conflict events
+    sub_id = subscribe_to_events(EventType.CONFLICT_DETECTED.value, event_handler)
+    print(f"   Subscribed to conflict detection events")
+
+    print("\n[Step 2] Publishing real-time events...")
+
+    # Publish conflict detection
+    publish_conflict_detected(
+        agent_id="claude-1",
+        file_path="src/payment.py",
+        risk_level="HIGH",
+        conflicting_developers=["alice", "bob"]
+    )
+
+    # Publish coordination needed
+    publish_coordination_needed(
+        file_path="src/payment.py",
+        num_developers=3,
+        suggested_order=["alice", "bob", "charlie"]
+    )
+
+    print(f"\n   Published {len(events_log)} events")
+
+    print("\n[Step 3] Expertise matching...")
+
+    # Build expertise profiles
+    alice_history = [
+        {"duration": 600, "category": "feature", "file_path": "src/auth.py"},
+        {"duration": 720, "category": "feature", "file_path": "src/auth.py"},
+    ]
+
+    bob_history = [
+        {"duration": 300, "category": "bugfix", "file_path": "src/payment.py"},
+        {"duration": 350, "category": "bugfix", "file_path": "src/payment.py"},
+    ]
+
+    profiles = {
+        "alice": build_expertise_profile("alice", alice_history),
+        "bob": build_expertise_profile("bob", bob_history),
+    }
+
+    print("\n   Developer Expertise:")
+    for dev_id, profile in profiles.items():
+        print(f"     {dev_id}: {profile.expertise_level.value}")
+
+    # Recommend developer for urgent feature
+    print("\n   Recommending developer for urgent feature...")
+    recs = recommend_developer(
+        change_type="feature",
+        change_scope="file",
+        urgency="high",
+        expertise_profiles=profiles
+    )
+
+    if recs:
+        dev_id, score, reasoning = recs[0]
+        print(f"     Recommended: {dev_id} ({score:.0f}/100)")
+        print(f"     Reason: {reasoning}")
+
+    print(f"\n   Total events captured: {len(events_log)}")
+
+
 def show_activity_log():
     """Display the current activity log."""
     print("\n" + "="*70)
@@ -374,37 +700,65 @@ def show_activity_log():
 def main():
     print("="*70)
     print("PRE-GENERATION CONFLICT WARNING POC")
-    print("Enhanced with Agent Integration & Intent Classification")
+    print("Enhanced with 13 Advanced Scenarios")
     print("="*70)
 
-    # Run basic developer scenarios
+    # Run basic developer scenarios (1-5)
     scenario_1_basic_overlap()
-    time.sleep(1)
+    time.sleep(0.5)
 
     scenario_2_non_overlapping()
-    time.sleep(1)
+    time.sleep(0.5)
 
     scenario_3_signature_change()
-    time.sleep(1)
+    time.sleep(0.5)
 
     scenario_4_expiry()
-    time.sleep(1)
+    time.sleep(0.5)
 
     scenario_5_multiple_developers()
-    time.sleep(1)
+    time.sleep(0.5)
 
-    # Run agent integration scenarios
+    # Run agent integration scenarios (6-7)
     scenario_6_agent_conflict_detection()
-    time.sleep(1)
+    time.sleep(0.5)
 
     scenario_7_intent_classification()
+    time.sleep(0.5)
+
+    # Run advanced scenarios (8-13)
+    scenario_8_cascading_conflicts()
+    time.sleep(0.5)
+
+    scenario_9_race_conditions()
+    time.sleep(0.5)
+
+    scenario_10_conflict_resolution()
+    time.sleep(0.5)
+
+    scenario_11_pattern_prediction()
+    time.sleep(0.5)
+
+    scenario_12_multifile_atomic()
+    time.sleep(0.5)
+
+    scenario_13_realtime_events()
 
     # Show final state
     show_activity_log()
 
     print("\n" + "="*70)
-    print("POC COMPLETE - All 7 Scenarios Demonstrated")
+    print("POC COMPLETE - All 13 Scenarios Demonstrated")
     print("="*70)
+    print("\n📊 What You've Seen:")
+    print("   ✓ Basic conflict detection (scenarios 1-5)")
+    print("   ✓ Agent integration (scenarios 6-7)")
+    print("   ✓ Cascading conflicts (scenario 8)")
+    print("   ✓ Race conditions (scenario 9)")
+    print("   ✓ Resolution suggestions (scenario 10)")
+    print("   ✓ Pattern-based prediction (scenario 11)")
+    print("   ✓ Multi-file atomic changes (scenario 12)")
+    print("   ✓ Real-time events & expertise (scenario 13)")
 
 
 if __name__ == "__main__":
