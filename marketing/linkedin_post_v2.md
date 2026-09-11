@@ -6,22 +6,29 @@ I built something while procrastinating on actual work, and it just clicked.
 
 **The Problem:** When Claude Agent, Devin, and I work in parallel on the same codebase, conflicts happen *after* code is checked in. Git catches them. But by then it's too late—merge hell.
 
-**The Insight:** What if every agent (Claude, Devin, Codex, etc.) automatically announced what it was about to work on *before* actually generating code? Not through Slack or tickets—directly in a shared log that's accessible to all agents in real-time.
+**The Deeper Problem:** Even if we detect conflicts early, how do agents coordinate without blocking each other? How does one agent pause without losing context? How does it resume exactly where it left off?
 
-**The Solution:** A **shared activity log** automatically maintained by agents:
+**The Insight:** What if agents could:
+1. **Announce** what they're about to do (shared activity log)
+2. **Detect** conflicts before generating code
+3. **Pause** with full context saved (checkpoint)
+4. **Sleep** without polling or wasting tokens
+5. **Wake** automatically when it's safe
+6. **Resume** from exact point with zero context loss
+7. **Collaborate** in real-time if they want to
+
+**The Solution:** An **event-driven state machine** over the shared activity log:
 ```
-{
-  "agent": "claude-agent",
-  "file": "src/auth.py",
-  "intent": "refactor login_user",
-  "region": "lines 20-40",
-  "timestamp": "2026-09-11T15:30:00Z"
-}
+Developer A: ACTIVE (logs intent, starts work)
+Developer B: checks conflicts → HIGH RISK
+Developer B: LOCKED (decision point)
+Developer B opts to: WAIT (saves checkpoint, sleeps)
+Developer A: COMPLETED (finishes, logs completion)
+System: fires lock_removed event
+Developer B: RESUMED (wakes up, continues from checkpoint)
 ```
 
-The moment Claude Agent logs this intent (before generating), Devin can check: *"Is anyone already here? Should I wait or coordinate?"* 
-
-No manual logging. No git checks. **Just real-time awareness built into the agent workflow.**
+No busy-polling. No lost context. **Automatic, event-driven coordination.**
 
 ## Why This Matters:
 
@@ -41,20 +48,30 @@ But the *log itself* is the magic. It's so simple. One JSON file that agents aut
 
 ## What I Built:
 
-A system that watches this activity log and:
-1. **Detects conflicts in <100ms** — faster than you can type
-2. **Scores them 0-100** — not just "HIGH/MEDIUM/LOW" 
-3. **Recommends strategies** — sequential, parallel, cherry-pick, manual
-4. **Learns developer patterns** — predicts who finishes when
-5. **Matches expertise** — Alice knows auth, Claude knows refactoring
+A state machine that:
+1. **Logs intent automatically** — Agents announce what they're doing
+2. **Detects conflicts in <100ms** — Before code is generated
+3. **Offers smart decisions** — Collaborate, Wait, or Request wrap-up
+4. **Saves checkpoints** — Full generation context preserved
+5. **Sleeps without polling** — Event-driven wake-ups, zero wasted tokens
+6. **Auto-resumes** — Picks up exactly where it left off
+7. **Enables collaboration** — Developers can sync up in real-time
 
-All from a shared activity log.
+All without merge conflicts.
 
 ## The Kicker:
 
-Conflicts are **prevented before code is generated.** Claude waits for Devin. Devin waits for human developers. No messy merges. No git nightmares. No manual coordination.
+When high risk is detected:
+- Developer B doesn't just block ❌
+- Developer B gets **options**: Collaborate, Wait, or Request wrap-up
+- If B chooses WAIT: Claude saves work, sleeps, subscribes to event
+- No polling. No tokens wasted. No context lost.
+- When Developer A finishes → event fires → B wakes up → continues
+- If B chooses COLLABORATE: Both developers notified → sync offline
 
-Everything is automatic. Everything is real-time. Agents work in parallel safely because they actually know what each other is doing.
+Conflicts are **prevented before code is generated.** Coordination happens **before merging.** Everything is **event-driven and automatic.**
+
+No messy merges. No git nightmares. No blocked agents wasting tokens on polls. Just smart coordination.
 
 ---
 

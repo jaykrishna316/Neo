@@ -16,42 +16,33 @@ That was the insight that changed everything.
 
 ---
 
-## The Shared Activity Log: One JSON File to Rule Them All
+## The Architecture: A State Machine, Not Just a Log
 
-Here's the entire elegant solution. Every agent automatically logs what it's about to work on:
+The shared activity log is the foundation. But on top of it is a **state machine** that orchestrates everything.
 
 ```json
-[
-  {
-    "agent": "claude-agent",
-    "file": "src/auth.py",
-    "intent": "refactor login_user for better error handling",
-    "region": "login_user (lines 20-40)",
-    "timestamp": "2026-09-11T15:30:00Z",
-    "expires_at": "2026-09-11T16:00:00Z"
-  },
-  {
-    "agent": "devin-agent",
-    "file": "src/payment.py",
-    "intent": "update payment processing to use new auth flow",
-    "region": "process_payment (lines 50-80)",
-    "timestamp": "2026-09-11T15:30:15Z",
-    "expires_at": "2026-09-11T16:00:15Z"
-  },
-  {
-    "agent": "human-dev-alice-id",
-    "file": "src/models.py",
-    "intent": "add new User fields for OAuth2",
-    "region": "User class (lines 20-60)",
-    "timestamp": "2026-09-11T15:35:00Z",
-    "expires_at": "2026-09-11T16:05:00Z"
-  }
-]
+{
+  "agent": "claude-agent",
+  "file": "src/auth.py",
+  "intent": "refactor login_user",
+  "region": "lines 20-40",
+  "state": "ACTIVE",
+  "timestamp": "2026-09-11T15:30:00Z",
+  "expires_at": "2026-09-11T16:00:00Z"
+}
 ```
 
-That's it. A single `.devsync/activity-log.json` file. No database. No complex setup. Just **intent automatically captured in real-time by every agent before it generates code.**
+That `state` field is the key. It tracks **where in the coordination lifecycle** this work is:
 
-The magic is what you can do *because* this log exists.
+- **ACTIVE** — Agent is generating code right now
+- **LOCKED** — High risk conflict detected. Awaiting decision from other agent.
+- **WAITING** — Agent chose to pause. Checkpoint saved. Sleeping until event.
+- **COLLABORATE** — Agents reached out to work together
+- **COMPLETED** — Agent finished. Work is done.
+- **LOCK_REMOVED** (event) — Fires when it's safe to wake up
+- **RESUMED** — Agent woke up and is continuing
+
+This isn't just a log—it's a **distributed state machine** for multi-agent coordination.
 
 ---
 
@@ -68,27 +59,91 @@ The magic is what you can do *because* this log exists.
 16:00:00 Merge nightmare begins
 ```
 
-### After: The Activity Log Way
+### After: The State Machine Way
 ```
-15:30:00 Claude announces: "about to refactor auth (lines 20-40)" → logs to activity log
-15:30:05 Devin checks activity log before generating → sees Claude in auth
-15:30:06 Devin knows: payment depends on auth → decides to wait 30 minutes
-15:30:08 Human developer's IDE logs: "updating models for OAuth2" → system records this
-15:30:10 System recognizes: Claude (auth) → Human dev (models) → Devin (payment) dependency chain
-15:30:11 Recommendation: Sequential order. Claude first, then human dev, then Devin.
-15:45:30 Claude finishes, logs completion
-15:46:00 Devin continues with human dev work (they coordinated)
-16:15:00 Devin finishes, logs completion
-16:15:05 Everything merges cleanly. Zero conflicts.
+15:30:00 Claude logs: state=ACTIVE, intent="refactor auth"
+15:30:05 Devin checks before generating → sees Claude in auth (state=ACTIVE)
+15:30:06 System detects HIGH RISK (80/100) → Devin gets options
+15:30:07 Devin chooses: WAIT (saves checkpoint, enters WAITING state)
+15:30:08 Devin's Claude: saves context → sleeps → subscribes to event
+        (no polling, no token waste, just sleeping)
+
+15:45:00 Claude finishes → logs state=COMPLETED
+15:45:01 System fires: lock_removed event
+15:45:02 Devin's Claude: WAKES UP automatically (event-driven!)
+15:45:03 Devin resumes from EXACT CHECKPOINT
+        (context preserved, no lost work, just continues)
+
+15:50:00 Devin finishes, logs state=COMPLETED
+16:00:00 Everything merged cleanly. Zero conflicts. No wasted tokens.
 ```
 
-**The conflict was prevented before code was generated.**
+**The conflict was prevented before code was generated. Agents never blocked each other. Everything was automatic.**
 
 ---
 
-## How It Works: The 5-Stage Pipeline
+## How It Works: The State Machine + Event System
 
-Once you have the activity log, you can build on top of it:
+This is where it gets elegant. Instead of just detecting conflicts and blocking, the system uses **state transitions** + **event-driven wake-ups**.
+
+### States
+
+**Developer A (Actively Working)**
+- `ACTIVE`: Agent is generating code. Intent logged with this state.
+- `COMPLETED`: Agent finished. Work is done. Logs completion.
+
+**Developer B (When Encountering HIGH Risk)**
+- `LOCKED`: System detects conflict. Developer B gets decision options.
+- `WAITING`: Developer B chose to wait. Saves checkpoint, enters sleep.
+- `COLLABORATE`: Developer B reached out. Both devs notified to sync.
+- `RESUMED`: Lock removed event fired. Developer B wakes up.
+
+### The Checkpoint System
+
+When Developer B chooses to WAIT, the system saves:
+```python
+checkpoint = {
+    "agent_id": "devin-agent",
+    "intent": "add validation to login_user",
+    "region": "lines 25-50",
+    "tokens_generated": 150,
+    "context_buffer": "Devin's full prompt/context so far",
+    "timestamp": "2026-09-11T15:30:15Z"
+}
+```
+
+This is crucial: when Developer B's Claude wakes up, it has **full context**. No lost work. No lost intent. Just resume.
+
+### The Event System
+
+No polling. No "wait 20 minutes and hope."
+
+Instead:
+1. Developer B subscribes to `lock_removed` event
+2. Developer B's Claude enters sleep (no token waste)
+3. When Developer A finishes → system fires `lock_removed` event
+4. Developer B's Claude wakes **immediately** and resumes
+
+This is async/await for distributed agents.
+
+### Decision Options When Locked
+
+When Developer B hits a HIGH RISK lock, it gets three choices:
+
+1. **COLLABORATE**: "Developer A is here. Want to sync up and work together?"
+   - Both devs notified. Can pair program, divide work, or coordinate.
+
+2. **WAIT**: "I'll pause and resume when you're done."
+   - Saves checkpoint, sleeps, wakes automatically on event.
+
+3. **WRAP_UP_REQUEST**: "Can you finish soon? I have parallel work."
+   - Developer A sees someone is waiting. May expedite.
+
+---
+
+## The 5-Stage Detection Pipeline
+
+Once you have the activity log + state machine, you can build higher-level capabilities:
 
 ### Stage 1: Real-Time Detection
 
