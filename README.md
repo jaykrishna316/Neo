@@ -54,43 +54,36 @@ Sequential commits, clean merge, zero manual work
 
 ---
 
-## 🎯 See It In Action (3 Minutes)
-
-### Interactive Visualizations
-
-**1. State Machine Scenarios** — How Neo handles conflicts at different risk levels
-```bash
-open docs/state-machine-scenarios.html
-```
-Shows three parallel scenarios:
-- 🟢 **LOW RISK (15/100):** Different regions → proceed
-- 🟡 **MEDIUM RISK (58/100):** Overlapping regions → wait for checkpoint/resume
-- 🔴 **HIGH RISK (82/100):** Same region → must coordinate (3 options)
-
-Each scenario displays what agents see in their terminals, state transitions, and decisions.
-
-**2. Git Workflow Comparison** — Traditional vs. Neo coordinated approach
-```bash
-open docs/git-workflow-comparison.html
-```
-Side-by-side git graph showing:
-- **Traditional:** Agent A + Agent B → Diverging commits → **MERGE CONFLICT** (20 min manual work)
-- **Neo:** Shared activity log → Agent B checks → Waits → Agent A finishes → **CLEAN MERGE** (0 min)
-
----
-
-## 🚀 Run the POC (2 Minutes)
+## 🚀 Quick Start (2 Minutes)
 
 ```bash
-# Clone and setup
+# Clone the repository
 git clone https://github.com/yourusername/codeNinja.git
 cd codeNinja
 
-# Run the CLI simulation (shows 5 real-world scenarios)
+# Run the CLI demo (shows 13 real-world scenarios)
 python3 cli_simulation.py
 ```
 
-**Output:** Live state machine transitions with agent decisions, timestamps, and outcomes.
+**Output:** Live state machine transitions showing conflict detection, risk scoring, and agent decisions.
+
+---
+
+## 🎨 Interactive Visualizations (Optional)
+
+For interactive HTML visualizations, checkout the separate `HTMLs` branch:
+
+```bash
+# View visualizations
+git checkout HTMLs
+open docs/state-machine-scenarios.html      # See 3 risk scenarios (LOW/MEDIUM/HIGH)
+open docs/git-workflow-comparison.html      # Traditional vs. Neo workflow
+
+# Return to main branch
+git checkout open-source-ready
+```
+
+**Why separate?** The main branch (`open-source-ready`) is pure Python code for developers. The `HTMLs` branch contains marketing/visualization assets referenced for learning but not required for development.
 
 ---
 
@@ -126,10 +119,11 @@ Each guide includes production-ready code patterns, error handling, and deployme
 | **GitHub Copilot** | `docs/ENTERPRISE_SCALING_CODEX.md` | ✅ Complete | 1-10 agents |
 | **Core Patterns** | `docs/INTEGRATION_ARCHITECTURE.md` | ✅ Complete | All frameworks |
 
-### Interactive Visualizations
+### Interactive Visualizations (in `HTMLs` branch)
 - `docs/state-machine-scenarios.html` — 3 risk scenarios with terminal output
 - `docs/git-workflow-comparison.html` — Before/after git workflow
 - `docs/state-machine-diagram.html` — SVG state machine diagram
+- *See above: "Interactive Visualizations" section for how to access*
 
 ### Marketing Content
 - `marketing/linkedin_post_v2.md` — LinkedIn post highlighting activity log coordination
