@@ -14,6 +14,42 @@ from typing import Optional, List, Dict, Any
 from enum import Enum
 from activity_log import read_log, log_activity, get_active_entries
 from risk_classifier import classify_risk
+from developer_patterns import estimate_completion_time
+from git_integration import detect_real_conflicts, get_changed_functions
+
+
+class ConflictCache:
+    """Cache conflict check results to avoid redundant checks."""
+
+    def __init__(self, ttl_seconds: int = 60):
+        self.cache: Dict[str, tuple] = {}
+        self.ttl = ttl_seconds
+
+    def get_cached(self, agent_id: str, file_path: str, intent: str, region: str) -> Optional:
+        """Get cached report if valid (key includes all check parameters)."""
+        key = f"{agent_id}:{file_path}:{intent}:{region}"
+        if key in self.cache:
+            cached_report, timestamp = self.cache[key]
+            if time.time() - timestamp < self.ttl:
+                return cached_report
+            else:
+                del self.cache[key]  # Expired
+        return None
+
+    def set(self, agent_id: str, file_path: str, intent: str, region: str, report) -> None:
+        """Cache a conflict report."""
+        key = f"{agent_id}:{file_path}:{intent}:{region}"
+        self.cache[key] = (report, time.time())
+
+    def clear_file(self, file_path: str) -> None:
+        """Clear cache for a specific file (when conflict resolved)."""
+        to_remove = [k for k in self.cache if file_path in k]
+        for k in to_remove:
+            del self.cache[k]
+
+
+# Global cache instance
+_conflict_cache = ConflictCache(ttl_seconds=60)
 
 
 class RecommendedAction(Enum):
@@ -70,7 +106,9 @@ def check_conflicts_for_agent(
     file_path: str,
     intent: str,
     region: str,
-    model: Optional[str] = None
+    model: Optional[str] = None,
+    use_cache: bool = True,
+    use_git: bool = True
 ) -> EnhancedConflictReport:
     """
     Pre-generation hook: Check for conflicts affecting agent.
@@ -81,10 +119,18 @@ def check_conflicts_for_agent(
         intent: What agent intends to do (e.g., "Add type hints")
         region: Code region (e.g., "login_user (lines 20-40)")
         model: Model name for logging (e.g., "claude-opus-5")
+        use_cache: Whether to use cached results (default True)
+        use_git: Whether to use git-based conflict detection (default True)
 
     Returns:
         EnhancedConflictReport with risk assessment and guidance
     """
+    # Check cache first
+    if use_cache:
+        cached = _conflict_cache.get_cached(agent_id, file_path, intent, region)
+        if cached is not None:
+            return cached
+
     log_activity(agent_id, file_path, intent, region, agent_metadata={
         "model": model,
         "check_type": "pre_generation",
@@ -96,6 +142,50 @@ def check_conflicts_for_agent(
     overlapping_regions = []
     dependency_conflicts = []
     signature_changes = []
+
+    # Use git-based detection for more accurate conflict identification
+    if use_git:
+        file_entries = [e for e in entries if e["file_path"] == file_path]
+        if detect_real_conflicts(file_path, file_entries):
+            # Real conflicts detected via git - trust this completely
+            for entry in file_entries:
+                if entry["developer_id"] == agent_id:
+                    continue
+                dev = ConflictingDeveloper(
+                    developer_id=entry["developer_id"],
+                    file_path=entry["file_path"],
+                    intent=entry["intent"],
+                    region=entry.get("region", ""),
+                    timestamp=entry["timestamp"],
+                    time_ago=format_duration(int(time.time() - entry["timestamp"])),
+                    risk_level="HIGH"
+                )
+                conflicts.append(dev)
+                overlapping_regions.append(entry.get("region", ""))
+                signature_changes.append("Function overlap detected via git diff")
+
+            # Return HIGH risk immediately if git detected real conflicts
+            if conflicts:
+                report = EnhancedConflictReport(
+                    risk_level="HIGH",
+                    reason=f"Real conflicts detected: {len(conflicts)} developer(s) modifying same functions",
+                    has_conflicts=True,
+                    conflicting_developers=conflicts,
+                    overlapping_regions=list(set(overlapping_regions)),
+                    dependency_conflicts=[],
+                    signature_changes=signature_changes,
+                    recommended_action=RecommendedAction.WAIT_FOR_RESOLUTION.value,
+                    estimated_wait_time=estimate_completion_time(
+                        conflicts[0].developer_id,
+                        "refactor",
+                        default_seconds=300
+                    ),
+                    agent_guidance="Real function-level conflicts detected via git analysis. Wait for resolution.",
+                    confidence_score=0.99
+                )
+                if use_cache:
+                    _conflict_cache.set(agent_id, file_path, intent, region, report)
+                return report
 
     for entry in entries:
         if entry["file_path"] != file_path or entry["developer_id"] == agent_id:
@@ -121,7 +211,7 @@ def check_conflicts_for_agent(
                 signature_changes.append(assessment.reason)
 
     if not conflicts:
-        return EnhancedConflictReport(
+        report = EnhancedConflictReport(
             risk_level="LOW",
             reason="No conflicts detected",
             has_conflicts=False,
@@ -134,16 +224,28 @@ def check_conflicts_for_agent(
             agent_guidance="Safe to proceed with generation.",
             confidence_score=0.95
         )
+        if use_cache:
+            _conflict_cache.set(agent_id, file_path, intent, region, report)
+        return report
 
     risk_levels = [c.risk_level for c in conflicts]
     max_risk = max(risk_levels) if risk_levels else "LOW"
 
     if max_risk == "HIGH":
         action = RecommendedAction.WAIT_FOR_RESOLUTION.value
-        wait_time = 300
+        # Estimate based on developer's typical time for this type of change
+        conflicting_dev = conflicts[0]
+        intent_category = conflicting_dev.risk_level.lower()  # Fallback to risk level
+        wait_time = estimate_completion_time(
+            conflicting_dev.developer_id,
+            intent_category,
+            default_seconds=300
+        )
+        wait_minutes = wait_time // 60
         guidance = (
-            f"HIGH risk conflict detected: {conflicts[0].developer_id} is editing "
-            f"{conflicts[0].intent}. Wait ~5 minutes before retrying, or coordinate directly."
+            f"HIGH risk conflict detected: {conflicting_dev.developer_id} is editing "
+            f"{conflicting_dev.intent}. Based on their patterns, expect ~{wait_minutes} min. "
+            f"Wait or coordinate directly."
         )
     elif max_risk == "MEDIUM":
         action = RecommendedAction.WARN_AND_PROCEED.value
@@ -157,7 +259,7 @@ def check_conflicts_for_agent(
         wait_time = None
         guidance = "Conflicts are low risk. Safe to proceed."
 
-    return EnhancedConflictReport(
+    report = EnhancedConflictReport(
         risk_level=max_risk,
         reason=f"Conflicts with {len(conflicts)} developer(s)",
         has_conflicts=True,
@@ -170,6 +272,9 @@ def check_conflicts_for_agent(
         agent_guidance=guidance,
         confidence_score=0.85 if max_risk == "MEDIUM" else 0.95
     )
+    if use_cache:
+        _conflict_cache.set(agent_id, file_path, intent, region, report)
+    return report
 
 
 def format_conflict_guidance_for_prompt(report: EnhancedConflictReport) -> str:
