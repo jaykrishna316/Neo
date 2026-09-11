@@ -265,6 +265,90 @@ def scenario_5_multiple_developers():
     print(f"Generation {'succeeded' if result else 'blocked'}")
 
 
+def scenario_6_agent_conflict_detection():
+    """Scenario 6: Agent checks for conflicts before generation."""
+    print("\n" + "="*70)
+    print("SCENARIO 6: Agent Pre-Generation Conflict Detection")
+    print("="*70)
+
+    clear_log()
+
+    # Import agent integration
+    from agent_integration import check_conflicts_for_agent, format_conflict_guidance_for_prompt
+    from intent_classifier import classify_intent
+
+    # Developer A starts work
+    dev_a = DeveloperSession("DevA")
+    dev_a.start_work(
+        "src/payment.py",
+        "Refactor payment processing logic to handle retries",
+        "process_payment function (lines 50-100)",
+    )
+
+    time.sleep(0.5)
+
+    # Agent checks for conflicts
+    print("\n" + "-"*70)
+    print("[Claude-Agent-1] Checking for conflicts before generation...")
+
+    report = check_conflicts_for_agent(
+        agent_id="claude-agent-1",
+        file_path="src/payment.py",
+        intent="Add detailed logging to payment processing",
+        region="process_payment function (lines 60-80)",
+        model="claude-opus-5"
+    )
+
+    print(f"\n📊 Conflict Report:")
+    print(f"   Risk Level: {report.risk_level}")
+    print(f"   Has Conflicts: {report.has_conflicts}")
+    print(f"   Recommendation: {report.recommended_action}")
+    print(f"   Confidence: {int(report.confidence_score * 100)}%")
+
+    if report.conflicting_developers:
+        print(f"\n   ⚠️  Conflicting Developers:")
+        for dev in report.conflicting_developers:
+            print(f"      - {dev.developer_id} ({dev.time_ago}): {dev.intent}")
+
+    print(f"\n   💡 Guidance: {report.agent_guidance}")
+
+    # Show prompt injection
+    print("\n📋 Prompt Injection Context:")
+    prompt_context = format_conflict_guidance_for_prompt(report)
+    for line in prompt_context.split("\n"):
+        print(f"   {line}")
+
+
+def scenario_7_intent_classification():
+    """Scenario 7: Intent classification for conflict prediction."""
+    print("\n" + "="*70)
+    print("SCENARIO 7: Intent Classification for Smarter Conflict Detection")
+    print("="*70)
+
+    # Import intent classifier
+    from intent_classifier import classify_intent, estimate_risk_from_intent
+
+    test_intents = [
+        "Add type hints to the login function",
+        "Fix critical security bug in authentication",
+        "Refactor database layer to use async/await",
+        "Add unit tests for payment module",
+    ]
+
+    print("\n📝 Classifying Developer/Agent Intents:\n")
+
+    for intent in test_intents:
+        classified = classify_intent(intent)
+        estimated_risk = estimate_risk_from_intent(classified)
+
+        print(f"Intent: \"{intent}\"")
+        print(f"  Category:   {classified.category.value}")
+        print(f"  Scope:      {classified.scope.value}")
+        print(f"  Risk:       {estimated_risk}")
+        print(f"  Confidence: {int(classified.confidence * 100)}%")
+        print()
+
+
 def show_activity_log():
     """Display the current activity log."""
     print("\n" + "="*70)
@@ -290,9 +374,10 @@ def show_activity_log():
 def main():
     print("="*70)
     print("PRE-GENERATION CONFLICT WARNING POC")
+    print("Enhanced with Agent Integration & Intent Classification")
     print("="*70)
 
-    # Run all scenarios
+    # Run basic developer scenarios
     scenario_1_basic_overlap()
     time.sleep(1)
 
@@ -306,12 +391,19 @@ def main():
     time.sleep(1)
 
     scenario_5_multiple_developers()
+    time.sleep(1)
+
+    # Run agent integration scenarios
+    scenario_6_agent_conflict_detection()
+    time.sleep(1)
+
+    scenario_7_intent_classification()
 
     # Show final state
     show_activity_log()
 
     print("\n" + "="*70)
-    print("POC COMPLETE")
+    print("POC COMPLETE - All 7 Scenarios Demonstrated")
     print("="*70)
 
 
