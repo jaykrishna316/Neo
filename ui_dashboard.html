@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conflict Warning Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 12px;
+        }
+
+        .file-item {
+            background: #f9f9f9;
+            border-left: 4px solid #ddd;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: #f0f0f0;
+            border-left-color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 8px;
+        }
+
+        .developers-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .dev-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .dev-tag.devA {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .dev-tag.devB {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .dev-tag.devC {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .dev-tag.devD {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .dev-tag .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .region {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 6px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .intent {
+            font-size: 13px;
+            color: #555;
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+
+        .risk-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .risk-low {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .risk-medium {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .risk-high {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .developer-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .developer-card h3 {
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .dev-info {
+            font-size: 13px;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+
+        .dev-info strong {
+            display: block;
+            margin-top: 8px;
+        }
+
+        .scenarios {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .scenarios h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 12px;
+        }
+
+        .scenario-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        .warning-box {
+            background: #fff8e1;
+            border-left: 4px solid #fbc02d;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .warning-box.medium {
+            background: #fff3e0;
+            border-left-color: #f57c00;
+        }
+
+        .warning-box.high {
+            background: #ffebee;
+            border-left-color: #c62828;
+        }
+
+        .warning-box h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .warning-box p {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .timestamp {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .status-active {
+            background: #c8e6c9;
+            color: #1b5e20;
+        }
+
+        .status-expired {
+            background: #eeeeee;
+            color: #616161;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+        }
+
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            opacity: 0.3;
+            margin-bottom: 16px;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .timeline-marker {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-content strong {
+            color: #333;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .timeline-content p {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .conflict-card {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border: 1px solid #667eea30;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .conflict-card.medium {
+            background: linear-gradient(135deg, #f5770015 0%, #f5770015 100%);
+            border-color: #f57700;
+        }
+
+        .conflict-card.high {
+            background: linear-gradient(135deg, #ff6b6b15 0%, #ff6b6b15 100%);
+            border-color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Pre-Generation Conflict Warning Dashboard</h1>
+            <p>Real-time visualization of concurrent developer activity and conflict detection</p>
+        </div>
+
+        <div class="scenarios">
+            <h2>Run Scenarios</h2>
+            <div class="controls">
+                <button class="btn-secondary" onclick="clearDashboard()">Clear All</button>
+            </div>
+            <div class="scenario-buttons">
+                <button class="btn-primary" onclick="runScenario1()">Scenario 1: Overlapping Regions</button>
+                <button class="btn-primary" onclick="runScenario2()">Scenario 2: Non-Overlapping</button>
+                <button class="btn-primary" onclick="runScenario3()">Scenario 3: Signature Change</button>
+                <button class="btn-primary" onclick="runScenario4()">Scenario 4: Entry Expiry</button>
+                <button class="btn-primary" onclick="runScenario5()">Scenario 5: Multiple Devs</button>
+                <button class="btn-primary" onclick="runAllScenarios()">Run All Scenarios</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h2>📁 Active Files</h2>
+                <div id="filesPanel" class="empty-state">
+                    <p>No active changes. Run a scenario to see file activity.</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>👨‍💻 Active Developers</h2>
+                <div id="developersPanel" class="empty-state">
+                    <p>No developers active. Run a scenario to begin.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h2>⚠️ Conflict Warnings</h2>
+                <div id="warningsPanel" class="empty-state">
+                    <p>No conflicts detected.</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📋 Activity Log</h2>
+                <div id="logPanel" class="empty-state">
+                    <p>Activity log is empty.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activityLog = [];
+        let currentScenario = null;
+
+        const RISK_LEVELS = {
+            LOW: { label: 'Low', class: 'risk-low' },
+            MEDIUM: { label: 'Medium', class: 'risk-medium' },
+            HIGH: { label: 'High', class: 'risk-high' }
+        };
+
+        const DEVELOPER_COLORS = {
+            'DevA': { class: 'devA', color: '#1976d2' },
+            'DevB': { class: 'devB', color: '#7b1fa2' },
+            'DevC': { class: 'devC', color: '#388e3c' },
+            'DevD': { class: 'devD', color: '#f57c00' }
+        };
+
+        function getTimestamp() {
+            return new Date().toLocaleTimeString();
+        }
+
+        function formatAge(seconds) {
+            if (seconds < 60) return `${Math.floor(seconds)}s ago`;
+            return `${Math.floor(seconds / 60)}m ago`;
+        }
+
+        function logEntry(dev, file, intent, region, riskLevel = null) {
+            const entry = {
+                developer: dev,
+                file: file,
+                intent: intent,
+                region: region,
+                timestamp: Date.now(),
+                riskLevel: riskLevel
+            };
+            activityLog.push(entry);
+            render();
+            return entry;
+        }
+
+        function classifyRisk(currentRegion, otherRegion, otherIntent) {
+            // Simple heuristic
+            if (!otherRegion || !currentRegion) return 'LOW';
+
+            // Extract line numbers if present
+            const extractLines = (region) => {
+                const match = region.match(/lines?\s+(\d+)[^\d]*(\d+)?/i);
+                if (match) return { start: parseInt(match[1]), end: parseInt(match[2] || match[1]) };
+                return null;
+            };
+
+            const currentLines = extractLines(currentRegion);
+            const otherLines = extractLines(otherRegion);
+
+            let overlaps = false;
+            if (currentLines && otherLines) {
+                overlaps = !(otherLines.end < currentLines.start || otherLines.start > currentLines.end);
+            } else if (!currentLines && !otherRegion) {
+                // Both are symbolic, check if same
+                overlaps = currentRegion.split('.')[0] === otherRegion.split('.')[0];
+            }
+
+            const sigKeywords = ['rename', 'remove', 'delete', 'change signature'];
+            const hasSigChange = sigKeywords.some(kw => otherIntent.toLowerCase().includes(kw));
+
+            if (overlaps && hasSigChange) return 'HIGH';
+            if (overlaps) return 'MEDIUM';
+            if (hasSigChange) return 'MEDIUM';
+            return 'LOW';
+        }
+
+        function detectConflict(dev, file, region) {
+            const conflicts = [];
+            activityLog.forEach(entry => {
+                if (entry.file === file && entry.developer !== dev) {
+                    const risk = classifyRisk(region, entry.region, entry.intent);
+                    if (risk !== 'LOW') {
+                        conflicts.push({
+                            risk: risk,
+                            developer: entry.developer,
+                            intent: entry.intent,
+                            region: entry.region
+                        });
+                    }
+                }
+            });
+            return conflicts;
+        }
+
+        function clearDashboard() {
+            activityLog = [];
+            currentScenario = null;
+            render();
+        }
+
+        function render() {
+            renderFiles();
+            renderDevelopers();
+            renderWarnings();
+            renderLog();
+        }
+
+        function renderFiles() {
+            const panel = document.getElementById('filesPanel');
+
+            // Group by file
+            const fileMap = new Map();
+            activityLog.forEach(entry => {
+                if (!fileMap.has(entry.file)) {
+                    fileMap.set(entry.file, []);
+                }
+                fileMap.get(entry.file).push(entry);
+            });
+
+            if (fileMap.size === 0) {
+                panel.innerHTML = '<div class="empty-state"><p>No active changes. Run a scenario to see file activity.</p></div>';
+                return;
+            }
+
+            let html = '';
+            fileMap.forEach((entries, file) => {
+                const uniqueDevs = [...new Set(entries.map(e => e.developer))];
+                const regions = [...new Set(entries.map(e => e.region).filter(Boolean))];
+                const maxRisk = entries.reduce((max, e) => {
+                    if (e.riskLevel === 'HIGH') return 'HIGH';
+                    if (e.riskLevel === 'MEDIUM' && max !== 'HIGH') return 'MEDIUM';
+                    return max || 'LOW';
+                }, 'LOW');
+
+                html += `
+                    <div class="file-item">
+                        <div class="file-name">📄 ${file}</div>
+                        <div class="developers-list">
+                            ${uniqueDevs.map(dev => `
+                                <span class="dev-tag ${DEVELOPER_COLORS[dev]?.class}">
+                                    <span class="dot"></span> ${dev}
+                                </span>
+                            `).join('')}
+                        </div>
+                        ${regions.length > 0 ? `<div class="region">Region: ${regions.join(', ')}</div>` : ''}
+                        <div style="margin-top: 8px;">
+                            <span class="risk-indicator ${RISK_LEVELS[maxRisk].class}">
+                                ${RISK_LEVELS[maxRisk].label} Risk
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            panel.innerHTML = html;
+        }
+
+        function renderDevelopers() {
+            const panel = document.getElementById('developersPanel');
+
+            const devMap = new Map();
+            activityLog.forEach(entry => {
+                if (!devMap.has(entry.developer)) {
+                    devMap.set(entry.developer, []);
+                }
+                devMap.get(entry.developer).push(entry);
+            });
+
+            if (devMap.size === 0) {
+                panel.innerHTML = '<div class="empty-state"><p>No developers active. Run a scenario to begin.</p></div>';
+                return;
+            }
+
+            let html = '';
+            devMap.forEach((entries, dev) => {
+                const gradient = dev === 'DevA' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' :
+                                 dev === 'DevB' ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' :
+                                 dev === 'DevC' ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' :
+                                 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+
+                const files = [...new Set(entries.map(e => e.file))];
+                const lastEntry = entries[entries.length - 1];
+                const age = formatAge((Date.now() - lastEntry.timestamp) / 1000);
+
+                html += `
+                    <div class="developer-card" style="background: ${gradient}">
+                        <h3>${dev}</h3>
+                        <div class="dev-info">
+                            <strong>Files: ${files.join(', ')}</strong>
+                            <p>${entries.length} change${entries.length > 1 ? 's' : ''}</p>
+                            <span class="status-badge status-active">Active ${age}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            panel.innerHTML = html;
+        }
+
+        function renderWarnings() {
+            const panel = document.getElementById('warningsPanel');
+
+            const fileMap = new Map();
+            activityLog.forEach(entry => {
+                if (!fileMap.has(entry.file)) {
+                    fileMap.set(entry.file, []);
+                }
+                fileMap.get(entry.file).push(entry);
+            });
+
+            let warnings = [];
+            fileMap.forEach((entries, file) => {
+                entries.forEach(entry => {
+                    const conflicts = detectConflict(entry.developer, file, entry.region);
+                    conflicts.forEach(conflict => {
+                        warnings.push({
+                            file,
+                            developer: entry.developer,
+                            conflictDev: conflict.developer,
+                            intent: entry.intent,
+                            conflictIntent: conflict.intent,
+                            region: entry.region,
+                            conflictRegion: conflict.region,
+                            risk: conflict.risk,
+                            timestamp: entry.timestamp
+                        });
+                    });
+                });
+            });
+
+            if (warnings.length === 0) {
+                panel.innerHTML = '<div class="empty-state"><p>No conflicts detected.</p></div>';
+                return;
+            }
+
+            let html = '';
+            warnings.forEach(w => {
+                const riskClass = w.risk === 'HIGH' ? 'high' : 'medium';
+                const riskIcon = w.risk === 'HIGH' ? '🛑' : '⚠️';
+
+                html += `
+                    <div class="conflict-card ${riskClass}">
+                        <div style="margin-bottom: 8px;">
+                            <span style="font-weight: 600; color: #333;">${riskIcon} ${w.risk} Risk Conflict</span>
+                            <div style="font-size: 11px; color: #666; margin-top: 4px;">${new Date(w.timestamp).toLocaleTimeString()}</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.02); padding: 12px; border-radius: 6px; font-size: 13px; line-height: 1.5;">
+                            <p><strong>${w.developer}</strong> is generating code on <code>${w.file}</code></p>
+                            <p style="margin-top: 6px; color: #666;"><em>"${w.intent}"</em></p>
+                            <p style="margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 8px;">
+                                But <strong>${w.conflictDev}</strong> is actively editing:<br>
+                                <em>"${w.conflictIntent}"</em><br>
+                                <code style="font-size: 11px; color: #666;">${w.conflictRegion || 'unspecified region'}</code>
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            panel.innerHTML = html;
+        }
+
+        function renderLog() {
+            const panel = document.getElementById('logPanel');
+
+            if (activityLog.length === 0) {
+                panel.innerHTML = '<div class="empty-state"><p>Activity log is empty.</p></div>';
+                return;
+            }
+
+            let html = '<div class="timeline">';
+            [...activityLog].reverse().forEach(entry => {
+                const age = formatAge((Date.now() - entry.timestamp) / 1000);
+                const riskBadge = entry.riskLevel ? `<span class="risk-indicator ${RISK_LEVELS[entry.riskLevel].class}">${RISK_LEVELS[entry.riskLevel].label}</span>` : '';
+
+                html += `
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <strong style="color: ${DEVELOPER_COLORS[entry.developer]?.color || '#333'}">${entry.developer}</strong>
+                            <p><code>${entry.file}</code></p>
+                            <p>"${entry.intent}"</p>
+                            <p style="font-size: 11px; color: #999;">
+                                ${entry.region ? `Region: ${entry.region} • ` : ''}${age}
+                                ${riskBadge}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            panel.innerHTML = html;
+        }
+
+        function runScenario1() {
+            clearDashboard();
+            currentScenario = 'Scenario 1: Overlapping Regions';
+            logEntry('DevA', 'src/auth.py', 'Refactor login_user function for better error handling', 'login_user (lines 20-40)');
+            setTimeout(() => {
+                const conflicts = detectConflict('DevB', 'src/auth.py', 'login_user (lines 25-35)');
+                const risk = conflicts.length > 0 ? conflicts[0].risk : 'LOW';
+                logEntry('DevB', 'src/auth.py', 'Add validation to login_user', 'login_user (lines 25-35)', risk);
+            }, 500);
+        }
+
+        function runScenario2() {
+            clearDashboard();
+            currentScenario = 'Scenario 2: Non-Overlapping Regions';
+            logEntry('DevA', 'src/auth.py', 'Refactor login_user function', 'login_user (lines 20-40)');
+            setTimeout(() => {
+                const conflicts = detectConflict('DevB', 'src/auth.py', 'logout_user (lines 100-120)');
+                const risk = conflicts.length > 0 ? conflicts[0].risk : 'LOW';
+                logEntry('DevB', 'src/auth.py', 'Add logout_user function', 'logout_user (lines 100-120)', risk);
+            }, 500);
+        }
+
+        function runScenario3() {
+            clearDashboard();
+            currentScenario = 'Scenario 3: Signature Change';
+            logEntry('DevA', 'src/auth.py', 'Rename login_user to authenticate and change signature', 'login_user (lines 20-40)');
+            setTimeout(() => {
+                const conflicts = detectConflict('DevB', 'src/auth.py', 'login_user (lines 25-35)');
+                const risk = conflicts.length > 0 ? conflicts[0].risk : 'LOW';
+                logEntry('DevB', 'src/auth.py', 'Call login_user from new location', 'login_user (lines 25-35)', risk);
+            }, 500);
+        }
+
+        function runScenario4() {
+            clearDashboard();
+            currentScenario = 'Scenario 4: Entry Expiry';
+            const oldTime = Date.now() - (31 * 60 * 1000); // 31 minutes ago
+            activityLog.push({
+                developer: 'DevA',
+                file: 'src/config.py',
+                intent: 'Update configuration schema',
+                region: 'Config class (lines 5-15)',
+                timestamp: oldTime
+            });
+            setTimeout(() => {
+                const conflicts = detectConflict('DevB', 'src/config.py', 'Config class (lines 5-15)');
+                const risk = conflicts.length > 0 ? conflicts[0].risk : 'LOW';
+                logEntry('DevB', 'src/config.py', 'Update configuration schema', 'Config class (lines 5-15)', risk);
+            }, 500);
+        }
+
+        function runScenario5() {
+            clearDashboard();
+            currentScenario = 'Scenario 5: Multiple Developers';
+            logEntry('DevA', 'src/models.py', 'Refactor User model', 'User class (lines 10-50)');
+            setTimeout(() => {
+                logEntry('DevB', 'src/models.py', 'Add password hashing to User', 'User class (lines 20-35)');
+            }, 300);
+            setTimeout(() => {
+                const conflicts = detectConflict('DevC', 'src/models.py', 'User class (lines 30-45)');
+                const risk = conflicts.length > 0 ? conflicts[0].risk : 'LOW';
+                logEntry('DevC', 'src/models.py', 'Add email validation to User', 'User class (lines 30-45)', risk);
+            }, 600);
+        }
+
+        function runAllScenarios() {
+            clearDashboard();
+            currentScenario = 'All Scenarios';
+
+            let delay = 0;
+
+            // Scenario 1
+            setTimeout(() => {
+                logEntry('DevA', 'src/auth.py', 'Refactor login_user', 'login_user (lines 20-40)');
+            }, delay);
+            delay += 300;
+
+            setTimeout(() => {
+                const conflicts = detectConflict('DevB', 'src/auth.py', 'login_user (lines 25-35)');
+                logEntry('DevB', 'src/auth.py', 'Add validation', 'login_user (lines 25-35)', conflicts.length > 0 ? conflicts[0].risk : 'LOW');
+            }, delay);
+            delay += 400;
+
+            // Scenario 2
+            setTimeout(() => {
+                logEntry('DevC', 'src/api.py', 'Add new endpoint', 'create_user (lines 50-70)');
+            }, delay);
+            delay += 300;
+
+            setTimeout(() => {
+                const conflicts = detectConflict('DevD', 'src/api.py', 'delete_user (lines 100-120)');
+                logEntry('DevD', 'src/api.py', 'Add delete endpoint', 'delete_user (lines 100-120)', conflicts.length > 0 ? conflicts[0].risk : 'LOW');
+            }, delay);
+            delay += 400;
+
+            // Scenario 3
+            setTimeout(() => {
+                logEntry('DevA', 'src/models.py', 'Rename User.validate', 'User class (lines 10-50)');
+            }, delay);
+            delay += 300;
+
+            setTimeout(() => {
+                const conflicts = detectConflict('DevB', 'src/models.py', 'User class (lines 30-40)');
+                logEntry('DevB', 'src/models.py', 'Call User.validate', 'User class (lines 30-40)', conflicts.length > 0 ? conflicts[0].risk : 'LOW');
+            }, delay);
+        }
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
