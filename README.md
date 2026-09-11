@@ -241,12 +241,15 @@ check = coordination.check_conflicts(
     region="lines 40-80"
 )
 
-# Step 3: Decide based on risk
+# Step 3: Decide based on risk score
 if check['risk_score'] > 70:  # HIGH RISK
-    print(f"⚠️  Conflict with {check['conflicting_agents']}")
+    print(f"⚠️  High risk conflict with {check['conflicting_agents']}")
+    print(f"   Risk Score: {check['risk_score']}/100")
     
-    # Show options to user
-    # Option 1: WAIT
+    # Show decision options
+    options = check['decision_options']  # [WAIT, COLLABORATE, WRAP_UP_REQUEST]
+    
+    # Option 1: WAIT (most common)
     checkpoint = coordination.save_checkpoint(generation_context)
     await coordination.await_event('lock_removed')  # No polling!
     
@@ -254,12 +257,13 @@ if check['risk_score'] > 70:  # HIGH RISK
     context = coordination.load_checkpoint("claude-agent-1")
     # Resume generation from exact point
     
-elif check['risk_score'] > 30:  # MEDIUM RISK
-    print(f"⚠️  Warning: {check['warning_message']}")
-    # Proceed with caution
+elif check['risk_score'] >= 30:  # MEDIUM RISK
+    print(f"⚠️  Medium risk (score: {check['risk_score']}/100)")
+    print(f"   Overlapping with: {check['conflicting_agents']}")
+    # Proceed with warning, but safe to generate
     
 else:  # LOW RISK
-    print("✅ Safe to proceed")
+    print(f"✅ Safe to proceed (score: {check['risk_score']}/100)")
     # Generate code confidently
 
 # Step 4: Mark complete when done
