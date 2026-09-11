@@ -18,8 +18,8 @@ Neo is a coordination framework for distributed AI agents and developers working
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/codeNinja.git
-cd codeNinja
+git clone https://github.com/yourusername/Neo.git
+cd Neo
 
 # Create a virtual environment (optional)
 python3 -m venv venv

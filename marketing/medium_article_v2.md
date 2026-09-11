@@ -367,4 +367,4 @@ That's the real value.
 
 *Have you run into coordination problems with multiple agents? I'd love to hear what you tried and what worked.*
 
-*Code: https://github.com/jaykrishna316/codeNinja (branch: claude/conflict-warning-poc-d04y0r)*
+*Code: https://github.com/yourusername/Neo (main branch: open-source-ready)*

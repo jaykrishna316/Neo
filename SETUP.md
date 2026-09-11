@@ -12,8 +12,8 @@ This guide walks you through setting up Neo locally and verifying that it works 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/codeNinja.git
-cd codeNinja
+git clone https://github.com/yourusername/Neo.git
+cd Neo
 
 # (Optional) Create a virtual environment
 python3 -m venv venv
@@ -232,7 +232,7 @@ git checkout open-source-ready
 ## ❓ Troubleshooting
 
 ### "ModuleNotFoundError: No module named 'coordination_state_machine'"
-- Make sure you're in the `codeNinja` directory
+- Make sure you're in the `Neo` directory
 - Check that Python can find the modules: `python3 -c "import coordination_state_machine; print('OK')"`
 
 ### "Permission denied when running cli_simulation.py"

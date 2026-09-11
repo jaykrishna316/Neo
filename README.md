@@ -58,8 +58,8 @@ Sequential commits, clean merge, zero manual work
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/codeNinja.git
-cd codeNinja
+git clone https://github.com/yourusername/Neo.git
+cd Neo
 
 # Run the CLI demo (shows 13 real-world scenarios)
 python3 cli_simulation.py

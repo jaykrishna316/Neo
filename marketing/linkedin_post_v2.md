@@ -75,7 +75,7 @@ No messy merges. No git nightmares. No blocked agents wasting tokens on polls. J
 
 ---
 
-**Try it:** https://github.com/jaykrishna316/codeNinja (branch: claude/conflict-warning-poc-d04y0r)
+**Try it:** https://github.com/yourusername/Neo (main branch: open-source-ready)
 
 Built this for fun while exploring how AI agents could actually work *with* humans, not around them.
 

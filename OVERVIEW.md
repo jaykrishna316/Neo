@@ -183,7 +183,7 @@ await coordination.await_event('lock_removed')
 ## File Structure
 
 ```
-codeNinja/
+Neo/
 ├── coordination_state_machine.py       # Core state machine logic
 ├── activity_log.py                     # Legacy activity log (POC)
 ├── agent_integration.py                # Agent-specific integrations
