@@ -58,7 +58,7 @@ Sequential commits, clean merge, zero manual work
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Neo.git
+git clone https://github.com/jaykrishna316/Neo.git
 cd Neo
 
 # Run the CLI demo (shows 13 real-world scenarios)

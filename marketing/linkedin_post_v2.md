@@ -95,7 +95,7 @@ Watch two Claude agents coordinate in real-time with actual LLM calls. No theory
 
 ---
 
-**Try it:** https://github.com/yourusername/Neo (main branch: open-source-ready)
+**Try it:** https://github.com/jaykrishna316/Neo (main branch: open-source-ready)
 
 Built this for fun while exploring how AI agents could actually work *with* humans, not around them. The coordination happens automatically. The conflicts never happen.
 

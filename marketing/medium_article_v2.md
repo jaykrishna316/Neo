@@ -396,5 +396,5 @@ That's the proof.
 
 *Have you run into coordination problems with multiple agents? I'd love to hear what you tried and what worked.*
 
-*Code: https://github.com/yourusername/Neo (main branch: open-source-ready)*
+*Code: https://github.com/jaykrishna316/Neo (main branch: open-source-ready)*
 *Demo: `python3 examples/claude_coordination_demo.py` (requires ANTHROPIC_API_KEY)*
