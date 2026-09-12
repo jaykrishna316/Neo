@@ -2,7 +2,7 @@
 
 ## Main Post:
 
-Even if every teardrop from every developer paid for the water used to power multi-agentic enterprises, it still wouldn't be worth dealing with merge conflicts once code hits git.
+If parallel computing could solve world hunger, merge conflicts would still make you want to flip your desk.
 
 Two Claude agents work on the same codebase. One needs to refactor authentication. The other needs to add payment validation. Both touch the same file. Both start generating.
 
