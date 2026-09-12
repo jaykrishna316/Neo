@@ -6,6 +6,8 @@
 
 **Thesis:** Parallel development. Zero conflicts. No tokens wasted.
 
+**The Analogy:** Your agents shouldn't improvise mid-air. Like air traffic control, Neo coordinates before code generation. No collisions. Just orchestrated flight.
+
 ---
 
 ## The 3 AM Realization
@@ -14,9 +16,17 @@ It was midnight. I had Claude Agent refactoring authentication, Devin fixing pay
 
 Then I pulled everyone's changes. The merge was a nightmare. Claude had rewritten function signatures Devin was calling. I'd modified a database schema Claude assumed was immutable. Nobody *knew* what anyone else was doing until git told us it was too late.
 
+**The problem:** We were like planes taking off without air traffic control. No coordination. Hope they don't collide mid-air.
+
 I thought: **There has to be a better way than waiting for merge conflicts.**
 
-And then it hit me: *What if every agent automatically announced what it was about to do?* Not in Slack or tickets—directly in a shared log that every agent could check before generating code. Claude could say "I'm about to refactor authentication (lines 20-40)." Devin could check that log before touching payment logic and know "Hey, I depend on auth, I should wait." The human developer's IDE could log work too.
+And then it hit me: *What if every agent automatically announced what it was about to do—before generating code?* 
+
+That's air traffic control. Controllers know every plane's route, altitude, and timing *before* takeoff. They don't wait for mid-air collisions. They prevent them.
+
+*What if code coordination worked the same way?*
+
+Not in Slack or tickets—directly in a shared log that every agent could check before generating. Claude says "I'm refactoring authentication (lines 20-40)." Devin checks that log and knows "Hey, I depend on auth, I should wait." The human developer's IDE logs work too. Everyone's flight path is visible before anyone takes off.
 
 That was the insight that changed everything.
 

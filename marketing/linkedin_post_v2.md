@@ -4,9 +4,13 @@
 
 **What if code conflicts never originated?**
 
+Like air traffic control for your agents. Controllers coordinate before takeoff, not after collision. Neo does the same for parallel development.
+
 I built something while procrastinating on actual work, and it just clicked.
 
-**The Problem:** When Claude Agent, Devin, and I work in parallel on the same codebase, conflicts happen *after* code is checked in. Git catches them. But by then it's too late—merge hell.
+**The Problem:** When Claude Agent, Devin, and I work in parallel on the same codebase, conflicts happen *after* code is checked in. Git catches them. But by then it's too late—merge hell. 
+
+It's like letting planes take off whenever they want and hoping they don't collide mid-air.
 
 **The Deeper Problem:** Even if we detect conflicts early, how do agents coordinate without blocking each other? How does one agent pause without losing context? How does it resume exactly where it left off?
 
