@@ -40,7 +40,7 @@ Developer B asks: "Safe to add validation at lines 50-70?"
 Neo checks line overlap: HIGH RISK (82/100) — lines overlap
   Developer C asks: "Safe to add logging at lines 200-250?"
   ↓
-Neo checks line overlap: CAUTION (25/100) — same file, different function
+Neo checks line overlap: LOW (15/100) — same file, different function
   ↓
 Developer B gets conflict options: Wait / Collaborate / Request wrap-up
 Developer C proceeds safely with advisory: "Another agent in this file"
@@ -55,6 +55,11 @@ Developer B resumes from exact checkpoint
 Sequential commits for overlapping work, parallel for non-overlapping
 Clean merge, zero manual work
 ```
+
+**Risk Categories:**
+- **LOW** (0-25): Different files or different functions in same file
+- **MEDIUM** (26-70): Same file, different code regions, possible dependencies
+- **HIGH_RISK** (70+): Direct line overlap, same function, or critical resource contention
 
 **Benefit:** Coordination happens early, intelligently, and automatically. No wasted tokens. No manual conflict resolution.
 
@@ -103,21 +108,21 @@ See `examples/claude_coordination_demo.py` for the complete walkthrough and code
 
 ---
 
-## 🎨 Interactive Visualizations (Optional)
+## 🎨 Interactive Visualizations & Guides
 
-For interactive HTML visualizations, checkout the separate `HTMLs` branch:
+For interactive HTML visualizations and comprehensive testing guides, checkout the `claude/conflict-warning-poc-d04y0r` branch:
 
 ```bash
-# View visualizations
-git checkout HTMLs
+# View visualizations and guides
+git checkout claude/conflict-warning-poc-d04y0r
 open docs/state-machine-scenarios.html      # See 3 risk scenarios (LOW/MEDIUM/HIGH)
 open docs/git-workflow-comparison.html      # Traditional vs. Neo workflow
 
-# Return to main branch
-git checkout open-source-ready
+# Return to main branch for development
+git checkout main
 ```
 
-**Why separate?** The main branch (`open-source-ready`) is pure Python code for developers. The `HTMLs` branch contains marketing/visualization assets referenced for learning but not required for development.
+**Why separate?** The main branch contains production-ready Python code for developers and integrators. The `claude/conflict-warning-poc-d04y0r` branch includes visualization assets, comprehensive testing guides (TEST.md, DEMO_SCENARIOS.md), and POC documentation for learning and evaluation purposes.
 
 ---
 
@@ -158,15 +163,13 @@ Each guide includes production-ready code patterns, error handling, and deployme
 | **GitHub Copilot** | `docs/ENTERPRISE_SCALING_CODEX.md` | ✅ Complete | 1-10 agents |
 | **Core Patterns** | `docs/INTEGRATION_ARCHITECTURE.md` | ✅ Complete | All frameworks |
 
-### Interactive Visualizations (in `HTMLs` branch)
+### Interactive Visualizations & POC Documentation (in `claude/conflict-warning-poc-d04y0r` branch)
 - `docs/state-machine-scenarios.html` — 3 risk scenarios with terminal output
 - `docs/git-workflow-comparison.html` — Before/after git workflow
 - `docs/state-machine-diagram.html` — SVG state machine diagram
-- *See above: "Interactive Visualizations" section for how to access*
-
-### Marketing Content
-- `marketing/linkedin_post_v2.md` — LinkedIn post highlighting activity log coordination
-- `marketing/medium_article_v2.md` — Medium article with state machine deep dive
+- `TEST.md` — Comprehensive testing guide with LOW/MEDIUM/HIGH risk scenarios
+- `DEMO_SCENARIOS.md` — Detailed scenario documentation and architecture deep dive
+- *See above: "Interactive Visualizations & Guides" section for how to access*
 
 ---
 
@@ -238,8 +241,8 @@ Neo uses a three-tier enforcement system to make HIGH_RISK conflicts impossible 
 3. **NEW:** Run `python3 examples/claude_coordination_demo.py` with real Claude API (3 min)
    - Set `export ANTHROPIC_API_KEY="sk-..."` first
    - See actual agents coordinating with real LLM calls
-4. Open `docs/state-machine-scenarios.html` in your browser (2 min)
-5. Read `OVERVIEW.md` for complete architecture
+4. Read `OVERVIEW.md` for complete architecture (5 min)
+5. **Optional:** For interactive visualizations, checkout `claude/conflict-warning-poc-d04y0r` branch and open `docs/state-machine-scenarios.html` in your browser
 
 ### For Framework Integrators (30 minutes to integrate)
 1. Read `OVERVIEW.md` (10 min)
@@ -505,9 +508,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines and development s
 ## 🎯 Quick Links
 
 - **See It With Real Agents:** `python3 examples/claude_coordination_demo.py` (requires ANTHROPIC_API_KEY)
-- **See It Visually:** `docs/state-machine-scenarios.html`
-- **Understand It:** `OVERVIEW.md`
-- **Run It (CLI):** `python3 cli_simulation.py`
+- **Run It (CLI):** `python3 cli_simulation.py` to see state transitions
+- **See It Visually:** Checkout `claude/conflict-warning-poc-d04y0r` branch for `docs/state-machine-scenarios.html`
+- **Understand It:** `OVERVIEW.md` (complete architecture, 2000+ lines)
+- **Test It:** Checkout `claude/conflict-warning-poc-d04y0r` branch for `TEST.md` (LOW/MEDIUM/HIGH scenarios)
 - **Build It:** `ROADMAP.md` + `CONTRIBUTING.md`
 - **Integrate It:** `docs/ENTERPRISE_SCALING_*.md` for your framework
 - **Deploy It:** `docs/INTEGRATION_ARCHITECTURE.md`
@@ -546,15 +550,19 @@ You can:
 
 2. **Try Locally:** Run `python3 cli_simulation.py` to see state transitions (2 min)
 
-3. **Explore Visuals:** Open `docs/state-machine-scenarios.html` and `docs/git-workflow-comparison.html` (3 min)
+3. **Understand Architecture:** Read `OVERVIEW.md` for complete system design (15 min)
 
-4. **Understand Architecture:** Read `OVERVIEW.md` for complete system design (15 min)
+4. **Explore Visuals (Optional):** Checkout `claude/conflict-warning-poc-d04y0r` branch
+   - Open `docs/state-machine-scenarios.html` and `docs/git-workflow-comparison.html` for interactive visualizations
+   - Read `TEST.md` for comprehensive testing guide
+   - Review `DEMO_SCENARIOS.md` for architectural deep dive
 
 5. **Choose Your Path:**
-   - 👨‍💻 **Developer?** → Run the example, then read `marketing/medium_article_v2.md` for context
+   - 👨‍💻 **Developer?** → Run the example, then read `OVERVIEW.md` for complete context
    - 🔧 **Integrator?** → Pick your framework in `docs/ENTERPRISE_SCALING_*.md`
    - 🏢 **DevOps?** → Start with `docs/INTEGRATION_ARCHITECTURE.md`
    - 👥 **Contributor?** → Follow `CONTRIBUTING.md` and check `ROADMAP.md`
+   - 🧪 **Testing?** → Checkout `claude/conflict-warning-poc-d04y0r` branch for `TEST.md`
 
 ---
 
