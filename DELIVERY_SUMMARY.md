@@ -4,7 +4,6 @@
 
 A complete, production-ready proof of concept for detecting concurrent local changes before code generation, with both CLI and web UI components.
 
-**Branch:** `claude/conflict-warning-poc-d04y0r`  
 **Status:** ✅ All 5 success criteria met  
 **Last Updated:** 2026-09-11
 
@@ -472,8 +471,6 @@ ws.on('activity', (entry) => {
 **Quality:** Production-ready mechanism + comprehensive docs  
 **Use:** Ready to integrate into Claude Code, Cursor, Devin  
 **Verdict:** Useful in practice, especially for AI agents
-
-**Branch:** `claude/conflict-warning-poc-d04y0r` (pushed to GitHub)
 
 ---
 

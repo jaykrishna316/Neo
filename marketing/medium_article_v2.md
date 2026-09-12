@@ -503,14 +503,8 @@ This is the future of multi-agent development.
 
 ## See It In Action: Real Enforcement, Real Blocks
 
-Theory is one thing. Seeing code generation get **blocked** is another.
+The system prevents conflicts by making code generation itself contingent on coordination:
 
-```bash
-export ANTHROPIC_API_KEY="sk-..."
-python3 examples/coordination_demo.py
-```
-
-Watch it happen:
 1. Agent A announces: "Refactoring auth.py (lines 40-80)"
 2. Agent B tries to generate on lines 50-75
 3. **Generation BLOCKED** — ConflictBlockedError raised
@@ -518,10 +512,10 @@ Watch it happen:
 5. Agent A acknowledges: "Yes, I know you're waiting"
 6. Mutual handshake complete → Enforcement check passes
 7. Agent B saves checkpoint, enters sleep (event-driven, no polling)
-8. Agent A generates code (real API call)
+8. Agent A generates code
 9. Agent A completes → lock_removed event fires
 10. Agent B wakes automatically, resumes from checkpoint
-11. Agent B generates code (real API call)
+11. Agent B generates code
 12. **Result: Zero conflicts. Code generation never happened without coordination.**
 
 No theory. No warnings. Just structural impossibility.
@@ -532,5 +526,4 @@ That's the proof.
 
 *Have coordination problems with multiple agents or developers? I'd love to hear what you've tried.*
 
-*Code: https://github.com/jaykrishna316/Neo (branch: open-source-ready)*
-*Demo: `python3 examples/claude_coordination_demo.py` (requires ANTHROPIC_API_KEY)*
+*Code: https://github.com/jaykrishna316/Neo*

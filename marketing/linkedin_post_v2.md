@@ -120,27 +120,13 @@ Conflicts are solved. We just stop creating them in the first place.
 
 ---
 
-## 🎯 See It In Action (Real API Calls):
+## 🎯 See It In Action:
 
-```bash
-export ANTHROPIC_API_KEY="sk-..."
-python3 examples/claude_coordination_demo.py
-```
-
-Watch two Claude agents coordinate in real-time with actual LLM calls. No theory—real agents, real API calls, zero merge conflicts.
-
-**What you'll see:**
-- Agent A logs intent + starts work
-- Agent B detects conflict (risk: 82/100 HIGH RISK)
-- Agent B pauses with checkpoint saved
-- Agent A completes → lock removed event fires
-- Agent B wakes up, resumes from exact point
-- Both generate code via Claude SDK
-- Result: Zero conflicts (prevented before generation)
+Try the **interactive dashboard** by cloning the repo and opening `ui_dashboard.html` in your browser. Watch the conflict detection system work with realistic scenarios.
 
 ---
 
-**Try it:** https://github.com/jaykrishna316/Neo (main branch: open-source-ready)
+**Try it:** https://github.com/jaykrishna316/Neo
 
 Built this for fun while exploring how AI agents could actually work *with* humans, not around them. The coordination happens automatically. The conflicts never happen.
 
