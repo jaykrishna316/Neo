@@ -69,6 +69,34 @@ python3 cli_simulation.py
 
 ---
 
+## 💡 See Real Value: Working Example with Claude SDK
+
+Want to see Neo actually prevent merge conflicts with **real AI agents**? Run our working demonstration:
+
+```bash
+# Set up your Anthropic API key
+export ANTHROPIC_API_KEY="sk-..."
+
+# Run the complete coordination demo
+# (Shows two Claude agents coordinating in real-time with actual API calls)
+python3 examples/claude_coordination_demo.py
+```
+
+**What it demonstrates:**
+1. **Agent A announces** work on shared code (coordination logging)
+2. **Agent B detects conflict** PRE-GENERATION (risk score: 82/100 HIGH RISK)
+3. **Agent B pauses** with checkpoint saved (zero context loss)
+4. **Agent A completes** and fires `lock_removed` event
+5. **Agent B resumes** automatically (event-driven, no polling, no wasted tokens)
+6. **Both agents generate code** with REAL Claude API calls
+7. **Result:** Zero merge conflicts (prevented before generation)
+
+**Key insight:** This proves Neo's core value—coordination happens *before* code is written, not after merge conflicts destroy your day.
+
+See `examples/claude_coordination_demo.py` for the complete walkthrough and code.
+
+---
+
 ## 🎨 Interactive Visualizations (Optional)
 
 For interactive HTML visualizations, checkout the separate `HTMLs` branch:
@@ -96,7 +124,12 @@ git checkout open-source-ready
 | `activity_log.py` | Shared activity log management | ~150 |
 | `agent_integration.py` | Multi-agent coordination adapters | ~200 |
 | `websocket_support.py` | Event bus (WebSocket + Polling fallback) | ~300 |
-| `cli_simulation.py` | Interactive CLI demo (5 scenarios) | ~250 |
+| `cli_simulation.py` | Interactive CLI demo (13 scenarios) | ~250 |
+
+### Working Examples
+| File | Purpose | Use Case |
+|------|---------|----------|
+| `examples/claude_coordination_demo.py` | Real-world demo with Claude SDK + real API calls | See Neo in action with actual agents |
 
 ### Documentation (Complete)
 | File | Purpose | Audience |
@@ -170,11 +203,14 @@ Each guide includes production-ready code patterns, error handling, and deployme
 
 ## 🎓 Learning Paths
 
-### For Developers (5 minutes to understand)
-1. Open `docs/state-machine-scenarios.html` in your browser
-2. Read the **Problem/Solution** section above
-3. Run `python3 cli_simulation.py`
-4. Read `OVERVIEW.md` for architecture
+### For Developers (10 minutes to understand)
+1. Read the **Problem/Solution** section above (2 min)
+2. Run `python3 cli_simulation.py` to see state transitions (1 min)
+3. **NEW:** Run `python3 examples/claude_coordination_demo.py` with real Claude API (3 min)
+   - Set `export ANTHROPIC_API_KEY="sk-..."` first
+   - See actual agents coordinating with real LLM calls
+4. Open `docs/state-machine-scenarios.html` in your browser (2 min)
+5. Read `OVERVIEW.md` for complete architecture
 
 ### For Framework Integrators (30 minutes to integrate)
 1. Read `OVERVIEW.md` (10 min)
@@ -319,7 +355,7 @@ See framework-specific guides in `docs/ENTERPRISE_SCALING_*.md` for complete int
 - [ ] Reference coordination service (REST API + WebSocket)
 - [ ] Python client SDK (PyPI package)
 - [ ] Comprehensive test suite (80%+ coverage)
-- [ ] Working end-to-end example
+- [x] **Working end-to-end example** — `examples/claude_coordination_demo.py` with real Claude API calls
 
 ### Short-term (Production - 4-8 weeks)
 - [ ] PostgreSQL backend
@@ -437,9 +473,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines and development s
 
 ## 🎯 Quick Links
 
-- **See It Work:** `docs/state-machine-scenarios.html`
+- **See It With Real Agents:** `python3 examples/claude_coordination_demo.py` (requires ANTHROPIC_API_KEY)
+- **See It Visually:** `docs/state-machine-scenarios.html`
 - **Understand It:** `OVERVIEW.md`
-- **Run It:** `python3 cli_simulation.py`
+- **Run It (CLI):** `python3 cli_simulation.py`
 - **Build It:** `ROADMAP.md` + `CONTRIBUTING.md`
 - **Integrate It:** `docs/ENTERPRISE_SCALING_*.md` for your framework
 - **Deploy It:** `docs/INTEGRATION_ARCHITECTURE.md`
@@ -471,11 +508,19 @@ You can:
 
 ## 🚀 Next Steps
 
-1. **Explore:** Open `docs/state-machine-scenarios.html` and `docs/git-workflow-comparison.html` (3 min)
-2. **Understand:** Read `OVERVIEW.md` for complete architecture (15 min)
-3. **Try It:** Run `python3 cli_simulation.py` to see it in action (2 min)
-4. **Choose Your Path:**
-   - 👨‍💻 **Developer?** → Read `marketing/medium_article_v2.md` for context
+1. **See Real Value:** Run `python3 examples/claude_coordination_demo.py` (3 min)
+   - Shows actual agents coordinating with real Claude API calls
+   - Proves Neo prevents merge conflicts before code is generated
+   - Requires: `export ANTHROPIC_API_KEY="sk-..."`
+
+2. **Try Locally:** Run `python3 cli_simulation.py` to see state transitions (2 min)
+
+3. **Explore Visuals:** Open `docs/state-machine-scenarios.html` and `docs/git-workflow-comparison.html` (3 min)
+
+4. **Understand Architecture:** Read `OVERVIEW.md` for complete system design (15 min)
+
+5. **Choose Your Path:**
+   - 👨‍💻 **Developer?** → Run the example, then read `marketing/medium_article_v2.md` for context
    - 🔧 **Integrator?** → Pick your framework in `docs/ENTERPRISE_SCALING_*.md`
    - 🏢 **DevOps?** → Start with `docs/INTEGRATION_ARCHITECTURE.md`
    - 👥 **Contributor?** → Follow `CONTRIBUTING.md` and check `ROADMAP.md`
