@@ -81,8 +81,8 @@ def demo():
     )
 
     log_step("Agent B", f"Risk Score: {check['risk_score']}/100")
-    log_step("Agent B", f"Conflict Type: {check['conflict_type']}")
-    log_step("Agent B", f"Conflicting Agents: {check['overlapping_agents']}")
+    log_step("Agent B", f"Has Conflict: {check['has_conflict']}")
+    log_step("Agent B", f"Conflicting Agents: {check['conflicting_agents']}")
 
     # ========================================================================
     # STEP 2b: ENFORCEMENT GATE - Try to generate without decision (blocked)
@@ -97,11 +97,11 @@ def demo():
             agent_id="agent-claude-payment",
             file_path="src/auth.py",
             region="validate_credentials function (lines 50-75)",
-            decision_made=None  # No decision yet
+            decision=None  # No decision yet - this will block
         )
         log_step("Agent B", "ERROR: Should have been blocked!")
     except Exception as e:
-        if "HIGH_RISK" in str(e):
+        if "HIGH_RISK" in str(e) or "conflict" in str(e).lower():
             log_step("SYSTEM", f"🚫 BLOCKED: {str(e)}")
             log_step("SYSTEM", "Code generation prevented. Agent must make a decision.")
         else:
@@ -121,15 +121,19 @@ def demo():
 
         log_step("Agent B", "Decision: WAIT (saving checkpoint, will sleep)")
 
-        # Acknowledge wait decision to blocking agent (mutual agreement)
-        coordination.acknowledge_wait("agent-claude-auth", "agent-claude-payment")
+        # Handle the WAIT decision - enters WAITING state with checkpoint
+        coordination.handle_decision(
+            agent_id="agent-claude-payment",
+            decision=DecisionOption.WAIT,
+            checkpoint=None  # Checkpoint handled separately below
+        )
 
         # Now verify enforcement check passes with decision
         enforcement_check = coordination.check_generation_allowed(
             agent_id="agent-claude-payment",
             file_path="src/auth.py",
             region="validate_credentials function (lines 50-75)",
-            decision_made=DecisionOption.WAIT
+            decision=DecisionOption.WAIT
         )
         log_step("SYSTEM", "✓ Enforcement check passed: Decision confirmed")
 
