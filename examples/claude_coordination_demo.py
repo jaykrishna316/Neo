@@ -20,7 +20,7 @@ from pathlib import Path
 # Add parent directory to path so we can import coordination_state_machine
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from coordination_state_machine import CoordinationStateMachine
+from coordination_state_machine import CoordinationStateMachine, DecisionOption
 from anthropic import Anthropic
 
 # Initialize the coordination state machine
@@ -85,6 +85,29 @@ def demo():
     log_step("Agent B", f"Conflicting Agents: {check['overlapping_agents']}")
 
     # ========================================================================
+    # STEP 2b: ENFORCEMENT GATE - Try to generate without decision (blocked)
+    # ========================================================================
+    log_section("STEP 2b: Enforcement Gate - Attempting Generation Without Decision")
+
+    log_step("SYSTEM", "Agent B attempting to generate code without making a decision...")
+
+    try:
+        # This should raise ConflictBlockedError because decision is None
+        enforcement_check = coordination.check_generation_allowed(
+            agent_id="agent-claude-payment",
+            file_path="src/auth.py",
+            region="validate_credentials function (lines 50-75)",
+            decision_made=None  # No decision yet
+        )
+        log_step("Agent B", "ERROR: Should have been blocked!")
+    except Exception as e:
+        if "HIGH_RISK" in str(e):
+            log_step("SYSTEM", f"🚫 BLOCKED: {str(e)}")
+            log_step("SYSTEM", "Code generation prevented. Agent must make a decision.")
+        else:
+            raise
+
+    # ========================================================================
     # STEP 3: Decision Point (Agent B decides to WAIT)
     # ========================================================================
     log_section("STEP 3: Decision Point - Agent B Encounters HIGH RISK")
@@ -97,6 +120,18 @@ def demo():
         print("  3. WRAP_UP_REQUEST: Ask Agent A to finish sooner")
 
         log_step("Agent B", "Decision: WAIT (saving checkpoint, will sleep)")
+
+        # Acknowledge wait decision to blocking agent (mutual agreement)
+        coordination.acknowledge_wait("agent-claude-auth", "agent-claude-payment")
+
+        # Now verify enforcement check passes with decision
+        enforcement_check = coordination.check_generation_allowed(
+            agent_id="agent-claude-payment",
+            file_path="src/auth.py",
+            region="validate_credentials function (lines 50-75)",
+            decision_made=DecisionOption.WAIT
+        )
+        log_step("SYSTEM", "✓ Enforcement check passed: Decision confirmed")
 
         # Save checkpoint with full generation context
         checkpoint = {
