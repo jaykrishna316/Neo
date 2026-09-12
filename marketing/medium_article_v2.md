@@ -1,6 +1,12 @@
-# Preventing Merge Conflicts Before They're Written: Building Automatic Agent Coordination
+# What If Code Conflicts Never Originated?
 
-*A side project exploring how developers and AI agents can coordinate without chaos*
+*Preventing merge conflicts before they're written: How AI agents can coordinate before generating code*
+
+---
+
+**Thesis:** Parallel development. Zero conflicts. No tokens wasted.
+
+---
 
 ## The 3 AM Realization
 
@@ -361,7 +367,7 @@ The shared activity log is the answer. It's so simple, it feels like it should h
 
 This side project started as a way to keep my AI agents from killing each other's code. It turned into something deeper: a new model for how developers (human and AI) can safely work in parallel.
 
-That's the real value.
+**The insight that changed everything:** Stop trying to resolve conflicts better. Stop them from happening in the first place. Coordinate before code exists.
 
 ---
 
