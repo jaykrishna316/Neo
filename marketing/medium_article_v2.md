@@ -12,9 +12,9 @@
 
 ## The 3 AM Realization
 
-It was midnight. I had Claude Agent refactoring authentication, Devin fixing payment logic, and I was optimizing the database layer. All parallel. All fast.
+It was midnight. I had Agent A refactoring authentication, Agent B fixing payment logic, and Agent C optimizing the database layer. All parallel. All fast.
 
-Then I pulled everyone's changes. The merge was a nightmare. Claude had rewritten function signatures Devin was calling. I'd modified a database schema Claude assumed was immutable. Nobody *knew* what anyone else was doing until git told us it was too late.
+Then I pulled everyone's changes. The merge was a nightmare. Agent A had rewritten function signatures Agent B was calling. Agent C had modified a database schema Agent A assumed was immutable. Nobody *knew* what anyone else was doing until git told us it was too late.
 
 **The problem:** We had detection, but no enforcement. We could see conflicts coming, but nothing stopped agents from colliding anyway.
 
@@ -62,34 +62,34 @@ This isn't just "be careful." This is: **you cannot generate code without coordi
 
 ### Before: The Detection Way (Still Broken)
 ```
-15:30:00 Claude Agent starts generating auth refactor
-15:30:05 Devin checks before generating → sees Claude in auth
+15:30:00 Agent A starts generating auth refactor
+15:30:05 Agent B checks before generating → sees Agent A in auth
 15:30:06 System warns: "HIGH RISK - overlapping lines"
-15:30:07 Devin: "I'll ignore that and proceed anyway" ← DISASTER
-15:30:15 Devin generates code (ignoring the warning)
+15:30:07 Agent B: "I'll ignore that and proceed anyway" ← DISASTER
+15:30:15 Agent B generates code (ignoring the warning)
 ...
 16:00:00 Merge conflict anyway
 ```
 
 ### After: The Enforcement Way (Impossible to Bypass)
 ```
-15:30:00 Claude logs: state=ACTIVE (lines 40-80)
-15:30:05 Devin tries to generate code on lines 50-70
+15:30:00 Agent A logs: state=ACTIVE (lines 40-80)
+15:30:05 Agent B tries to generate code on lines 50-70
 15:30:06 Neo detection: "HIGH_RISK overlap detected"
 15:30:07 Generation gate BLOCKS: "ConflictBlockedError: Choose WAIT/COLLABORATE/WRAP_UP_REQUEST"
-         Devin CANNOT proceed without decision
+         Agent B CANNOT proceed without decision
 
-15:30:08 Devin chooses: WAIT
-         System requires Claude to acknowledge (mutual handshake)
-15:30:09 Claude acknowledges: "Yes, I know Devin is waiting"
+15:30:08 Agent B chooses: WAIT
+         System requires Agent A to acknowledge (mutual handshake)
+15:30:09 Agent A acknowledges: "Yes, I know Agent B is waiting"
          Enforcement check passes
 
-15:30:10 Devin enters WAITING state, saves checkpoint, sleeps
+15:30:10 Agent B enters WAITING state, saves checkpoint, sleeps
          (Subscribed to lock_removed event, no polling)
 
-15:45:00 Claude finishes, logs state=COMPLETED
+15:45:00 Agent A finishes, logs state=COMPLETED
 15:45:01 lock_removed event fires
-15:45:02 Devin wakes up with full context preserved
+15:45:02 Agent B wakes up with full context preserved
 
 16:00:00 Everything merged. Zero conflicts. No way to have bypassed it.
 ```
@@ -133,8 +133,8 @@ agent_b.decide(DecisionOption.WAIT, checkpoint=context)
 # System requires Agent A (blocking) to acknowledge
 # Agent A doesn't get a "someone wants you to hurry" note
 # Agent A gets: "Agent B is blocked and waiting for you"
-agent_a.acknowledge_wait(
-    waiting_agent="agent-b",
+blocking_agent.acknowledge_wait(
+    waiting_agent="agent_b_id",
     reason="High-risk conflict on auth.py"
 )
 
@@ -246,29 +246,29 @@ The difference:
 
 ## Real Scenario: Three Agents, Cascading Coordination (All Automatic)
 
-**15:30** Claude Agent logs: "Refactor payment.py (process_payment, lines 20-60)"
+**15:30** Agent A logs: "Refactor payment.py (process_payment, lines 20-60)"
 
-**15:32** Devin Agent tries to generate code
+**15:32** Agent B tries to generate code
 - Detects: HIGH_RISK overlap on payment.py (lines 40-50)
 - Generation gate BLOCKS
-- Devin chooses: WAIT
+- Agent B chooses: WAIT
 
-**15:33** Claude acknowledges Devin is waiting
+**15:33** Agent A acknowledges Agent B is waiting
 - Mutual handshake complete
-- Enforcement check passes for Devin
+- Enforcement check passes for Agent B
 
-**15:35** Human developer (via IDE) tries to work
-- Detects: HIGH_RISK (depends on both Claude + Devin)
+**15:35** Agent C (via IDE) tries to work
+- Detects: HIGH_RISK (depends on both Agent A + Agent B)
 - Generation gate BLOCKS
-- Human chooses: WAIT (cascade continues)
+- Agent C chooses: WAIT (cascade continues)
 
-**15:50** Claude finishes
+**15:50** Agent A finishes
 - Fires lock_removed event
-- Devin wakes up, resumes from checkpoint
+- Agent B wakes up, resumes from checkpoint
 
-**16:00** Devin finishes
+**16:00** Agent B finishes
 - Fires lock_removed event
-- Human developer wakes up, proceeds
+- Agent C wakes up, proceeds
 
 **16:15** All done. Zero conflicts. Perfect merge. Everything coordinated automatically.
 
@@ -429,13 +429,13 @@ Action: System escalates → force_release_lock() fires
 
 ### Scenario 7: Cascading Conflicts (3+ Agents)
 ```
-15:30 Claude: auth.py (lines 40-80) — refactoring
-15:32 Devin: auth.py (lines 50-70) — validation → BLOCKED (waits for Claude)
-15:35 Alice: auth.py (lines 45-65) — type hints → BLOCKED (waits for both)
+15:30 Agent A: auth.py (lines 40-80) — refactoring
+15:32 Agent B: auth.py (lines 50-70) — validation → BLOCKED (waits for Agent A)
+15:35 Agent C: auth.py (lines 45-65) — type hints → BLOCKED (waits for both)
 Result: Chain of 3 agents
 Action: All coordinated automatically
-        Claude finishes → Devin wakes
-        Devin finishes → Alice wakes
+        Agent A finishes → Agent B wakes
+        Agent B finishes → Agent C wakes
         Perfect sequential coordination without manual intervention
 ```
 
@@ -507,7 +507,7 @@ Theory is one thing. Seeing code generation get **blocked** is another.
 
 ```bash
 export ANTHROPIC_API_KEY="sk-..."
-python3 examples/claude_coordination_demo.py
+python3 examples/coordination_demo.py
 ```
 
 Watch it happen:
@@ -518,10 +518,10 @@ Watch it happen:
 5. Agent A acknowledges: "Yes, I know you're waiting"
 6. Mutual handshake complete → Enforcement check passes
 7. Agent B saves checkpoint, enters sleep (event-driven, no polling)
-8. Agent A generates code (real Claude API call)
+8. Agent A generates code (real API call)
 9. Agent A completes → lock_removed event fires
 10. Agent B wakes automatically, resumes from checkpoint
-11. Agent B generates code (real Claude API call)
+11. Agent B generates code (real API call)
 12. **Result: Zero conflicts. Code generation never happened without coordination.**
 
 No theory. No warnings. Just structural impossibility.
