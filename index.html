@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo - Complete Package</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            flex-wrap: wrap;
+        }
+        
+        .controls button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .controls button:active {
+            transform: translateY(0);
+        }
+        
+        .page-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1em;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .page-input {
+            width: 60px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 1em;
+        }
+        
+        .pdf-viewer {
+            display: flex;
+            justify-content: center;
+            padding: 30px;
+            background: #f8f9fa;
+            min-height: 600px;
+        }
+        
+        #pdf-canvas {
+            max-width: 100%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-radius: 6px;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+        
+        .error {
+            color: #e74c3c;
+            padding: 20px;
+            background: #fadbd8;
+            border-radius: 6px;
+            margin: 20px;
+        }
+        
+        .footer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Neo - Complete Package</h1>
+            <p>Interactive PDF Documentation</p>
+        </div>
+        
+        <div class="controls">
+            <button onclick="previousPage()" title="Go to previous page">← Previous</button>
+            <div class="page-info">
+                <span>Page</span>
+                <input type="number" id="page-input" class="page-input" min="1" onkeypress="if(event.key==='Enter') jumpToPage()" title="Enter page number and press Enter">
+                <span>of <span id="page-count">-</span></span>
+            </div>
+            <button onclick="nextPage()" title="Go to next page">Next →</button>
+        </div>
+        
+        <div class="pdf-viewer">
+            <div id="loading" class="loading">Loading PDF...</div>
+            <canvas id="pdf-canvas" style="display: none;"></canvas>
+        </div>
+        
+        <div class="footer">
+            <p>Neo Complete Package © 2024 | Powered by PDF.js</p>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        let pdf = null;
+        let currentPage = 1;
+
+        // Load PDF
+        pdfjsLib.getDocument('Neo_Complete_Package.pdf').promise.then(loadedPdf => {
+            pdf = loadedPdf;
+            document.getElementById('page-count').textContent = pdf.numPages;
+            document.getElementById('page-input').max = pdf.numPages;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('pdf-canvas').style.display = 'block';
+            renderPage(1);
+        }).catch(error => {
+            console.error('Error loading PDF:', error);
+            document.getElementById('loading').innerHTML = '<div class="error">Error loading PDF. Please check the file path.</div>';
+        });
+
+        function renderPage(num) {
+            if (!pdf || num < 1 || num > pdf.numPages) return;
+            
+            currentPage = num;
+            document.getElementById('page-input').value = num;
+            
+            pdf.getPage(num).then(page => {
+                const canvas = document.getElementById('pdf-canvas');
+                const ctx = canvas.getContext('2d');
+                const viewport = page.getViewport({ scale: 1.5 });
+                
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                page.render({ 
+                    canvasContext: ctx, 
+                    viewport: viewport 
+                }).promise.then(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
+        }
+
+        function nextPage() {
+            if (pdf && currentPage < pdf.numPages) {
+                renderPage(currentPage + 1);
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                renderPage(currentPage - 1);
+            }
+        }
+
+        function jumpToPage() {
+            const pageNum = parseInt(document.getElementById('page-input').value);
+            if (pageNum && pageNum >= 1 && pageNum <= pdf.numPages) {
+                renderPage(pageNum);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextPage();
+            if (e.key === 'ArrowLeft') previousPage();
+        });
+    </script>
+</body>
+</html>
