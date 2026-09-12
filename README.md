@@ -1,6 +1,23 @@
-# Pre-Generation Conflict Warning POC
+# Neo: Agent Coordination Layer
 
-A complete proof of concept for detecting when multiple developers work on the same file locally, before code generation proceeds. Includes both CLI simulation and an interactive web dashboard.
+A production-oriented reference implementation for preventing conflicting work before autonomous agents execute code. Neo introduces a coordination protocol that manages agent intent, detects resource conflicts, and enforces safe execution across multi-agent environments.
+
+**The Core Innovation:** Git resolves conflicts *after* agents collide. Neo prevents the collision.
+
+Instead of: `generate → commit → merge → conflict → resolve`
+
+Neo enables: `intent → coordinate → authorize → generate → commit`
+
+## What Neo Solves
+
+**The Problem:** Autonomous agents lack human intuition about resource conflicts. When Agent A and Agent B independently decide to modify the same code, database schema, API, or infrastructure resource, the result is merge conflicts, failed builds, and wasted tokens.
+
+**The Solution:** Neo inserts a coordination layer that:
+1. Captures agent intent before code generation
+2. Detects overlapping work (semantic + line-level)
+3. Scores conflict risk with evidence
+4. Enforces safe execution through three-tier gates
+5. Enables smart waiting with checkpoints (no token waste)
 
 ## Quick Start
 
@@ -11,9 +28,9 @@ A complete proof of concept for detecting when multiple developers work on the s
 Or view online: [Interactive Dashboard (Published Artifact)](https://claude.ai/code/artifact/ec1168f5-707d-4296-b365-e4747ec9842e)
 
 Click any scenario button to see:
-- File activity with developer tags
-- Conflict detection in action
-- Risk level indicators (LOW/MEDIUM/HIGH)
+- Developer/agent activity with intent tags
+- Conflict detection and risk scoring
+- Three-tier enforcement gates in action
 - Real-time activity timeline
 
 ### 🔧 Run the CLI Simulation
@@ -22,37 +39,82 @@ Click any scenario button to see:
 python3 cli_simulation.py
 ```
 
-Runs 5 scenarios end-to-end demonstrating:
+Runs 7 scenarios demonstrating:
 1. Overlapping regions → MEDIUM risk warning
 2. Non-overlapping regions → LOW risk (silent)
 3. Signature changes → HIGH risk (blocking)
 4. Entry expiry → stale entries ignored
-5. Multiple developers → conflict detection
+5. Multiple agents → conflict detection
+6. Agent pre-generation check with conflict reporting
+7. Intent classification for smarter coordination
 
-## How It Works
+## How Neo Works
 
-### 1. Activity Log
-A shared JSON file (`.devsync/activity-log.json`) records:
-- **Developer ID:** Who is working
-- **File Path:** Which file
-- **Intent:** What they're changing and why
-- **Region:** Specific function/class/lines
-- **Timestamp:** When work started
+### 1. Intent Declaration (Agent → Neo)
+Before generating code, agents declare intent:
+```python
+log_activity(
+    agent_id="claude-opus-1",
+    file_path="src/auth.py",
+    intent="Add OAuth2 support",
+    region="authenticate_user function",  # function/symbol-level
+    intent_category="feature"
+)
+```
 
-### 2. Risk Classification
-Given two developers on the same file:
-- **LOW:** Non-overlapping regions, no signature changes → silent
-- **MEDIUM:** Overlapping region or signature changes → non-blocking warning
-- **HIGH:** Overlapping region + signature changes → requires confirmation
+### 2. Conflict Detection (Multi-Layer)
+Neo analyzes the declared intent against active work:
 
-### 3. Pre-Generation Check
-Before generating code:
-1. Read activity log
-2. Find entries for the same file
-3. Classify risk
-4. Respond appropriately (silence/warn/block)
+**Layer 1: Spatial Overlap**
+- File-level: Same file?
+- Region-level: Overlapping line ranges? (current)
 
-Speed: <10ms (local JSON read + in-memory analysis)
+**Layer 2: Semantic Analysis**
+- Function/symbol level: Same functions touched? (planned)
+- Dependency graph: Transitive conflicts? (planned)
+
+**Layer 3: Risk Scoring**
+```
+ConflictScore = 0.30×file_overlap + 0.25×symbol_overlap + 0.20×dependency + ...
+
+Example: 82/100
+Evidence:
+├── same function          +40
+├── same AST nodes         +20
+├── dependency overlap     +15
+├── semantic similarity    +7
+└── configuration change   +0
+```
+
+### 3. Three-Tier Enforcement Gates
+
+**Tier 1: Generation Gate** - Blocks HIGH_RISK generation
+```python
+try:
+    sm.check_generation_allowed(agent_id, file_path, region)
+except ConflictBlockedError:
+    # Agent must make explicit decision: WAIT / COLLABORATE / WRAP_UP
+```
+
+**Tier 2: Mutual Acknowledgment** - Both agents confirm coordination
+```python
+agent_b.acknowledge_wait()  # Confirms checkpoint saved
+agent_a.release_lock()      # Releases after completion
+```
+
+**Tier 3: Auto-Escalation** - 30-minute timeout releases lock
+```python
+sm.force_release_lock(holding_agent, [waiting_agents])  # Prevents deadlock
+```
+
+### 4. Smart Resumption (Checkpoint System)
+When waiting:
+- ✅ Full context preserved
+- ✅ No polling (event-driven wake-up)
+- ✅ Zero token waste during wait
+- ✅ Deterministic resumption point
+
+Speed: **<10ms** per check (local JSON read + in-memory analysis)
 
 ## Project Structure
 
@@ -337,5 +399,6 @@ Built as a demonstration of conflict detection in concurrent development workflo
 
 ---
 
-**Status:** ✅ Complete, all success criteria met  
-**Last Updated:** 2026-09-11
+**Status:** Production-oriented reference implementation (validated architecture, needs scale testing)  
+**Maturity:** ⭐⭐⭐⭐☆ (Strong POC, proven patterns, pending distributed-system hardening)  
+**Last Updated:** 2026-09-12
