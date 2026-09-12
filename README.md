@@ -170,6 +170,27 @@ Each guide includes production-ready code patterns, error handling, and deployme
 
 ---
 
+## 🔐 Three-Tier Enforcement Gates
+
+Neo uses a three-tier enforcement system to make HIGH_RISK conflicts impossible to bypass:
+
+**Tier 1: Generation Gate** — `check_generation_allowed(agent_id, decision=None)`
+- Raises `ConflictBlockedError` if HIGH_RISK conflict exists without explicit decision
+- Forces agent to choose: WAIT, COLLABORATE, or WRAP_UP_REQUEST
+- No generation allowed until decision committed
+
+**Tier 2: Mutual Acknowledgment** — `acknowledge_wait(agent_id)`
+- Confirms agent entered WAITING state with checkpoint preserved
+- Mutual agreement recorded in coordination log
+- Creates audit trail of who decided what, when
+
+**Tier 3: Timeout/Escalation** — `force_release_lock(holding_agent, waiting_agents)`
+- Auto-escalates after 30+ minutes to prevent indefinite locks
+- Fires `lock_removed` event to wake waiting agents
+- Ensures system never deadlocks
+
+---
+
 ## 🏗️ Architecture Overview
 
 ```
@@ -180,12 +201,14 @@ Each guide includes production-ready code patterns, error handling, and deployme
 ┌──────────────────▼──────────────────────────────────┐
 │  Coordination Client Interface (Language-agnostic)  │
 │  • log_intent()  • check_conflicts()                │
-│  • save_checkpoint()  • await_event()               │
-│  • mark_completed()                                 │
+│  • check_generation_allowed()  ← ENFORCEMENT GATE   │
+│  • acknowledge_wait()  ← TIER 2 ENFORCEMENT         │
+│  • await_event()  • mark_completed()                │
 └──────────────────┬──────────────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────────────┐
 │  CoordinationStateMachine (Core Logic)              │
+│  • Three-tier enforcement gates                    │
 │  • State transitions (ACTIVE → LOCKED → WAITING)   │
 │  • Risk scoring (0-100)  • Conflict detection      │
 │  • Event dispatch                                  │
@@ -387,9 +410,11 @@ See framework-specific guides in `docs/ENTERPRISE_SCALING_*.md` for complete int
 
 | Feature | Benefit |
 |---------|---------|
+| **Three-Tier Enforcement Gates** | Prevents generation on HIGH_RISK conflicts (ConflictBlockedError, mutual acknowledgment, timeout/escalation) |
 | **Event-Driven State Machine** | Clean transitions, no race conditions |
 | **Checkpoint System** | Resume from exact point, no regeneration |
 | **No Polling, No Wasted Tokens** | Agents sleep on events, wake instantly |
+| **Line/Function-Level Detection** | Safe parallel work on same files (not just file-level) |
 | **Multi-Framework Support** | Claude, OpenAI, Devin, GitHub Copilot |
 | **Multiple Deployment Options** | Git-backed (simple) → Cloud (scalable) → Hybrid (resilient) |
 | **Production-Ready Code** | Type hints, docstrings, comprehensive docs |
