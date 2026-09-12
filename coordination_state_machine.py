@@ -36,6 +36,11 @@ class DecisionOption(Enum):
     WRAP_UP_REQUEST = "wrap_up_request"  # Request Developer A to finish soon
 
 
+class ConflictBlockedError(Exception):
+    """Raised when generation is blocked by a high-risk conflict"""
+    pass
+
+
 @dataclass
 class GenerationCheckpoint:
     """Saved state for a paused Claude generation"""
@@ -251,6 +256,36 @@ class CoordinationStateMachine:
 
         return min(score, 100)
 
+    def check_generation_allowed(
+        self,
+        agent_id: str,
+        file_path: str,
+        region: str,
+        decision: Optional[DecisionOption] = None
+    ) -> bool:
+        """
+        Enforce generation gate: check if generation is allowed.
+
+        Raises:
+            ConflictBlockedError if HIGH_RISK conflict exists without decision
+
+        Returns:
+            True if generation is allowed
+        """
+        conflict_check = self.check_conflicts(agent_id, file_path, region)
+
+        if conflict_check['state'] == CoordinationState.LOCKED:
+            if decision is None:
+                raise ConflictBlockedError(
+                    f"HIGH_RISK conflict detected with {conflict_check['conflicting_agents']}. "
+                    f"Choose WAIT/COLLABORATE/WRAP_UP_REQUEST. "
+                    f"Risk score: {conflict_check['risk_score']}/100"
+                )
+            # Decision made, allow generation but log the decision
+            self.handle_decision(agent_id, decision)
+
+        return True
+
     def handle_decision(
         self,
         agent_id: str,
@@ -264,6 +299,23 @@ class CoordinationStateMachine:
             self._enter_collaboration_state(agent_id)
         elif decision == DecisionOption.WRAP_UP_REQUEST:
             self._request_wrap_up(agent_id)
+
+    def acknowledge_wait(self, agent_id: str) -> bool:
+        """
+        Tier 2: Mutual acknowledgment that agent has entered WAITING state.
+
+        Returns:
+            True if acknowledgment confirmed
+        """
+        waiting_entry = next(
+            (e for e in self.entries
+             if e.agent_id == agent_id and e.state == CoordinationState.WAITING),
+            None
+        )
+        if waiting_entry:
+            print(f"✓ {agent_id} acknowledged in WAITING state with checkpoint saved")
+            return True
+        return False
 
     def _enter_waiting_state(
         self,
@@ -305,6 +357,48 @@ class CoordinationStateMachine:
     def _request_wrap_up(self, agent_id: str):
         """Request Developer A to wrap up"""
         print(f"✓ {agent_id} requesting wrap-up from active developers")
+
+    def force_release_lock(self, holding_agent: str, waiting_agents: List[str]) -> bool:
+        """
+        Tier 3: Timeout/Escalation enforcement.
+        Force release lock after timeout (e.g., 30+ minutes).
+
+        Args:
+            holding_agent: Agent ID that has been holding the lock
+            waiting_agents: List of agent IDs waiting for release
+
+        Returns:
+            True if lock was successfully released
+        """
+        active_entry = next(
+            (e for e in self.entries
+             if e.agent_id == holding_agent and e.state == CoordinationState.ACTIVE),
+            None
+        )
+
+        if not active_entry:
+            return False
+
+        # Check if timeout has elapsed
+        now = datetime.now()
+        elapsed = (now - datetime.fromisoformat(active_entry.timestamp)).total_seconds()
+        timeout_seconds = 1800  # 30 minutes
+
+        if elapsed > timeout_seconds:
+            active_entry.state = CoordinationState.LOCK_REMOVED
+            self._save_log()
+            print(f"⏰ TIMEOUT: {holding_agent} lock forced released after {elapsed/60:.0f} minutes")
+            print(f"   Escalation notification sent to: {waiting_agents}")
+
+            # Fire lock_removed event to wake waiting agents
+            self._fire_event("lock_removed", {
+                "agent": holding_agent,
+                "escalated": True,
+                "waiting_agents": waiting_agents
+            })
+            return True
+
+        return False
 
     def mark_completed(self, agent_id: str):
         """Developer A marks work complete"""
