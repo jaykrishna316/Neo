@@ -1,6 +1,14 @@
-# Preventing Merge Conflicts Before They're Written: Building Automatic Agent Coordination
+# What If Code Conflicts Were Simply Impossible?
 
-*A side project exploring how developers and AI agents can coordinate without chaos*
+*Preventing merge conflicts by making code generation itself contingent on coordination*
+
+---
+
+**Thesis:** Parallel development. Zero conflicts. Zero choice to bypass coordination.
+
+**The Analogy:** Air traffic control doesn't just detect collisions—it prevents them. Planes don't take off without clearance. Neo works the same way: agents don't generate code without clearance either.
+
+---
 
 ## The 3 AM Realization
 
@@ -8,17 +16,25 @@ It was midnight. I had Claude Agent refactoring authentication, Devin fixing pay
 
 Then I pulled everyone's changes. The merge was a nightmare. Claude had rewritten function signatures Devin was calling. I'd modified a database schema Claude assumed was immutable. Nobody *knew* what anyone else was doing until git told us it was too late.
 
-I thought: **There has to be a better way than waiting for merge conflicts.**
+**The problem:** We had detection, but no enforcement. We could see conflicts coming, but nothing stopped agents from colliding anyway.
 
-And then it hit me: *What if every agent automatically announced what it was about to do?* Not in Slack or tickets—directly in a shared log that every agent could check before generating code. Claude could say "I'm about to refactor authentication (lines 20-40)." Devin could check that log before touching payment logic and know "Hey, I depend on auth, I should wait." The human developer's IDE could log work too.
+I thought: **There has to be a way to make conflicts structurally impossible.**
+
+And then it hit me: *What if agents couldn't generate code until they proved they'd coordinated?*
+
+That's air traffic control. Planes don't take off without explicit clearance. Not because they might collide—because the runway won't let them take off without it.
+
+*What if code generation worked the same way?*
+
+Not "here's a warning, proceed at your own risk." More like: **"Code generation blocked. Choose: WAIT / COLLABORATE / REQUEST WRAP-UP. Pick one and confirm."**
 
 That was the insight that changed everything.
 
 ---
 
-## The Architecture: A State Machine, Not Just a Log
+## The Architecture: Detection + Enforcement
 
-The shared activity log is the foundation. But on top of it is a **state machine** that orchestrates everything.
+The shared activity log is the foundation. But the real power is the **three-tier enforcement system** that makes bypassing coordination impossible.
 
 ```json
 {
@@ -27,344 +43,494 @@ The shared activity log is the foundation. But on top of it is a **state machine
   "intent": "refactor login_user",
   "region": "lines 20-40",
   "state": "ACTIVE",
-  "timestamp": "2026-09-11T15:30:00Z",
-  "expires_at": "2026-09-11T16:00:00Z"
+  "decision": null,
+  "timestamp": "2026-09-11T15:30:00Z"
 }
 ```
 
-That `state` field is the key. It tracks **where in the coordination lifecycle** this work is:
+Here's the enforcement chain:
 
-- **ACTIVE** — Agent is generating code right now
-- **LOCKED** — High risk conflict detected. Awaiting decision from other agent.
-- **WAITING** — Agent chose to pause. Checkpoint saved. Sleeping until event.
-- **COLLABORATE** — Agents reached out to work together
-- **COMPLETED** — Agent finished. Work is done.
-- **LOCK_REMOVED** (event) — Fires when it's safe to wake up
-- **RESUMED** — Agent woke up and is continuing
+**Tier 1: Generation Gate** — Code generation blocked if HIGH_RISK + no decision
+**Tier 2: Mutual Acknowledgment** — Blocking agent must confirm they're aware of waiting agent
+**Tier 3: Timeout/Escalation** — If coordination drags on, automatic release fires (prevents infinite blocking)
 
-This isn't just a log—it's a **distributed state machine** for multi-agent coordination.
+This isn't just "be careful." This is: **you cannot generate code without coordination.**
 
 ---
 
 ## Why This Changes Everything
 
-### Before: The Git Way
+### Before: The Detection Way (Still Broken)
 ```
 15:30:00 Claude Agent starts generating auth refactor
-15:30:15 Devin agent independently starts working on payment logic
-15:30:20 Human developer starts updating models (connected via IDE)
-15:45:00 Claude pushes changes (rewrites auth function signatures)
-15:50:00 Devin pushes (breaks because auth signatures changed!)
-15:55:00 Human developer pushes (conflicts in models!)
-16:00:00 Merge nightmare begins
+15:30:05 Devin checks before generating → sees Claude in auth
+15:30:06 System warns: "HIGH RISK - overlapping lines"
+15:30:07 Devin: "I'll ignore that and proceed anyway" ← DISASTER
+15:30:15 Devin generates code (ignoring the warning)
+...
+16:00:00 Merge conflict anyway
 ```
 
-### After: The State Machine Way
+### After: The Enforcement Way (Impossible to Bypass)
 ```
-15:30:00 Claude logs: state=ACTIVE, intent="refactor auth"
-15:30:05 Devin checks before generating → sees Claude in auth (state=ACTIVE)
-15:30:06 System detects HIGH RISK (80/100) → Devin gets options
-15:30:07 Devin chooses: WAIT (saves checkpoint, enters WAITING state)
-15:30:08 Devin's Claude: saves context → sleeps → subscribes to event
-        (no polling, no token waste, just sleeping)
+15:30:00 Claude logs: state=ACTIVE (lines 40-80)
+15:30:05 Devin tries to generate code on lines 50-70
+15:30:06 Neo detection: "HIGH_RISK overlap detected"
+15:30:07 Generation gate BLOCKS: "ConflictBlockedError: Choose WAIT/COLLABORATE/WRAP_UP_REQUEST"
+         Devin CANNOT proceed without decision
 
-15:45:00 Claude finishes → logs state=COMPLETED
-15:45:01 System fires: lock_removed event
-15:45:02 Devin's Claude: WAKES UP automatically (event-driven!)
-15:45:03 Devin resumes from EXACT CHECKPOINT
-        (context preserved, no lost work, just continues)
+15:30:08 Devin chooses: WAIT
+         System requires Claude to acknowledge (mutual handshake)
+15:30:09 Claude acknowledges: "Yes, I know Devin is waiting"
+         Enforcement check passes
 
-15:50:00 Devin finishes, logs state=COMPLETED
-16:00:00 Everything merged cleanly. Zero conflicts. No wasted tokens.
+15:30:10 Devin enters WAITING state, saves checkpoint, sleeps
+         (Subscribed to lock_removed event, no polling)
+
+15:45:00 Claude finishes, logs state=COMPLETED
+15:45:01 lock_removed event fires
+15:45:02 Devin wakes up with full context preserved
+
+16:00:00 Everything merged. Zero conflicts. No way to have bypassed it.
 ```
 
-**The conflict was prevented before code was generated. Agents never blocked each other. Everything was automatic.**
+**The conflict is structurally impossible. Code generation itself enforces coordination.**
 
 ---
 
-## How It Works: The State Machine + Event System
+## The Three-Tier Enforcement System
 
-This is where it gets elegant. Instead of just detecting conflicts and blocking, the system uses **state transitions** + **event-driven wake-ups**.
+### Tier 1: Generation Gate (Blocks at Source)
 
-### States
-
-**Developer A (Actively Working)**
-- `ACTIVE`: Agent is generating code. Intent logged with this state.
-- `COMPLETED`: Agent finished. Work is done. Logs completion.
-
-**Developer B (When Encountering HIGH Risk)**
-- `LOCKED`: System detects conflict. Developer B gets decision options.
-- `WAITING`: Developer B chose to wait. Saves checkpoint, enters sleep.
-- `COLLABORATE`: Developer B reached out. Both devs notified to sync.
-- `RESUMED`: Lock removed event fired. Developer B wakes up.
-
-### The Checkpoint System
-
-When Developer B chooses to WAIT, the system saves:
 ```python
-checkpoint = {
-    "agent_id": "devin-agent",
-    "intent": "add validation to login_user",
-    "region": "lines 25-50",
-    "tokens_generated": 150,
-    "context_buffer": "Devin's full prompt/context so far",
-    "timestamp": "2026-09-11T15:30:15Z"
-}
+try:
+    agent.generate_code(
+        file="src/auth.py",
+        region="lines 50-75"
+    )
+except ConflictBlockedError as e:
+    # "HIGH_RISK conflict (82/100) detected with agents: ['claude-auth']"
+    # "Code generation blocked. Choose: WAIT / COLLABORATE / REQUEST WRAP-UP"
+    # Agent MUST pick one. No proceed-anyway option.
 ```
 
-This is crucial: when Developer B's Claude wakes up, it has **full context**. No lost work. No lost intent. Just resume.
+When a HIGH_RISK conflict is detected:
+- Code generation is **physically blocked**
+- Agent must make explicit decision
+- No "warning" mode, no bypass
+- System waits for decision before allowing generation
 
-### The Event System
+This is the critical difference from detection-only systems. **You cannot accidentally (or intentionally) bypass coordination.**
 
-No polling. No "wait 20 minutes and hope."
+### Tier 2: Mutual Acknowledgment (Handshake Protocol)
 
-Instead:
-1. Developer B subscribes to `lock_removed` event
-2. Developer B's Claude enters sleep (no token waste)
-3. When Developer A finishes → system fires `lock_removed` event
-4. Developer B's Claude wakes **immediately** and resumes
+When an agent chooses WAIT, coordination requires confirmation:
 
-This is async/await for distributed agents.
+```python
+# Agent B (waiting) logs decision
+agent_b.decide(DecisionOption.WAIT, checkpoint=context)
 
-### Decision Options When Locked
+# System requires Agent A (blocking) to acknowledge
+# Agent A doesn't get a "someone wants you to hurry" note
+# Agent A gets: "Agent B is blocked and waiting for you"
+agent_a.acknowledge_wait(
+    waiting_agent="agent-b",
+    reason="High-risk conflict on auth.py"
+)
 
-When Developer B hits a HIGH RISK lock, it gets three choices:
+# Only AFTER mutual acknowledgment does enforcement check pass
+check = coordination.check_generation_allowed(decision=WAIT)
+# ✓ Now safe to proceed (both sides aware)
+```
 
-1. **COLLABORATE**: "Developer A is here. Want to sync up and work together?"
-   - Both devs notified. Can pair program, divide work, or coordinate.
+Why mutual acknowledgment matters:
+- **WAIT:** Blocking agent must know someone is waiting (not silent failure)
+- **COLLABORATE:** Both agents explicitly confirm they'll coordinate together
+- **WRAP_UP_REQUEST:** Request is logged and acknowledged (not ignored)
 
-2. **WAIT**: "I'll pause and resume when you're done."
-   - Saves checkpoint, sleeps, wakes automatically on event.
+Without this, you get silent failures: Agent B thinks it's waiting, but Agent A never saw the notification.
 
-3. **WRAP_UP_REQUEST**: "Can you finish soon? I have parallel work."
-   - Developer A sees someone is waiting. May expedite.
+### Tier 3: Timeout & Escalation (Prevents Infinite Blocking)
+
+But what if Agent A takes forever? What if it crashes? What if coordination breaks down?
+
+Neo doesn't let that happen:
+
+```python
+status = coordination.check_wait_timeout(
+    waiting_agent="agent-b",
+    blocking_agent="agent-a",
+    escalate_after_minutes=30
+)
+
+if status['status'] == 'timeout':
+    # After 30 minutes of waiting, escalate
+    coordination.force_release_lock("agent-a", ["agent-b"])
+    # Agent B wakes up with reason: "timeout_exceeded"
+    # No more infinite blocking
+```
+
+The escalation ensures:
+- Teams can set SLAs (30 min, 1 hour, whatever)
+- Timeouts are automatic (no manual intervention)
+- Waiting agents wake up even if coordination fails
+- Last-resort fallback, not the normal path
 
 ---
 
-## The 5-Stage Detection Pipeline
+## The Line/Function-Level Detection (Enabling Precise Blocking)
 
-Once you have the activity log + state machine, you can build higher-level capabilities:
+You can't block intelligently if you don't detect conflicts precisely. That's why we layer detection on top of enforcement:
 
-### Stage 1: Real-Time Detection
+### Stage 1: Real-Time Line/Function Detection
 
-The moment a new intent is logged, the system asks: **"Does this overlap with anything active?"**
+The moment an agent logs intent, check for actual line overlap (not just file overlap):
 
-```python
-def detect_overlaps(new_entry):
-    overlaps = []
-    for existing in activity_log:
-        if existing["file"] == new_entry["file"]:
-            if regions_overlap(existing["region"], new_entry["region"]):
-                overlaps.append(existing)
-    return overlaps
+```
+Agent A: auth.py "login_user (lines 40-80)"
+Agent B: auth.py "validate_credentials (lines 50-70)"
+Result: HIGH_RISK overlap detected → Generation gate blocks
+
+vs.
+
+Agent A: auth.py "login_user (lines 40-80)"
+Agent C: auth.py "add_types (lines 200-250)"
+Result: CAUTION (same file, different functions) → Proceeds safely with advisory
 ```
 
-This runs in milliseconds. Alice logs. Claude checks. Instant answer.
+### Stage 2: Risk Scoring (0-100)
 
-**Why this is better than git:** Git only knows about committed code. The activity log knows about intent *before* any code is written.
+When there's actual line/function overlap:
+- **0-25:** CAUTION (safe parallel work possible)
+- **26-70:** MEDIUM (watch for issues)
+- **70-100:** HIGH_RISK (enforcement gates trigger)
 
-### Stage 2: Smart Scoring
-
-Not all overlaps are equal. Alice refactoring authentication while Claude adds type hints is one thing. But if Bob is *renaming* the function Alice is refactoring? That's a blocker.
-
-The system scores conflicts 0-100:
-
-```python
-score = (
-    conflict_count * 30 +           # How many are conflicting?
-    conflict_type_severity * 25 +   # Are they renaming? Deleting?
-    git_confidence * 15 +            # Is this a real overlap?
-    code_overlap * 15 +              # How much overlaps?
-    time_pressure * 10 +             # How long has it been active?
-    velocity_impact * 5              # Are fast devs blocked?
-) / 100
-```
-
-Result: A 0-100 score that says **exactly how bad** the conflict is. Not just "HIGH" or "MEDIUM."
+Scoring factors:
+- Line overlap severity (30 pts) — Touching same lines?
+- Conflict count (20 pts) — How many agents?
+- Intent severity (20 pts) — Refactoring > modification?
+- Time pressure (20 pts) — How long active?
+- Velocity impact (10 pts) — Fast devs blocked?
 
 ### Stage 3: Resolution Strategies
 
-Once we know there's a conflict, the system recommends how to resolve it:
+Once blocked, the system recommends paths:
+- **Sequential:** Alice finishes (15m), then Claude (10m) → 25m total, SAFE
+- **Parallel:** Non-overlapping work first (5m), then coordinate overlap → 20m, MEDIUM risk
+- **Collaborate:** Split the work between agents → 15m, requires real coordination
+- **Wait:** Simple: pause and resume when cleared → LOW risk, but blocked time
 
-**Sequential:** "Alice finishes (15m), then Claude (10m), then Bob" → 35m total, LOW risk
-**Parallel:** "All three go at once, coordinate merges" → 15m total, HIGH risk
-**Cherry-Pick:** "Bob's non-overlapping work first (5m), then coordinate the overlap" → 20m total, MEDIUM risk
-**Manual:** "This needs human judgment" → 45m total, LOW risk
-
-Each strategy comes with effort/time/risk estimates.
-
-### Stage 4: Pattern Learning
-
-Here's where it gets interesting. I track how long each developer actually takes:
-
-```python
-alice_patterns = {
-    "refactoring": {
-        "median": 900,           # 15 minutes
-        "stdev": 150,            # consistent
-        "samples": 45
-    },
-    "feature_work": {
-        "median": 1200,          # 20 minutes
-        "stdev": 300,            # less consistent
-        "samples": 32
-    }
-}
-```
-
-When Alice logs "refactor auth.py," the system knows: **She'll probably finish in 15-17 minutes.** Not a guess. Based on her actual history.
-
-Claude can wait 20 minutes (confidence interval) instead of "I dunno, 5 minutes?" or "I'll wait forever."
-
-### Stage 5: Expertise Matching
-
-The system learns who's best at what:
-
-```python
-alice_profile = {
-    "speed": 85,              # Fast median completion
-    "consistency": 90,        # Predictable
-    "expertise_level": "specialist",
-    "skills": ["auth", "payment", "api"],
-    "confidence": 95          # Based on 50+ completed tasks
-}
-
-claude_profile = {
-    "speed": 88,
-    "consistency": 92,
-    "expertise_level": "expert",
-    "skills": ["types", "refactoring", "tests"],
-    "confidence": 95
-}
-```
-
-When recommending who should handle the next change: **Match it to the right person.** Alice for auth? Claude for refactoring? Devin for infrastructure?
+Each with estimated time and effort cost.
 
 ---
 
-## The Real Value: Prevention, Not Cure
+## The Real Value: Enforcement, Not Detection
 
-Here's the thing that excites me most:
+Here's what excites me most:
 
-**Most conflict resolution tools are firefighting:** Git detects the conflict after it happens. Then you spend 2 hours fixing it.
+**Detection systems say:** "Here's a warning. Good luck."
 
-**This is preventive:** The conflict never happens. Code is never written that breaks other code. Because coordination happened *before* anyone typed anything.
+**Enforcement systems say:** "Code generation is blocked until you coordinate."
 
 Think about the implications:
-- ✅ Agents never block each other (except when they absolutely must)
-- ✅ Humans never deal with merge nightmares
-- ✅ Teams can run N agents + N developers in parallel **safely**
-- ✅ Everything happens in real-time (no "wait for CI," no "hope this works")
+- ❌ **Can't bypass conflicts** — Generation itself is blocked
+- ❌ **Can't ignore warnings** — No proceed-anyway option exists
+- ❌ **Can't have silent failures** — Mutual acknowledgment required
+- ❌ **Can't block forever** — Automatic timeout + escalation
 
-The activity log is the linchpin. It's the single source of truth that makes everything else possible.
+The difference:
+- Detection = "I see the problem"
+- Enforcement = "I've made the problem impossible"
+
+---
+
+## Real Scenario: Three Agents, Cascading Coordination (All Automatic)
+
+**15:30** Claude Agent logs: "Refactor payment.py (process_payment, lines 20-60)"
+
+**15:32** Devin Agent tries to generate code
+- Detects: HIGH_RISK overlap on payment.py (lines 40-50)
+- Generation gate BLOCKS
+- Devin chooses: WAIT
+
+**15:33** Claude acknowledges Devin is waiting
+- Mutual handshake complete
+- Enforcement check passes for Devin
+
+**15:35** Human developer (via IDE) tries to work
+- Detects: HIGH_RISK (depends on both Claude + Devin)
+- Generation gate BLOCKS
+- Human chooses: WAIT (cascade continues)
+
+**15:50** Claude finishes
+- Fires lock_removed event
+- Devin wakes up, resumes from checkpoint
+
+**16:00** Devin finishes
+- Fires lock_removed event
+- Human developer wakes up, proceeds
+
+**16:15** All done. Zero conflicts. Perfect merge. Everything coordinated automatically.
+
+**Result:** Three agents worked in sequence, not because they were forced, but because coordination was structurally enforced.
 
 ---
 
 ## What Surprised Me
 
-### Surprise 1: Simplicity Works
-I expected I'd need a database, a backend API, complex state management. Instead? A JSON file on disk works great. Append-only. Easy to reason about. Easy to sync.
+### Surprise 1: Enforcement Changes Everything
+I expected detection alone would be enough. It wasn't. Agents needed the *inability* to bypass, not just the *ability* to see warnings.
 
-### Surprise 2: Pattern Learning is Powerful
-I thought "developer patterns" would be a nice-to-have. Turns out it's essential. When you know Alice finishes authentication in 15±2 minutes, waiting 20 minutes isn't a guess—it's data-driven.
+### Surprise 2: Mutual Acknowledgment Prevents Silent Failures
+When Agent A doesn't know Agent B is waiting, Agent B times out silently. The handshake prevents this entirely.
 
-### Surprise 3: Git Analysis Eliminates False Positives
-I was skeptical about parsing function signatures. But being able to say "Alice is refactoring login_user at lines 20-40" and Claude is adding type hints at lines 25-35, so there's a **real function-level overlap"** vs "they're in the same file so maybe?" reduces false positives by 60%.
+### Surprise 3: Timeouts Are Safety, Not Cruelty
+I worried timeouts would be too harsh. Turns out they're essential: without escalation, a crashed agent blocks everyone forever.
 
-### Surprise 4: Agents Get It
-I thought coordinating AI agents would be hard. Turns out they understand "wait until this person is done" immediately. No complex negotiation. No game theory. Just: "Is anyone else here? → Yes → Wait or coordinate."
-
----
-
-## Real Scenario: Cascading Conflicts (All Automatic)
-
-This is where the activity log + prediction shines:
-
-**15:30** Claude Agent announces (auto-logs): "Refactor payment.py (process_payment, lines 20-60)"
-**15:30** System learns: Claude will finish in ~18 minutes (pattern: 900s median on refactors)
-
-**15:32** Devin Agent checks before generating, sees Claude in payment
-**15:32** Devin knows: "My payment flow changes depend on Claude's refactor"
-**15:32** Devin decides: "I'll wait 20 minutes, then proceed"
-
-**15:35** Human developer (via IDE) starts: "Add audit logging to payment processing"
-**15:35** System logs this automatically via their agent ID
-**15:35** System detects: Human dev depends on Claude's refactor AND Devin's auth updates
-**15:35** Recommendation: "Claude first → Devin second → You last"
-
-**16:15** All done. Zero conflicts. Perfect merge. Everything coordinated automatically before any code was written.
+### Surprise 4: Line/Function Detection Matters Only With Enforcement
+Precise detection means nothing if agents can ignore it. But with enforcement, it becomes: "Let's not block when we don't have to."
 
 ---
 
-## The Implementation
+## The Implementation (No Decision = No Code Generation)
 
-Here's how agents integrate this. It's automatic:
+Here's how it works from an agent's perspective:
 
 ```python
-# 1. Agent (Claude, Devin, etc.) logs intent BEFORE generating code
-activity_log.append({
-    "agent": "claude-agent",
-    "file": "src/auth.py",
-    "intent": "refactor login_user",
-    "region": "login_user (lines 20-40)",
-    "timestamp": datetime.now().isoformat(),
-    "expires_at": (datetime.now() + timedelta(minutes=30)).isoformat()
-})
-
-# 2. Other agents check the log before generating their code
-conflicts = detector.check(
+# 1. Agent tries to generate code
+agent.generate_code(
     file="src/auth.py",
-    region="lines 15-50",
-    agent="devin-agent"  # Devin checks if it should wait
+    region="login_user (lines 20-40)"
 )
 
-if conflicts:
-    print(f"Risk: {conflicts['score']}/100")
-    print(f"Wait: {conflicts['recommended_wait']}s")
-    print(f"Strategy: {conflicts['strategy']}")
-    # Devin waits. Or coordinates.
-    
-# 3. Agent logs completion when done
-activity_log.mark_complete("claude-agent")
-# Now Devin can proceed
+# 2. Internally, framework checks for conflicts
+# 3. If HIGH_RISK found and no decision made → ConflictBlockedError
+# 4. Agent MUST choose:
+
+decision = agent.resolve_conflict([
+    DecisionOption.WAIT,              # Pause with checkpoint
+    DecisionOption.COLLABORATE,        # Coordinate in real-time
+    DecisionOption.WRAP_UP_REQUEST    # Request agent finish sooner
+])
+
+# 5. Blocking agent acknowledges the decision
+coordination.acknowledge_wait(blocking_agent, waiting_agent)
+
+# 6. Now check passes, generation proceeds
+check = coordination.check_generation_allowed(decision=decision)
+# ✓ Allowed (decision made + acknowledged)
+
+# 7. Agent generates code
+generated_code = agent.generate()
+
+# 8. On completion
+coordination.mark_completed(agent.id)
+# Fires lock_removed event → wakes all waiting agents
 ```
 
-Human developers? Their IDE/editor logs their work too, using their connected agent ID. Same system. Same log. All participants visible to each other.
+Human developers? IDE plugins log their work too. Same system. Same enforcement.
 
 ---
 
 ## What I Learned Building This
 
-1. **Coordination beats speed.** A slower sequential execution with zero conflicts beats a chaotic parallel with merge nightmares.
+1. **Enforcement beats detection.** A system that makes violations impossible is stronger than one that just warns.
 
-2. **Intent is more valuable than code.** Knowing what someone is *about to do* is more useful than seeing what they *already did.*
+2. **Mutual acknowledgment prevents ghosts.** Silent failures are worse than delays. Handshakes eliminate them.
 
-3. **Simple models work.** Pattern learning with median + stdev is surprisingly effective. No ML needed.
+3. **Timeouts are mercy, not punishment.** Escalation prevents "infinite wait" scenarios that doom coordination.
 
-4. **Real-time beats eventual consistency.** By the time git told me about the conflict, 2 hours of work was already wasted. Activity log prevents that same 2 hours from happening.
+4. **Agents don't mind waiting—they mind uncertainty.** When a wait is bounded (timeout, checkpoint-preserved), agents embrace it.
 
-5. **Agents are eager to coordinate.** I expected adversarial behavior or competition for resources. Instead, agents immediately understood: "If Alice is here, I wait." Done.
-
----
-
-## Conclusion: A Different Approach to Concurrency
-
-The whole premise of modern development is: **Multiple people touching the same codebase is hard.**
-
-It is. But what if we changed the question?
-
-Instead of: *"How do we resolve conflicts after they happen?"*
-
-Ask: *"How do we prevent conflicts before they happen?"*
-
-The shared activity log is the answer. It's so simple, it feels like it should have always existed. And once you have it, everything else—scoring, strategies, expertise matching, pattern learning—becomes just engineering details on top.
-
-This side project started as a way to keep my AI agents from killing each other's code. It turned into something deeper: a new model for how developers (human and AI) can safely work in parallel.
-
-That's the real value.
+5. **Real coordination requires mutual commitment.** One-way detection doesn't work. Both sides must acknowledge their role.
 
 ---
 
-*Have you run into coordination problems with multiple agents? I'd love to hear what you tried and what worked.*
+## Conclusion: From "Don't Collide" to "Can't Collide"
 
-*Code: https://github.com/jaykrishna316/codeNinja (branch: claude/conflict-warning-poc-d04y0r)*
+Modern development's premise: **Multiple people on the same codebase is chaotic.**
+
+It is. But the fix isn't better detection. It's better enforcement.
+
+Instead of: *"How do we detect conflicts better?"*
+
+Ask: *"How do we make conflicts structurally impossible?"*
+
+The answer: Make code generation itself contingent on coordination.
+
+This started as a way to keep my AI agents from stepping on each other. It evolved into something deeper: a new model where developers (human and AI) **can't** work on the same code without coordination.
+
+**The insight that changed everything:** Stop warning about conflicts. Make them impossible.
+
+---
+
+## All Scenarios: Complete Coverage
+
+Neo handles every conflict scenario an agent might encounter:
+
+### Scenario 1: No Conflict (Proceed Freely)
+```
+Agent A: auth.py (lines 40-80)
+Agent B: payment.py (lines 1-50)
+Result: No conflict → Proceed immediately, no coordination needed
+```
+
+### Scenario 2: CAUTION Conflict (Proceed with Advisory)
+```
+Agent A: auth.py (lines 40-80) — refactoring login_user
+Agent B: auth.py (lines 200-250) — adding password_reset
+Result: Same file, different functions → CAUTION (25 risk)
+Action: Agent B proceeds safely with advisory notification
+```
+
+### Scenario 3: HIGH_RISK, Agent Chooses WAIT
+```
+Agent A: auth.py (lines 40-80) — refactoring login_user
+Agent B: auth.py (lines 50-75) — validating credentials
+Result: Overlapping lines → HIGH_RISK (82 risk)
+Agent B decision: WAIT
+Action: Agent B saves checkpoint, sleeps (event-driven wake-up)
+        Agent A finishes → lock_removed fires
+        Agent B wakes, resumes from exact checkpoint
+```
+
+### Scenario 4: HIGH_RISK, Agent Chooses COLLABORATE
+```
+Agent A: auth.py (lines 40-80) — refactoring login_user
+Agent B: auth.py (lines 50-75) — validating credentials
+Result: Overlapping lines → HIGH_RISK (82 risk)
+Agent B decision: COLLABORATE
+Action: Both agents notified for real-time coordination
+        Can pair-program, split work, or divide responsibilities
+        Mutual acknowledgment ensures both sides are aware
+```
+
+### Scenario 5: HIGH_RISK, Agent Chooses WRAP_UP_REQUEST
+```
+Agent A: auth.py (lines 40-80) — refactoring login_user
+Agent B: auth.py (lines 50-75) — validating credentials
+Result: Overlapping lines → HIGH_RISK (82 risk)
+Agent B decision: WRAP_UP_REQUEST
+Action: Agent A receives notification: "Someone is waiting"
+        Agent A may expedite work (choice, not forced)
+        If Agent A continues normally → Agent B still waits
+        Provides visibility without strict blocking
+```
+
+### Scenario 6: TIMEOUT & ESCALATION (Safety Net)
+```
+Agent B waits 30+ minutes for Agent A (timeout threshold)
+Result: Agent A hasn't finished (crashed, stalled, or taking too long)
+Action: System escalates → force_release_lock() fires
+        Agent B wakes up automatically with reason: "timeout_exceeded"
+        Prevents infinite blocking
+        Agents can detect timeout and act (re-attempt, escalate to human, etc.)
+```
+
+### Scenario 7: Cascading Conflicts (3+ Agents)
+```
+15:30 Claude: auth.py (lines 40-80) — refactoring
+15:32 Devin: auth.py (lines 50-70) — validation → BLOCKED (waits for Claude)
+15:35 Alice: auth.py (lines 45-65) — type hints → BLOCKED (waits for both)
+Result: Chain of 3 agents
+Action: All coordinated automatically
+        Claude finishes → Devin wakes
+        Devin finishes → Alice wakes
+        Perfect sequential coordination without manual intervention
+```
+
+---
+
+## Future State: Cloud-Native Coordination (No Git Check-In Needed)
+
+Here's where Neo gets even more powerful:
+
+Today's workflow:
+1. Agents generate code locally
+2. Agents must check code into git (push/commit)
+3. Git handles merge/conflict resolution
+4. CI/CD validates the result
+
+Tomorrow's workflow (Cloud-Native):
+```
+Code files live in cloud (not local checkout)
+All agents read/write directly to cloud storage
+Neo coordinates at generation time (not commit time)
+Results are immediately visible to all agents
+NO need for git check-in → results exist in real-time
+```
+
+**Why this matters:**
+
+When code lives in the cloud and coordination happens PRE-generation:
+- ❌ No need to push/commit between coordinated work
+- ❌ No merge conflicts (coordination prevents them)
+- ❌ No CI delays validating conflicts
+- ❌ No merge resolution overhead
+- ✅ Code appears instantly for next agent to build on
+- ✅ 100% real-time coordination
+- ✅ Perfect consistency (single source of truth)
+
+**Example:**
+
+*Today (Git-based):*
+```
+15:30 Claude generates code → commits → pushed
+15:35 Devin pulls latest → generates code → commits → pushed
+15:40 Alice pulls latest → generates code → commits → pushed
+15:45 CI validates all three → passes
+```
+
+*Tomorrow (Cloud-native):*
+```
+15:30 Claude generates code → written to cloud directly
+15:32 Devin sees Claude's completed work (already in cloud)
+15:35 Devin generates code → written to cloud directly
+15:37 Alice sees both results (already in cloud)
+15:40 Alice generates code → written to cloud directly
+15:42 All done. No commits. No CI needed. Perfect coordination.
+```
+
+Neo's enforcement becomes even cleaner in cloud-native architectures:
+- Coordination happens at generation time (not commit time)
+- Code is immediately available to all agents
+- Git becomes optional (audit log, not coordination mechanism)
+- Real-time visibility replaces eventual consistency
+
+This is the future of multi-agent development.
+
+---
+
+## See It In Action: Real Enforcement, Real Blocks
+
+Theory is one thing. Seeing code generation get **blocked** is another.
+
+```bash
+export ANTHROPIC_API_KEY="sk-..."
+python3 examples/claude_coordination_demo.py
+```
+
+Watch it happen:
+1. Agent A announces: "Refactoring auth.py (lines 40-80)"
+2. Agent B tries to generate on lines 50-75
+3. **Generation BLOCKED** — ConflictBlockedError raised
+4. Agent B chooses: "WAIT" (explicit decision required)
+5. Agent A acknowledges: "Yes, I know you're waiting"
+6. Mutual handshake complete → Enforcement check passes
+7. Agent B saves checkpoint, enters sleep (event-driven, no polling)
+8. Agent A generates code (real Claude API call)
+9. Agent A completes → lock_removed event fires
+10. Agent B wakes automatically, resumes from checkpoint
+11. Agent B generates code (real Claude API call)
+12. **Result: Zero conflicts. Code generation never happened without coordination.**
+
+No theory. No warnings. Just structural impossibility.
+
+That's the proof.
+
+---
+
+*Have coordination problems with multiple agents or developers? I'd love to hear what you've tried.*
+
+*Code: https://github.com/jaykrishna316/Neo (branch: open-source-ready)*
+*Demo: `python3 examples/claude_coordination_demo.py` (requires ANTHROPIC_API_KEY)*
