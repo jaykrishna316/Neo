@@ -75,9 +75,29 @@ No messy merges. No git nightmares. No blocked agents wasting tokens on polls. J
 
 ---
 
+## 🎯 See It In Action (Real API Calls):
+
+```bash
+export ANTHROPIC_API_KEY="sk-..."
+python3 examples/claude_coordination_demo.py
+```
+
+Watch two Claude agents coordinate in real-time with actual LLM calls. No theory—real agents, real API calls, zero merge conflicts.
+
+**What you'll see:**
+- Agent A logs intent + starts work
+- Agent B detects conflict (risk: 82/100 HIGH RISK)
+- Agent B pauses with checkpoint saved
+- Agent A completes → lock removed event fires
+- Agent B wakes up, resumes from exact point
+- Both generate code via Claude SDK
+- Result: Zero conflicts (prevented before generation)
+
+---
+
 **Try it:** https://github.com/yourusername/Neo (main branch: open-source-ready)
 
-Built this for fun while exploring how AI agents could actually work *with* humans, not around them.
+Built this for fun while exploring how AI agents could actually work *with* humans, not around them. The coordination happens automatically. The conflicts never happen.
 
 #AI #SoftwareDevelopment #BuildInPublic #ConflictDetection
 

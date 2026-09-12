@@ -365,6 +365,36 @@ That's the real value.
 
 ---
 
+## See It In Action: Real Agents, Real API Calls
+
+Theory is great. But here's what matters: **it actually works.**
+
+Stop reading. Pull the repo and run this:
+
+```bash
+export ANTHROPIC_API_KEY="sk-..."
+python3 examples/claude_coordination_demo.py
+```
+
+Watch it happen:
+1. Agent A logs: "Refactoring auth.py (lines 40-80)"
+2. Agent B checks: "Is it safe to work here?"
+3. Neo detects: "HIGH RISK - risk score 82/100"
+4. Agent B decides: "I'll wait"
+5. Agent B saves checkpoint, sleeps (no polling, no tokens wasted)
+6. Agent A generates code (real Claude API call)
+7. Agent A completes → event fires
+8. Agent B wakes automatically, loads checkpoint, resumes
+9. Agent B generates code (real Claude API call)
+10. Result: **Zero merge conflicts.** Clean, sequential commits.
+
+No theory. No promises. Just working coordination with two real Claude agents making actual API calls.
+
+That's the proof.
+
+---
+
 *Have you run into coordination problems with multiple agents? I'd love to hear what you tried and what worked.*
 
 *Code: https://github.com/yourusername/Neo (main branch: open-source-ready)*
+*Demo: `python3 examples/claude_coordination_demo.py` (requires ANTHROPIC_API_KEY)*
