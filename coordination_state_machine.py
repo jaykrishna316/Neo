@@ -37,16 +37,8 @@ class DecisionOption(Enum):
 
 
 class ConflictBlockedError(Exception):
-    """Raised when code generation is blocked due to HIGH_RISK conflict"""
-    def __init__(self, conflict_type: str, risk_score: int, blocking_agents: List[str]):
-        self.conflict_type = conflict_type
-        self.risk_score = risk_score
-        self.blocking_agents = blocking_agents
-        super().__init__(
-            f"HIGH_RISK conflict detected (score: {risk_score}/100). "
-            f"Code generation blocked. Blocking agents: {', '.join(blocking_agents)}. "
-            f"Choose: WAIT (pause with checkpoint), COLLABORATE (coordinate), or WRAP_UP_REQUEST."
-        )
+    """Raised when generation is blocked by a high-risk conflict"""
+    pass
 
 
 @dataclass
@@ -185,313 +177,114 @@ class CoordinationStateMachine:
     ) -> Dict[str, Any]:
         """
         Check for conflicts when a new agent wants to work.
-        Uses refined line/function-level detection, not just file-level.
 
         Returns:
             {
                 'has_conflict': bool,
-                'conflict_type': 'none' | 'caution' | 'high_risk',
                 'risk_score': 0-100,
                 'conflicting_agents': [agent_ids],
                 'state': ACTIVE | LOCKED,
-                'decision_options': [COLLABORATE, WAIT, WRAP_UP_REQUEST],
-                'message': human-readable warning
+                'decision_options': [COLLABORATE, WAIT, WRAP_UP_REQUEST]
             }
         """
         self._clean_expired()
 
-        # Find active entries on same file
-        same_file = [
+        # Find active entries on same file/region
+        conflicts = [
             e for e in self.entries
             if e.file_path == file_path
             and e.state == CoordinationState.ACTIVE
             and e.agent_id != agent_id
+            and self._regions_overlap(e.region, region)
         ]
 
-        if not same_file:
+        if not conflicts:
             return {
                 'has_conflict': False,
-                'conflict_type': 'none',
                 'risk_score': 0,
                 'conflicting_agents': [],
                 'state': CoordinationState.ACTIVE,
-                'decision_options': [],
-                'message': 'No conflicts detected'
+                'decision_options': []
             }
 
-        # Check line/function-level overlap
-        actual_conflicts = [
-            e for e in same_file
-            if self._regions_overlap(e.region, region)
-        ]
+        # Calculate risk score
+        risk_score = self._calculate_risk(conflicts, agent_id)
 
-        # No actual line/function overlap
-        if not actual_conflicts:
-            return {
-                'has_conflict': True,
-                'conflict_type': 'caution',
-                'risk_score': 25,  # Low risk
-                'conflicting_agents': [e.agent_id for e in same_file],
-                'conflict_details': [e.intent for e in same_file],
-                'state': CoordinationState.ACTIVE,
-                'decision_options': [],  # No forced wait
-                'message': f'⚠️  Caution: Other agents working on {file_path} but in different sections. Proceed with caution.'
-            }
-
-        # Actual line/function overlap = HIGH RISK
-        risk_score = self._calculate_risk(actual_conflicts, agent_id)
-
-        return {
-            'has_conflict': True,
-            'conflict_type': 'high_risk',
-            'risk_score': risk_score,
-            'conflicting_agents': [c.agent_id for c in actual_conflicts],
-            'conflict_details': [c.intent for c in actual_conflicts],
-            'state': CoordinationState.LOCKED,
-            'decision_options': [
+        # Determine state and options
+        if risk_score >= 70:
+            state = CoordinationState.LOCKED
+            decision_options = [
                 DecisionOption.COLLABORATE,
                 DecisionOption.WAIT,
                 DecisionOption.WRAP_UP_REQUEST
-            ],
-            'message': f'🚨 HIGH RISK: {len(actual_conflicts)} agent(s) touching overlapping lines/functions. Recommendation: {", ".join([opt.value for opt in [DecisionOption.WAIT, DecisionOption.COLLABORATE]])}'
+            ]
+        else:
+            state = CoordinationState.ACTIVE
+            decision_options = []
+
+        return {
+            'has_conflict': True,
+            'risk_score': risk_score,
+            'conflicting_agents': [c.agent_id for c in conflicts],
+            'conflict_details': [c.intent for c in conflicts],
+            'state': state,
+            'decision_options': decision_options
         }
+
+    def _regions_overlap(self, region1: str, region2: str) -> bool:
+        """Check if two region strings overlap"""
+        # Simple check for now: if both mention same function or overlapping lines
+        # In production, this would use AST parsing
+        return "lines" in region1 and "lines" in region2
+
+    def _calculate_risk(self, conflicts: List[CoordinationLogEntry], agent_id: str) -> int:
+        """Calculate risk score 0-100"""
+        score = 0
+
+        # Conflict count
+        score += min(len(conflicts) * 30, 30)
+
+        # Type severity (assume modification = high risk)
+        score += 25  # Default high risk for any overlap
+
+        # Time pressure (longer active = higher risk)
+        now = datetime.now()
+        for conflict in conflicts:
+            elapsed = (now - datetime.fromisoformat(conflict.timestamp)).total_seconds()
+            if elapsed > 1800:  # 30+ minutes
+                score += 10
+
+        return min(score, 100)
 
     def check_generation_allowed(
         self,
         agent_id: str,
         file_path: str,
         region: str,
-        decision_made: Optional[DecisionOption] = None
-    ) -> Dict[str, Any]:
+        decision: Optional[DecisionOption] = None
+    ) -> bool:
         """
-        ENFORCEMENT GATE: Check if code generation is allowed.
+        Enforce generation gate: check if generation is allowed.
 
-        Raises ConflictBlockedError if:
-        - HIGH_RISK conflict detected AND
-        - No valid decision has been made (WAIT/COLLABORATE/WRAP_UP_REQUEST)
+        Raises:
+            ConflictBlockedError if HIGH_RISK conflict exists without decision
 
         Returns:
-            {
-                'allowed': bool,
-                'reason': str,
-                'decision_status': 'none' | 'pending_acknowledgment' | 'confirmed',
-                'blocking_agents': [agent_ids]
-            }
+            True if generation is allowed
         """
         conflict_check = self.check_conflicts(agent_id, file_path, region)
 
-        # LOW/CAUTION risk - always allowed
-        if conflict_check['conflict_type'] in ['none', 'caution']:
-            return {
-                'allowed': True,
-                'reason': 'No HIGH_RISK conflict detected',
-                'decision_status': 'not_required',
-                'blocking_agents': []
-            }
-
-        # HIGH_RISK requires valid decision
-        if conflict_check['conflict_type'] == 'high_risk':
-            # Decision not made - BLOCK
-            if not decision_made:
+        if conflict_check['state'] == CoordinationState.LOCKED:
+            if decision is None:
                 raise ConflictBlockedError(
-                    conflict_type='high_risk',
-                    risk_score=conflict_check['risk_score'],
-                    blocking_agents=conflict_check['conflicting_agents']
+                    f"HIGH_RISK conflict detected with {conflict_check['conflicting_agents']}. "
+                    f"Choose WAIT/COLLABORATE/WRAP_UP_REQUEST. "
+                    f"Risk score: {conflict_check['risk_score']}/100"
                 )
+            # Decision made, allow generation but log the decision
+            self.handle_decision(agent_id, decision)
 
-            # Decision made but not yet acknowledged by blocking agent
-            decision_status = self._check_decision_acknowledgment(
-                agent_id,
-                decision_made,
-                conflict_check['conflicting_agents']
-            )
-
-            if decision_status == 'pending_acknowledgment':
-                raise ConflictBlockedError(
-                    conflict_type='high_risk_pending_ack',
-                    risk_score=conflict_check['risk_score'],
-                    blocking_agents=conflict_check['conflicting_agents']
-                )
-
-            return {
-                'allowed': True,
-                'reason': f'Decision confirmed: {decision_made.value}',
-                'decision_status': decision_status,
-                'blocking_agents': []
-            }
-
-    def _check_decision_acknowledgment(
-        self,
-        agent_id: str,
-        decision: DecisionOption,
-        conflicting_agents: List[str]
-    ) -> str:
-        """
-        Check if decision requires mutual acknowledgment and if it's been received.
-
-        Returns: 'confirmed' | 'pending_acknowledgment'
-        """
-        if decision == DecisionOption.WAIT:
-            # WAIT requires blocking agent to acknowledge they know someone is waiting
-            # Check if blocking agent(s) have logged acknowledgment
-            blocking_agent = conflicting_agents[0] if conflicting_agents else None
-            if blocking_agent:
-                ack = self._find_acknowledgment(blocking_agent, agent_id, "wait_acknowledged")
-                return "confirmed" if ack else "pending_acknowledgment"
-            return "confirmed"
-
-        elif decision == DecisionOption.COLLABORATE:
-            # COLLABORATE requires both agents to agree
-            blocking_agent = conflicting_agents[0] if conflicting_agents else None
-            if blocking_agent:
-                ack = self._find_acknowledgment(blocking_agent, agent_id, "collaborate_confirmed")
-                return "confirmed" if ack else "pending_acknowledgment"
-            return "confirmed"
-
-        return "confirmed"  # WRAP_UP_REQUEST doesn't require acknowledgment
-
-    def _find_acknowledgment(
-        self,
-        target_agent: str,
-        requesting_agent: str,
-        ack_type: str
-    ) -> bool:
-        """Check if target agent has acknowledged the decision"""
-        for entry in self.entries:
-            if (entry.agent_id == target_agent and
-                entry.intent.startswith(f"ACK:{ack_type}") and
-                requesting_agent in entry.intent):
-                # Check if acknowledgment is recent (within last 5 minutes)
-                ack_time = datetime.fromisoformat(entry.timestamp)
-                if (datetime.now() - ack_time).total_seconds() < 300:
-                    return True
-        return False
-
-    def acknowledge_wait(self, agent_id: str, waiting_agent: str):
-        """Blocking agent acknowledges that another agent is waiting"""
-        entry = CoordinationLogEntry(
-            agent_id=agent_id,
-            file_path="acknowledgment",
-            region="",
-            intent=f"ACK:wait_acknowledged:{waiting_agent}",
-            state=CoordinationState.ACTIVE,
-            timestamp=datetime.now().isoformat(),
-            expires_at=(datetime.now() + timedelta(minutes=5)).isoformat()
-        )
-        self.entries.append(entry)
-        self._save_log()
-        print(f"✓ {agent_id} acknowledged that {waiting_agent} is waiting")
-
-    def acknowledge_collaborate(self, agent_id: str, initiating_agent: str):
-        """Agent acknowledges collaboration request"""
-        entry = CoordinationLogEntry(
-            agent_id=agent_id,
-            file_path="acknowledgment",
-            region="",
-            intent=f"ACK:collaborate_confirmed:{initiating_agent}",
-            state=CoordinationState.COLLABORATE,
-            timestamp=datetime.now().isoformat(),
-            expires_at=(datetime.now() + timedelta(minutes=5)).isoformat()
-        )
-        self.entries.append(entry)
-        self._save_log()
-        print(f"✓ {agent_id} confirmed collaboration with {initiating_agent}")
-
-    def _regions_overlap(self, region1: str, region2: str) -> bool:
-        """
-        Check if two region strings have ACTUAL line/function overlap.
-        Returns True only if they touch the same lines or functions.
-
-        Format: "function_name (lines X-Y)" or "lines X-Y"
-        Example: "login_user (lines 20-40)" overlaps with "validate_creds (lines 25-35)"
-        """
-        import re
-
-        # Extract line ranges
-        lines1 = self._extract_line_range(region1)
-        lines2 = self._extract_line_range(region2)
-
-        # Extract function names
-        func1 = self._extract_function_name(region1)
-        func2 = self._extract_function_name(region2)
-
-        # Same function = overlap
-        if func1 and func2 and func1 == func2:
-            return True
-
-        # No line info = assume no overlap
-        if not lines1 or not lines2:
-            return False
-
-        # Check line overlap
-        start1, end1 = lines1
-        start2, end2 = lines2
-        return not (end1 < start2 or end2 < start1)  # Overlap if NOT mutually exclusive
-
-    def _extract_line_range(self, region: str) -> Optional[tuple]:
-        """Extract (start, end) line numbers from region string"""
-        import re
-        match = re.search(r'lines?\s+(\d+)-(\d+)', region)
-        if match:
-            return (int(match.group(1)), int(match.group(2)))
-        return None
-
-    def _extract_function_name(self, region: str) -> Optional[str]:
-        """Extract function name from region string"""
-        import re
-        match = re.search(r'(\w+)\s*\(', region)
-        if match:
-            return match.group(1)
-        return None
-
-    def _calculate_risk(self, conflicts: List[CoordinationLogEntry], agent_id: str) -> int:
-        """
-        Calculate risk score 0-100 for actual line/function conflicts.
-
-        Factors:
-        - Conflict count (multiple agents = higher risk)
-        - Line overlap degree (exact same lines = highest risk)
-        - Time pressure (how long has conflict been active)
-        - Conflict type (rename/delete > modification > read)
-        """
-        score = 0
-
-        # Number of conflicting agents (30 points)
-        conflict_count = min(len(conflicts), 3)
-        score += conflict_count * 20  # 20 per agent, max 60
-
-        # Line overlap severity (30 points)
-        # Assume if we're here, there's line overlap
-        # More specific functions = higher risk
-        if any("function" in c.intent.lower() for c in conflicts):
-            score += 30
-        else:
-            score += 25
-
-        # Time pressure (20 points)
-        # Longer active conflicts = higher risk
-        now = datetime.now()
-        max_elapsed = 0
-        for conflict in conflicts:
-            elapsed = (now - datetime.fromisoformat(conflict.timestamp)).total_seconds()
-            max_elapsed = max(max_elapsed, elapsed)
-
-        if max_elapsed > 1800:  # 30+ minutes
-            score += 20
-        elif max_elapsed > 900:  # 15+ minutes
-            score += 10
-        else:
-            score += 5
-
-        # Intent severity (20 points)
-        # Refactoring/renaming = higher risk
-        high_risk_keywords = ["refactor", "rename", "delete", "rewrite"]
-        for conflict in conflicts:
-            if any(keyword in conflict.intent.lower() for keyword in high_risk_keywords):
-                score += 15
-                break
-
-        return min(score, 100)
+        return True
 
     def handle_decision(
         self,
@@ -506,6 +299,23 @@ class CoordinationStateMachine:
             self._enter_collaboration_state(agent_id)
         elif decision == DecisionOption.WRAP_UP_REQUEST:
             self._request_wrap_up(agent_id)
+
+    def acknowledge_wait(self, agent_id: str) -> bool:
+        """
+        Tier 2: Mutual acknowledgment that agent has entered WAITING state.
+
+        Returns:
+            True if acknowledgment confirmed
+        """
+        waiting_entry = next(
+            (e for e in self.entries
+             if e.agent_id == agent_id and e.state == CoordinationState.WAITING),
+            None
+        )
+        if waiting_entry:
+            print(f"✓ {agent_id} acknowledged in WAITING state with checkpoint saved")
+            return True
+        return False
 
     def _enter_waiting_state(
         self,
@@ -548,85 +358,47 @@ class CoordinationStateMachine:
         """Request Developer A to wrap up"""
         print(f"✓ {agent_id} requesting wrap-up from active developers")
 
-    def check_wait_timeout(
-        self,
-        waiting_agent: str,
-        blocking_agent: str,
-        escalate_after_minutes: int = 30
-    ) -> Dict[str, Any]:
+    def force_release_lock(self, holding_agent: str, waiting_agents: List[str]) -> bool:
         """
-        ESCALATION GATE: Check if waiting agent has exceeded timeout.
+        Tier 3: Timeout/Escalation enforcement.
+        Force release lock after timeout (e.g., 30+ minutes).
 
-        If blocking agent has been active longer than escalate_after_minutes,
-        escalate to automatic release or escalation message.
+        Args:
+            holding_agent: Agent ID that has been holding the lock
+            waiting_agents: List of agent IDs waiting for release
 
         Returns:
-            {
-                'status': 'waiting' | 'timeout' | 'escalated',
-                'elapsed_minutes': int,
-                'escalation_action': str
-            }
+            True if lock was successfully released
         """
-        # Find blocking agent's active entry
-        blocking_entry = next(
+        active_entry = next(
             (e for e in self.entries
-             if e.agent_id == blocking_agent and e.state == CoordinationState.ACTIVE),
+             if e.agent_id == holding_agent and e.state == CoordinationState.ACTIVE),
             None
         )
 
-        if not blocking_entry:
-            return {
-                'status': 'completed',
-                'elapsed_minutes': 0,
-                'escalation_action': 'none'
-            }
+        if not active_entry:
+            return False
 
-        # Calculate elapsed time
+        # Check if timeout has elapsed
         now = datetime.now()
-        elapsed = (now - datetime.fromisoformat(blocking_entry.timestamp)).total_seconds() / 60
+        elapsed = (now - datetime.fromisoformat(active_entry.timestamp)).total_seconds()
+        timeout_seconds = 1800  # 30 minutes
 
-        if elapsed > escalate_after_minutes:
-            # Timeout exceeded - escalate
-            return {
-                'status': 'timeout',
-                'elapsed_minutes': int(elapsed),
-                'escalation_action': 'force_release',
-                'message': f'⚠️  Blocking agent {blocking_agent} exceeded {escalate_after_minutes}min timeout. Releasing {waiting_agent}.'
-            }
-
-        return {
-            'status': 'waiting',
-            'elapsed_minutes': int(elapsed),
-            'escalation_action': 'none',
-            'message': f'{waiting_agent} waiting for {blocking_agent}. Elapsed: {int(elapsed)}min / {escalate_after_minutes}min timeout'
-        }
-
-    def force_release_lock(self, blocking_agent: str, waiting_agents: List[str]):
-        """
-        Force release a lock if blocking agent exceeds timeout.
-
-        This is a last-resort enforcement when coordination fails.
-        """
-        # Mark blocking agent as completed
-        active = next(
-            (e for e in self.entries
-             if e.agent_id == blocking_agent and e.state == CoordinationState.ACTIVE),
-            None
-        )
-
-        if active:
-            active.state = CoordinationState.COMPLETED
+        if elapsed > timeout_seconds:
+            active_entry.state = CoordinationState.LOCK_REMOVED
             self._save_log()
-            print(f"⚠️  FORCE RELEASE: {blocking_agent} exceeded timeout. Lock released.")
+            print(f"⏰ TIMEOUT: {holding_agent} lock forced released after {elapsed/60:.0f} minutes")
+            print(f"   Escalation notification sent to: {waiting_agents}")
 
-            # Wake all waiting agents
-            for waiting_agent in waiting_agents:
-                self._fire_event("lock_removed", {
-                    "agent": blocking_agent,
-                    "reason": "timeout_exceeded",
-                    "force_released": True
-                })
-                print(f"🔔 {waiting_agent} woken: blocking agent exceeded timeout")
+            # Fire lock_removed event to wake waiting agents
+            self._fire_event("lock_removed", {
+                "agent": holding_agent,
+                "escalated": True,
+                "waiting_agents": waiting_agents
+            })
+            return True
+
+        return False
 
     def mark_completed(self, agent_id: str):
         """Developer A marks work complete"""

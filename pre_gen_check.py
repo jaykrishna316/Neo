@@ -6,6 +6,7 @@ import time
 
 from activity_log import get_active_entries, log_entry_age_seconds
 from risk_classifier import classify_risk, RiskLevel
+from coordination_state_machine import ConflictBlockedError
 
 
 def format_duration(seconds: float) -> str:
@@ -71,6 +72,9 @@ def handle_conflict_response(risk_level: RiskLevel, message: str) -> bool:
     """
     Handle the conflict response based on risk level.
 
+    Raises:
+        ConflictBlockedError if HIGH_RISK conflict detected
+
     Returns:
         True if generation should proceed, False if blocked.
     """
@@ -79,13 +83,15 @@ def handle_conflict_response(risk_level: RiskLevel, message: str) -> bool:
 
     if risk_level == RiskLevel.MEDIUM:
         print("\n" + message)
-        print("Generation will proceed. (Non-blocking warning)")
+        print("⚠️  Generation will proceed. (Non-blocking warning)")
         return True
 
     if risk_level == RiskLevel.HIGH:
-        print("\n🛑 CONFLICT DETECTED:")
+        print("\n🛑 CONFLICT DETECTED - GENERATION BLOCKED:")
         print(message)
-        response = input("\nProceed with generation anyway? (y/n): ")
-        return response.lower() in ("y", "yes")
+        raise ConflictBlockedError(
+            f"HIGH_RISK conflict requires explicit decision. "
+            f"Choose WAIT/COLLABORATE/WRAP_UP_REQUEST to proceed."
+        )
 
     return True
