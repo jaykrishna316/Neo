@@ -152,7 +152,7 @@ while waiting:
 
 ### Pre-Generation Hook
 
-Every agent needs a hook that runs **before generating code**:
+Every agent needs a hook that runs **before generating code**. Neo uses **line/function-level detection** to distinguish between CAUTION and HIGH_RISK conflicts:
 
 ```python
 @before_generation
@@ -160,44 +160,52 @@ async def coordination_check(agent_id, file_path, region, intent):
     """
     Called before any code generation.
     
-    Returns:
-        - 'proceed': Go ahead, no conflicts
-        - 'wait': Conflict detected, return to caller to retry later
-        - 'collaborate': High-risk conflict, suggest collaboration
-        - 'blocked': Critical conflict, must wait
+    Neo performs line/function-level detection:
+    - 'caution': Same file, different functions → proceed with advisory
+    - 'high_risk': Overlapping lines/functions → decision required
+    - 'none': No conflicts → safe to proceed
+    
+    Returns action based on conflict_type, not just risk_score.
     """
     
     # 1. Log this agent's intent
     log_entry = activity_log.log_intent(
         agent_id=agent_id,
         file_path=file_path,
-        region=region,
+        region=region,  # Include function name: "login_user (lines 40-80)"
         intent=intent
     )
     
-    # 2. Check for conflicts
+    # 2. Check for conflicts (with line/function-level precision)
     conflict_check = activity_log.check_conflicts(
         agent_id=agent_id,
         file_path=file_path,
         region=region
     )
     
-    # 3. Return recommendation
-    if conflict_check['risk_score'] < 30:
+    # 3. Return recommendation based on conflict_type
+    if conflict_check['conflict_type'] == 'none':
+        # No overlaps detected
         return {'action': 'proceed'}
     
-    elif conflict_check['risk_score'] < 70:
+    elif conflict_check['conflict_type'] == 'caution':
+        # Same file, different regions (e.g., different functions)
+        # Safe to proceed in parallel with advisory
         return {
-            'action': 'proceed_with_caution',
-            'warning': f"Low risk conflict with {conflict_check['conflicting_agents']}",
-            'estimated_wait': 300  # seconds
+            'action': 'proceed_with_advisory',
+            'risk_score': conflict_check['risk_score'],  # ~25
+            'warning': f"Another agent is in {file_path} (different region)",
+            'conflicting_agents': conflict_check['overlapping_agents']
         }
     
-    else:  # HIGH RISK
+    else:  # conflict_type == 'high_risk'
+        # Actual line/function overlap → decision required
         return {
             'action': 'decision_required',
-            'risk_score': conflict_check['risk_score'],
-            'options': ['collaborate', 'wait', 'wrap_up_request']
+            'conflict_type': 'high_risk',
+            'risk_score': conflict_check['risk_score'],  # 70-100
+            'overlapping_region': conflict_check['overlapping_region'],
+            'options': ['wait', 'collaborate', 'wrap_up_request']
         }
 ```
 
@@ -352,8 +360,13 @@ class CoordinationClient:
     def mark_completed(self, agent_id: str) -> None
     def mark_cancelled(self, agent_id: str) -> None
     
-    # Conflict Detection
+    # Conflict Detection (line/function-level)
     def check_conflicts(self, agent_id: str, file: str, region: str) -> ConflictReport
+    # Returns ConflictReport with:
+    #   - conflict_type: 'none' | 'caution' | 'high_risk'
+    #   - risk_score: 0-100 (0-25 caution, 70-100 high_risk)
+    #   - overlapping_agents: List[str]
+    #   - overlapping_region: str | None
     
     # Checkpoints
     def save_checkpoint(self, checkpoint: GenerationCheckpoint) -> None

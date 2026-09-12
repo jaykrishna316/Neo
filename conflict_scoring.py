@@ -106,18 +106,19 @@ def calculate_conflict_score(
     # Calculate total
     total_score = sum(factors.values())
 
-    # Determine risk category
+    # Determine risk category (aligned with line/function-level detection)
     if total_score < 25:
-        risk_category = "LOW"
-        recommendations.append("Safe to proceed - minimal conflict risk")
-    elif total_score < 50:
+        risk_category = "CAUTION"
+        recommendations.append("Advisory: Same file detected, but different regions")
+        recommendations.append("Proceed safely - ensure final merge testing")
+    elif total_score < 70:
         risk_category = "MEDIUM"
         recommendations.append("Coordinate with conflicting developers before proceeding")
         recommendations.append("Have conflict resolution strategy ready")
     else:
-        risk_category = "HIGH"
-        recommendations.append("WAIT - resolve conflicts before proceeding")
-        recommendations.append("Establish clear coordination protocol")
+        risk_category = "HIGH_RISK"
+        recommendations.append("WAIT - actual line/function overlap detected")
+        recommendations.append("Establish clear coordination protocol (wait/collaborate/wrap-up)")
 
     # Add specific recommendations based on factors
     if is_git_detected and factors["overlap_severity"] > 0.5:
@@ -140,13 +141,19 @@ def calculate_conflict_score(
 
 
 def score_to_risk_level(score: float) -> str:
-    """Convert score to simple risk level."""
+    """Convert score to risk level with line/function-level detection thresholds.
+
+    Neo uses refined conflict detection:
+    - 0-25: CAUTION (same file, different regions/functions)
+    - 26-70: MEDIUM RISK (partial overlap)
+    - 70-100: HIGH_RISK (actual line/function overlap)
+    """
     if score < 25:
-        return "LOW"
-    elif score < 50:
+        return "CAUTION"
+    elif score < 70:
         return "MEDIUM"
     else:
-        return "HIGH"
+        return "HIGH_RISK"
 
 
 def compare_scores(score_a: ConflictScore, score_b: ConflictScore) -> Dict[str, Any]:

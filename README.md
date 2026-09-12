@@ -30,24 +30,30 @@ Git merge conflict → Manual resolution → Wasted tokens → Broken build
 
 ### Our Solution
 
-Neo introduces a **shared activity log** and **event-driven state machine** that agents check **before generating code**—preventing conflicts at the source:
+Neo introduces a **shared activity log** and **event-driven state machine** that agents check **before generating code**—with **line/function-level precision** to allow safe parallel work:
 
 ```
-Developer A announces: "I'm working on src/auth.py (lines 40-80)"
+Developer A announces: "Refactoring login_user (lines 40-80)"
   ↓
-Developer B asks: "Is it safe to work here?"
+Developer B asks: "Safe to add validation at lines 50-70?"
   ↓
-Neo checks: "HIGH RISK - Developer A is overlapping"
+Neo checks line overlap: HIGH RISK (82/100) — lines overlap
+  Developer C asks: "Safe to add logging at lines 200-250?"
   ↓
-Developer B gets options: Wait / Collaborate / Request wrap-up
+Neo checks line overlap: CAUTION (25/100) — same file, different function
   ↓
-Developer B waits (no tokens wasted, event-driven wake-up, not polling)
+Developer B gets conflict options: Wait / Collaborate / Request wrap-up
+Developer C proceeds safely with advisory: "Another agent in this file"
+  ↓
+Developer B waits (checkpoint saved, no tokens wasted)
+Developer C proceeds (no blocking needed)
   ↓
 Developer A completes → fires lock_removed event
   ↓
 Developer B resumes from exact checkpoint
   ↓
-Sequential commits, clean merge, zero manual work
+Sequential commits for overlapping work, parallel for non-overlapping
+Clean merge, zero manual work
 ```
 
 **Benefit:** Coordination happens early, intelligently, and automatically. No wasted tokens. No manual conflict resolution.

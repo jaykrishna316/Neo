@@ -20,18 +20,20 @@ This wastes tokens, time, and causes developers to manually resolve conflicts af
 
 ## The Solution
 
-Neo introduces a **shared activity log** and **event-driven state machine** that agents check **before** generating code:
+Neo introduces a **shared activity log** and **event-driven state machine** that agents check **before** generating code. Unlike file-level detection, Neo analyzes **actual line and function-level conflicts**:
 
 ```
-Developer A announces: "I'm working on src/auth.py (lines 40-80)"
+Developer A announces: "I'm refactoring login_user (lines 40-80)"
   ↓
-Developer B asks: "Is it safe to work here?"
+Developer B asks: "Is it safe to work on lines 50-75?"
   ↓
-Neo checks: "HIGH RISK - Developer A is overlapping"
+Neo checks line overlap: lines 40-80 vs 50-75
   ↓
-Developer B gets options: Wait / Collaborate / Request wrap-up
+If overlapping: HIGH RISK (82/100) → Developer B gets options
+If different regions in same file: CAUTION (25/100) → Developer B proceeds with warning
+If no overlap: LOW RISK (5/100) → Developer B proceeds safely
   ↓
-Developer B waits (no tokens wasted, sleeping until Developer A finishes)
+Developer B chooses: Wait (checkpoint saved, no tokens wasted)
   ↓
 Developer A completes → fires lock_removed event
   ↓
@@ -81,23 +83,31 @@ Agent notified and wakes up
 ```
 
 ### 3. Pre-Generation Hook
-Before any code generation, agents call:
+Before any code generation, agents call and check **both risk_score AND conflict_type**:
 
 ```python
 check = coordination.check_conflicts(
     agent_id="claude-agent-1",
     file_path="src/auth.py",
-    region="lines 40-80"
+    region="login_user (lines 40-80)"  # Include function name for line-level detection
 )
 
-if check['risk_score'] > 70:  # HIGH RISK
-    # Show options: Wait / Collaborate / Request wrap-up
-    pass
-elif check['risk_score'] > 30:  # MEDIUM RISK
-    # Show warning, but allow proceeding
-    pass
-else:  # LOW RISK
-    # Safe to proceed
+# Check conflict_type (none / caution / high_risk)
+if check['conflict_type'] == 'high_risk':
+    # Lines/functions overlap → Show options: Wait / Collaborate / Request wrap-up
+    risk_score = check['risk_score']  # 70-100
+    decision = await show_conflict_options(risk_score)
+    if decision == 'wait':
+        checkpoint = coordination.save_checkpoint(...)
+        await coordination.await_event('lock_removed')
+    
+elif check['conflict_type'] == 'caution':
+    # Same file, different regions → Show advisory, allow proceeding
+    print(f"Advisory: Another agent is in this file (different region)")
+    # Agent proceeds with warning
+    
+else:  # conflict_type == 'none'
+    # No conflicts detected → Safe to proceed
     pass
 ```
 
@@ -311,22 +321,30 @@ When an agent encounters a HIGH RISK lock, it gets three options:
 
 ## Risk Scoring (0-100)
 
+Neo uses **line/function-level detection** to score conflicts precisely:
+
 ```
-0-30:   LOW RISK       (Different regions, no signature changes)
-        → Silent proceed
+0-25:   CAUTION        (Same file, different functions/regions)
+        → Show advisory (line overlap check passed)
+        → Agent proceeds safely
+        Example: Alice on login_user (40-80), Claude on password_reset (200-250)
         
-30-70:  MEDIUM RISK    (Overlapping regions, minor conflicts)
+26-70:  MEDIUM RISK    (Partial overlap, minor conflicts)
         → Show warning, allow proceeding
         
-70-100: HIGH RISK      (Exact same region, signature changes)
-        → Show decision options, require action
+70-100: HIGH RISK      (Lines/functions overlap, significant conflict)
+        → Show decision options (Wait/Collaborate/Request wrap-up)
+        Example: Alice on login_user (40-80), Claude on validate_credentials (50-70)
 ```
 
-Scoring factors:
-- Region overlap (lines, functions, classes)
-- Signature changes (API modifications)
-- Type changes
-- Historical patterns (ML-based learning)
+Scoring factors (refined for line/function precision):
+- Line/function overlap (30 pts) — Does this region actually touch the same code?
+- Conflict count (20 pts) — How many developers are conflicting?
+- Intent severity (20 pts) — Refactoring/rename = higher risk than new feature
+- Time pressure (20 pts) — How long has the first agent been working?
+- Velocity impact (10 pts) — Are fast developers blocked unnecessarily?
+
+**Key Insight:** CAUTION conflicts (same file, different functions) allow safe parallel work with a warning. Only true line/function overlaps trigger HIGH_RISK locking.
 
 ## Deployment Architectures
 

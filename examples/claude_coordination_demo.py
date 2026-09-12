@@ -81,8 +81,8 @@ def demo():
     )
 
     log_step("Agent B", f"Risk Score: {check['risk_score']}/100")
-    log_step("Agent B", f"Conflict Detected: {check['has_conflict']}")
-    log_step("Agent B", f"Conflicting Agents: {check['conflicting_agents']}")
+    log_step("Agent B", f"Conflict Type: {check['conflict_type']}")
+    log_step("Agent B", f"Conflicting Agents: {check['overlapping_agents']}")
 
     # ========================================================================
     # STEP 3: Decision Point (Agent B decides to WAIT)

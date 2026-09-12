@@ -172,82 +172,170 @@ class CoordinationStateMachine:
     ) -> Dict[str, Any]:
         """
         Check for conflicts when a new agent wants to work.
+        Uses refined line/function-level detection, not just file-level.
 
         Returns:
             {
                 'has_conflict': bool,
+                'conflict_type': 'none' | 'caution' | 'high_risk',
                 'risk_score': 0-100,
                 'conflicting_agents': [agent_ids],
                 'state': ACTIVE | LOCKED,
-                'decision_options': [COLLABORATE, WAIT, WRAP_UP_REQUEST]
+                'decision_options': [COLLABORATE, WAIT, WRAP_UP_REQUEST],
+                'message': human-readable warning
             }
         """
         self._clean_expired()
 
-        # Find active entries on same file/region
-        conflicts = [
+        # Find active entries on same file
+        same_file = [
             e for e in self.entries
             if e.file_path == file_path
             and e.state == CoordinationState.ACTIVE
             and e.agent_id != agent_id
-            and self._regions_overlap(e.region, region)
         ]
 
-        if not conflicts:
+        if not same_file:
             return {
                 'has_conflict': False,
+                'conflict_type': 'none',
                 'risk_score': 0,
                 'conflicting_agents': [],
                 'state': CoordinationState.ACTIVE,
-                'decision_options': []
+                'decision_options': [],
+                'message': 'No conflicts detected'
             }
 
-        # Calculate risk score
-        risk_score = self._calculate_risk(conflicts, agent_id)
+        # Check line/function-level overlap
+        actual_conflicts = [
+            e for e in same_file
+            if self._regions_overlap(e.region, region)
+        ]
 
-        # Determine state and options
-        if risk_score >= 70:
-            state = CoordinationState.LOCKED
-            decision_options = [
-                DecisionOption.COLLABORATE,
-                DecisionOption.WAIT,
-                DecisionOption.WRAP_UP_REQUEST
-            ]
-        else:
-            state = CoordinationState.ACTIVE
-            decision_options = []
+        # No actual line/function overlap
+        if not actual_conflicts:
+            return {
+                'has_conflict': True,
+                'conflict_type': 'caution',
+                'risk_score': 25,  # Low risk
+                'conflicting_agents': [e.agent_id for e in same_file],
+                'conflict_details': [e.intent for e in same_file],
+                'state': CoordinationState.ACTIVE,
+                'decision_options': [],  # No forced wait
+                'message': f'⚠️  Caution: Other agents working on {file_path} but in different sections. Proceed with caution.'
+            }
+
+        # Actual line/function overlap = HIGH RISK
+        risk_score = self._calculate_risk(actual_conflicts, agent_id)
 
         return {
             'has_conflict': True,
+            'conflict_type': 'high_risk',
             'risk_score': risk_score,
-            'conflicting_agents': [c.agent_id for c in conflicts],
-            'conflict_details': [c.intent for c in conflicts],
-            'state': state,
-            'decision_options': decision_options
+            'conflicting_agents': [c.agent_id for c in actual_conflicts],
+            'conflict_details': [c.intent for c in actual_conflicts],
+            'state': CoordinationState.LOCKED,
+            'decision_options': [
+                DecisionOption.COLLABORATE,
+                DecisionOption.WAIT,
+                DecisionOption.WRAP_UP_REQUEST
+            ],
+            'message': f'🚨 HIGH RISK: {len(actual_conflicts)} agent(s) touching overlapping lines/functions. Recommendation: {", ".join([opt.value for opt in [DecisionOption.WAIT, DecisionOption.COLLABORATE]])}'
         }
 
     def _regions_overlap(self, region1: str, region2: str) -> bool:
-        """Check if two region strings overlap"""
-        # Simple check for now: if both mention same function or overlapping lines
-        # In production, this would use AST parsing
-        return "lines" in region1 and "lines" in region2
+        """
+        Check if two region strings have ACTUAL line/function overlap.
+        Returns True only if they touch the same lines or functions.
+
+        Format: "function_name (lines X-Y)" or "lines X-Y"
+        Example: "login_user (lines 20-40)" overlaps with "validate_creds (lines 25-35)"
+        """
+        import re
+
+        # Extract line ranges
+        lines1 = self._extract_line_range(region1)
+        lines2 = self._extract_line_range(region2)
+
+        # Extract function names
+        func1 = self._extract_function_name(region1)
+        func2 = self._extract_function_name(region2)
+
+        # Same function = overlap
+        if func1 and func2 and func1 == func2:
+            return True
+
+        # No line info = assume no overlap
+        if not lines1 or not lines2:
+            return False
+
+        # Check line overlap
+        start1, end1 = lines1
+        start2, end2 = lines2
+        return not (end1 < start2 or end2 < start1)  # Overlap if NOT mutually exclusive
+
+    def _extract_line_range(self, region: str) -> Optional[tuple]:
+        """Extract (start, end) line numbers from region string"""
+        import re
+        match = re.search(r'lines?\s+(\d+)-(\d+)', region)
+        if match:
+            return (int(match.group(1)), int(match.group(2)))
+        return None
+
+    def _extract_function_name(self, region: str) -> Optional[str]:
+        """Extract function name from region string"""
+        import re
+        match = re.search(r'(\w+)\s*\(', region)
+        if match:
+            return match.group(1)
+        return None
 
     def _calculate_risk(self, conflicts: List[CoordinationLogEntry], agent_id: str) -> int:
-        """Calculate risk score 0-100"""
+        """
+        Calculate risk score 0-100 for actual line/function conflicts.
+
+        Factors:
+        - Conflict count (multiple agents = higher risk)
+        - Line overlap degree (exact same lines = highest risk)
+        - Time pressure (how long has conflict been active)
+        - Conflict type (rename/delete > modification > read)
+        """
         score = 0
 
-        # Conflict count
-        score += min(len(conflicts) * 30, 30)
+        # Number of conflicting agents (30 points)
+        conflict_count = min(len(conflicts), 3)
+        score += conflict_count * 20  # 20 per agent, max 60
 
-        # Type severity (assume modification = high risk)
-        score += 25  # Default high risk for any overlap
+        # Line overlap severity (30 points)
+        # Assume if we're here, there's line overlap
+        # More specific functions = higher risk
+        if any("function" in c.intent.lower() for c in conflicts):
+            score += 30
+        else:
+            score += 25
 
-        # Time pressure (longer active = higher risk)
+        # Time pressure (20 points)
+        # Longer active conflicts = higher risk
         now = datetime.now()
+        max_elapsed = 0
         for conflict in conflicts:
             elapsed = (now - datetime.fromisoformat(conflict.timestamp)).total_seconds()
-            if elapsed > 1800:  # 30+ minutes
-                score += 10
+            max_elapsed = max(max_elapsed, elapsed)
+
+        if max_elapsed > 1800:  # 30+ minutes
+            score += 20
+        elif max_elapsed > 900:  # 15+ minutes
+            score += 10
+        else:
+            score += 5
+
+        # Intent severity (20 points)
+        # Refactoring/renaming = higher risk
+        high_risk_keywords = ["refactor", "rename", "delete", "rewrite"]
+        for conflict in conflicts:
+            if any(keyword in conflict.intent.lower() for keyword in high_risk_keywords):
+                score += 15
+                break
 
         return min(score, 100)
 

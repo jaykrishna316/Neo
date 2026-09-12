@@ -161,42 +161,78 @@ When Developer B hits a HIGH RISK lock, it gets three choices:
 
 Once you have the activity log + state machine, you can build higher-level capabilities:
 
-### Stage 1: Real-Time Detection
+### Stage 1: Real-Time Detection (Line-Level)
 
-The moment a new intent is logged, the system asks: **"Does this overlap with anything active?"**
+The moment a new intent is logged, the system asks: **"Does this overlap with anything active?"** But it checks at the LINE and FUNCTION level, not just file level.
 
 ```python
 def detect_overlaps(new_entry):
     overlaps = []
     for existing in activity_log:
         if existing["file"] == new_entry["file"]:
-            if regions_overlap(existing["region"], new_entry["region"]):
-                overlaps.append(existing)
+            # Check actual line/function overlap, not just file overlap
+            if lines_or_functions_overlap(existing["region"], new_entry["region"]):
+                overlaps.append(existing)  # TRUE conflict
+            else:
+                send_caution(existing, new_entry)  # Same file, different sections
     return overlaps
 ```
 
-This runs in milliseconds. Alice logs. Claude checks. Instant answer.
+**Example:**
+```
+Agent A: auth.py "login_user (lines 40-80)"
+Agent B: auth.py "password_reset (lines 200-250)"
+Result: CAUTION ⚠️ (same file, different functions)
+Action: B proceeds, with advisory notification
+```
 
-**Why this is better than git:** Git only knows about committed code. The activity log knows about intent *before* any code is written.
+vs.
 
-### Stage 2: Smart Scoring
+```
+Agent A: auth.py "login_user (lines 40-80)"
+Agent B: auth.py "validate_credentials (lines 50-70)"
+Result: HIGH RISK 🚨 (overlapping lines 50-70)
+Action: B must wait or collaborate
+```
 
-Not all overlaps are equal. Alice refactoring authentication while Claude adds type hints is one thing. But if Bob is *renaming* the function Alice is refactoring? That's a blocker.
+This runs in milliseconds. Alice logs. Claude checks. Instant, precise answer.
 
-The system scores conflicts 0-100:
+**Why this is better than git:** Git detects conflicts after commits. Neo detects them before code generation, with line-level precision.
+
+### Stage 2: Line/Function-Level Detection (Refined)
+
+Not all file overlaps are conflicts. Alice refactoring authentication (lines 40-80) while Claude adds type hints (lines 200-250) is safe. They're in the same file but different functions.
+
+**Before (File-Level):**
+- Alice modifies auth.py → HIGH RISK
+- Claude modifies auth.py → WAIT
+- Result: Unnecessary blocking
+
+**After (Line/Function-Level):**
+- Alice: `login_user (lines 40-80)`
+- Claude: `add_types (lines 200-250)`
+- Result: ⚠️ CAUTION (same file, different functions) → Claude proceeds with warning
+- Only LOCKED if they touch overlapping lines/functions
+
+The system now distinguishes:
+- **CAUTION** (0-30 risk): Same file, different sections → Proceed safely
+- **HIGH RISK** (70-100 risk): Overlapping lines/functions → Requires coordination
+
+### Stage 3: Smart Scoring
+
+When there IS actual line/function overlap, the system scores it 0-100:
 
 ```python
 score = (
-    conflict_count * 30 +           # How many are conflicting?
-    conflict_type_severity * 25 +   # Are they renaming? Deleting?
-    git_confidence * 15 +            # Is this a real overlap?
-    code_overlap * 15 +              # How much overlaps?
-    time_pressure * 10 +             # How long has it been active?
-    velocity_impact * 5              # Are fast devs blocked?
-) / 100
+    conflict_count * 20 +           # How many agents conflicting?
+    line_overlap_severity * 30 +    # Are they touching same lines?
+    time_pressure * 20 +            # How long has it been active?
+    intent_severity * 20 +          # Refactoring/rename/delete = higher
+    velocity_impact * 10            # Are fast devs blocked?
+)
 ```
 
-Result: A 0-100 score that says **exactly how bad** the conflict is. Not just "HIGH" or "MEDIUM."
+Result: A **granular 0-100 score** that says exactly how risky the conflict is, with refinement down to the function level.
 
 ### Stage 3: Resolution Strategies
 
