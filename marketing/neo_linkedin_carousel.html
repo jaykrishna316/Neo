@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo - Multi-Agent Coordination Framework</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .content {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            padding: 60px 50px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            line-height: 1.8;
+            color: #1f2937;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 30px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        h2 {
+            font-size: 28px;
+            margin: 40px 0 25px 0;
+            font-weight: 700;
+            color: #ef4444;
+        }
+
+        h3 {
+            font-size: 18px;
+            margin: 25px 0 15px 0;
+            font-weight: 600;
+            color: #4f46e5;
+        }
+
+        p {
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 25px;
+        }
+
+        li {
+            margin-bottom: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        strong {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .highlight {
+            background: rgba(79, 70, 229, 0.1);
+            padding: 25px;
+            border-left: 4px solid #4f46e5;
+            border-radius: 4px;
+            margin: 30px 0;
+            font-style: italic;
+            font-size: 15px;
+            color: #2d1b69;
+        }
+
+        .code-block {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 25px 0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .comparison-item {
+            padding: 20px;
+            border-radius: 6px;
+        }
+
+        .old-way {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+        }
+
+        .new-way {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+        }
+
+        .comparison-item strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        .comparison-item p {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .benefits-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .benefit {
+            padding: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid #10b981;
+            font-size: 15px;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: white;
+            padding: 50px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .cta-section h2 {
+            color: white;
+            margin-top: 0;
+        }
+
+        .cta-link {
+            font-size: 20px;
+            font-weight: 600;
+            color: #60a5fa;
+            margin: 20px 0;
+        }
+
+        .hashtags {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-top: 30px;
+        }
+
+        .controls {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .controls button:hover {
+            background: #4338ca;
+        }
+
+        .instructions {
+            background: #dbeafe;
+            border-left: 4px solid #0284c7;
+            padding: 15px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #0c2d6b;
+            margin-top: 10px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .controls {
+                display: none;
+            }
+
+            .content, .cta-section {
+                box-shadow: none;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <h1>🚀 Neo: Multi-Agent Coordination Framework</h1>
+
+            <h2>The Problem</h2>
+            <p>When Claude agents work in parallel on the same codebase, conflicts happen <strong>after</strong> code is checked in. Git catches them. But by then it's too late—merge hell.</p>
+
+            <p><strong>The Deeper Problem:</strong> Even if we detect conflicts early, how do agents coordinate without blocking each other? How does one agent pause without losing context? How does it resume exactly where it left off?</p>
+
+            <h2>The Insight</h2>
+            <p>What if agents could:</p>
+            <ol>
+                <li><strong>Announce</strong> what they're about to do (shared activity log)</li>
+                <li><strong>Detect</strong> conflicts before generating code</li>
+                <li><strong>Pause</strong> with full context saved (checkpoint)</li>
+                <li><strong>Sleep</strong> without polling or wasting tokens</li>
+                <li><strong>Wake</strong> automatically when it's safe</li>
+                <li><strong>Resume</strong> from exact point with zero context loss</li>
+                <li><strong>Collaborate</strong> in real-time if they want to</li>
+            </ol>
+
+            <h2>The Solution</h2>
+            <p><strong>An event-driven state machine</strong> over the shared activity log:</p>
+
+            <div class="code-block">
+Developer A: ACTIVE (logs intent, starts work)
+Developer B: checks conflicts → HIGH RISK
+Developer B: LOCKED (decision point)
+Developer B opts to: WAIT (saves checkpoint, sleeps)
+Developer A: COMPLETED (finishes, logs completion)
+System: fires lock_removed event
+Developer B: RESUMED (wakes up, continues from checkpoint)
+            </div>
+
+            <p><strong>No busy-polling. No lost context. Automatic, event-driven coordination.</strong></p>
+
+            <h2>Why This Matters</h2>
+
+            <div class="comparison">
+                <div class="comparison-item old-way">
+                    <strong>❌ Old Way</strong>
+                    <p>Code → Commit → Push → Conflict detected → Merge nightmare</p>
+                </div>
+                <div class="comparison-item new-way">
+                    <strong>✅ New Way</strong>
+                    <p>Agent announces intent → Logs to shared activity → Checks for overlaps → Coordinates → Zero conflicts</p>
+                </div>
+            </div>
+
+            <p>It's the difference between <strong>fixing fires vs preventing them.</strong></p>
+
+            <p>From this single log that agents automatically maintain, everything else became possible:</p>
+            <ul>
+                <li>Detect overlaps <em>before</em> any agent generates code</li>
+                <li>Score conflict risk in milliseconds</li>
+                <li>Recommend resolution strategies (sequential, parallel, cherry-pick)</li>
+                <li>Predict how long each agent/developer will be working (pattern learning)</li>
+                <li>Route work to the right agent for the job</li>
+            </ul>
+
+            <div class="highlight">
+                But the <em>log itself</em> is the magic. It's so simple. One JSON file that agents auto-update. Real-time coordination without human intervention.
+            </div>
+
+            <h2>What I Built</h2>
+            <p>A state machine that:</p>
+            <ol>
+                <li><strong>Logs intent automatically</strong> — Agents announce what they're doing</li>
+                <li><strong>Detects conflicts in &lt;100ms</strong> — Before code is generated</li>
+                <li><strong>Offers smart decisions</strong> — Collaborate, Wait, or Request wrap-up</li>
+                <li><strong>Saves checkpoints</strong> — Full generation context preserved</li>
+                <li><strong>Sleeps without polling</strong> — Event-driven wake-ups, zero wasted tokens</li>
+                <li><strong>Auto-resumes</strong> — Picks up exactly where it left off</li>
+                <li><strong>Enables collaboration</strong> — Developers can sync up in real-time</li>
+            </ol>
+
+            <p><strong>All without merge conflicts.</strong></p>
+
+            <h2>The Kicker</h2>
+            <p>When high risk is detected:</p>
+            <ul>
+                <li>Developer B doesn't just block ❌</li>
+                <li>Developer B gets <strong>options</strong>: Collaborate, Wait, or Request wrap-up</li>
+                <li>If B chooses WAIT: Claude saves work, sleeps, subscribes to event</li>
+                <li>No polling. No tokens wasted. No context lost.</li>
+                <li>When Developer A finishes → event fires → B wakes up → continues</li>
+                <li>If B chooses COLLABORATE: Both developers notified → sync offline</li>
+            </ul>
+
+            <p><strong>Conflicts are prevented before code is generated.</strong> <strong>Coordination happens before merging.</strong> <strong>Everything is event-driven and automatic.</strong></p>
+
+            <p>No messy merges. No git nightmares. No blocked agents wasting tokens on polls. Just smart coordination.</p>
+        </div>
+
+        <div class="cta-section">
+            <h2>Try It Now</h2>
+            <div class="cta-link">github.com/jaykrishna316/Neo</div>
+            <p>Built this for fun while exploring how AI agents could actually work <em>with</em> humans, not around them.</p>
+            <div class="hashtags">
+                #AI #SoftwareDevelopment #BuildInPublic #ConflictDetection
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="window.print()">🖨️ Export as PDF</button>
+            <div class="instructions">
+                Clicking the button will open your browser's print dialog. Select "Save as PDF" and click "Save" to download the file for LinkedIn.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

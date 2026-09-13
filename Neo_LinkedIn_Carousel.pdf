@@ -1,0 +1,111 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R 14 0 R] /Count 6 >>
+endobj
+3 0 obj
+<< /Length 81 >>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+(Slide 1: Hook - Developer Tears) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 3 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 70 >>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+(Slide 2: The Problem) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 5 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+7 0 obj
+<< /Length 70 >>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+(Slide 3: The Insight) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 7 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+9 0 obj
+<< /Length 71 >>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+(Slide 4: The Solution) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 9 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+11 0 obj
+<< /Length 73 >>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+(Slide 5: Why It Matters) Tj
+ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 11 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+13 0 obj
+<< /Length 73 >>
+stream
+BT
+/F1 12 Tf
+50 750 Td
+(Slide 6: Call to Action) Tj
+ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 13 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+xref
+0 16
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000148 00000 n 
+0000000260 00000 n 
+0000000386 00000 n 
+0000000456 00000 n 
+0000000557 00000 n 
+0000000683 00000 n 
+0000000784 00000 n 
+0000000910 00000 n 
+0000001012 00000 n 
+0000001139 00000 n 
+0000001244 00000 n 
+0000001372 00000 n 
+0000001477 00000 n 
+trailer
+<< /Size 16 /Root 1 0 R >>
+startxref
+1605
+%%EOF
