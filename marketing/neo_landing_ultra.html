@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo - Next-Gen Agent Coordination</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #000;
+            --accent: #00d9ff;
+            --accent-2: #ff006e;
+            --accent-3: #8338ec;
+            --text: #ffffff;
+            --text-muted: #a0a0a0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000;
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(0, 217, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255, 0, 110, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 0%, rgba(131, 56, 236, 0.05) 0%, transparent 50%);
+            animation: gradient-drift 15s ease-in-out infinite;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        @keyframes gradient-drift {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(50px, 50px); }
+        }
+
+        /* Grid background */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(rgba(0, 217, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 217, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 217, 255, 0.2);
+            z-index: 1000;
+            padding: 20px 0;
+        }
+
+        header .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: -2px;
+            background: linear-gradient(135deg, #00d9ff 0%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+        }
+
+        nav {
+            display: flex;
+            gap: 40px;
+        }
+
+        nav a {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent);
+            transition: width 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 60px;
+        }
+
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding-top: 100px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 217, 255, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: pulse-glow 4s ease-in-out infinite;
+            filter: blur(40px);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.3); }
+        }
+
+        .hero h1 {
+            font-size: 6rem;
+            font-weight: 900;
+            letter-spacing: -3px;
+            line-height: 1;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(135deg, #00d9ff 0%, #fff 50%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: slide-in 1s ease-out;
+        }
+
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto 60px;
+            font-weight: 400;
+            line-height: 1.8;
+            position: relative;
+            z-index: 2;
+            animation: slide-in 1s ease-out 0.2s both;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+            animation: slide-in 1s ease-out 0.4s both;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+            border: 2px solid var(--accent);
+            background: rgba(0, 217, 255, 0.1);
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            background: rgba(0, 217, 255, 0.2);
+            transform: translateY(-4px);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.4);
+            border-color: #00d9ff;
+        }
+
+        /* Section */
+        section {
+            padding: 120px 0;
+            position: relative;
+        }
+
+        .section-title {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 80px;
+            text-align: center;
+            letter-spacing: -2px;
+            background: linear-gradient(135deg, #00d9ff 0%, #fff 50%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Problem Cards with 3D */
+        .problems {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            perspective: 1000px;
+            margin-bottom: 60px;
+        }
+
+        .problem-card {
+            background: rgba(20, 20, 30, 0.5);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            padding: 40px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+        }
+
+        .problem-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(255, 0, 110, 0.1));
+            opacity: 0;
+            transition: opacity 0.6s;
+            transform: rotate(45deg);
+        }
+
+        .problem-card:hover {
+            border-color: var(--accent);
+            background: rgba(20, 20, 30, 0.8);
+            transform: translateY(-12px) rotateX(5deg);
+            box-shadow: 0 20px 40px rgba(0, 217, 255, 0.2);
+        }
+
+        .problem-card:hover::before {
+            opacity: 1;
+        }
+
+        .problem-card > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .problem-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .problem-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .problem-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* Solution Section */
+        .solution {
+            background: rgba(20, 20, 30, 0.3);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            border-radius: 12px;
+            padding: 80px 60px;
+            margin-bottom: 80px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .solution::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(131, 56, 236, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .solution-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .solution h3 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .solution-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .step {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            padding: 30px;
+            border-radius: 8px;
+            transition: all 0.4s;
+            position: relative;
+        }
+
+        .step:hover {
+            border-color: var(--accent);
+            background: rgba(0, 217, 255, 0.05);
+            transform: translateY(-8px);
+        }
+
+        .step-num {
+            display: inline-block;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-3));
+            border-radius: 50%;
+            text-align: center;
+            line-height: 45px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .step h4 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .step p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Test Results */
+        .test-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .result-card {
+            background: rgba(20, 20, 30, 0.5);
+            border: 2px solid rgba(0, 217, 255, 0.2);
+            border-radius: 12px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            transition: all 0.6s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card:hover {
+            border-color: var(--accent);
+            background: rgba(20, 20, 30, 0.8);
+            transform: translateY(-12px);
+            box-shadow: 0 0 40px rgba(0, 217, 255, 0.3);
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+            border: 1px solid rgba(255, 165, 0, 0.5);
+        }
+
+        .risk-badge.high {
+            background: rgba(255, 0, 110, 0.2);
+            color: #ff006e;
+            border-color: rgba(255, 0, 110, 0.5);
+        }
+
+        .result-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .result-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.8;
+            margin-bottom: 25px;
+        }
+
+        .metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: rgba(0, 217, 255, 0.05);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+
+        .metric-value.success {
+            color: #00ff88;
+        }
+
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .feature {
+            background: rgba(20, 20, 30, 0.4);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            padding: 35px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .feature:hover {
+            border-color: var(--accent);
+            background: rgba(20, 20, 30, 0.7);
+            transform: translateY(-12px);
+            box-shadow: 0 20px 50px rgba(0, 217, 255, 0.2);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .feature h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: var(--accent);
+        }
+
+        .feature p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        /* CTA */
+        .cta-section {
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(255, 0, 110, 0.1) 100%);
+            border: 2px solid rgba(0, 217, 255, 0.3);
+            border-radius: 16px;
+            padding: 100px 60px;
+            text-align: center;
+            margin-bottom: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(131, 56, 236, 0.1) 0%, transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .cta-section h2 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #00d9ff 0%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid rgba(0, 217, 255, 0.2);
+            padding: 60px 0 40px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        footer a:hover {
+            color: #00d9ff;
+            text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+        }
+
+        /* PDF Modal */
+        .pdf-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .pdf-modal.open {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .pdf-content {
+            background: rgba(20, 20, 30, 0.95);
+            border: 2px solid rgba(0, 217, 255, 0.3);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            padding: 50px;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pdf-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 217, 255, 0.2);
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--accent);
+            transition: all 0.3s;
+        }
+
+        .pdf-close:hover {
+            background: rgba(0, 217, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .pdf-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #00d9ff 0%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .pdf-section {
+            margin-bottom: 40px;
+        }
+
+        .pdf-section h2 {
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 15px;
+            border-bottom: 2px solid rgba(0, 217, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .pdf-section p {
+            color: var(--text-muted);
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .pdf-list {
+            list-style: none;
+            margin-left: 20px;
+        }
+
+        .pdf-list li {
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .pdf-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 3rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            header .container,
+            .container {
+                padding: 0 20px;
+            }
+
+            nav {
+                gap: 20px;
+            }
+
+            .cta-section {
+                padding: 50px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="logo">Neo</div>
+            <nav>
+                <a href="#problem">Problem</a>
+                <a href="#solution">Solution</a>
+                <a href="#tests">Results</a>
+                <a href="#features">Features</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-glow"></div>
+        <h1>Eliminate Merge<br>Conflicts Forever</h1>
+        <p>Neo prevents agent collisions before they happen. Semantic conflict detection. Intelligent coordination. Zero merge conflicts.</p>
+        <div class="cta-buttons">
+            <a href="https://github.com/jaykrishna316/Neo" class="btn">→ Get Started</a>
+            <a href="javascript:void(0)" onclick="openPDF()" class="btn">← Read Full Story</a>
+        </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section id="problem">
+        <div class="container">
+            <h2 class="section-title">The Challenge</h2>
+            <div class="problems">
+                <div class="problem-card">
+                    <div class="problem-icon">⚠️</div>
+                    <h3>Silent Collisions</h3>
+                    <p>Autonomous agents work in parallel, making conflicting decisions about the same code regions without any warning.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">💸</div>
+                    <h3>Token Hemorrhage</h3>
+                    <p>Incompatible code requires manual resolution. Wasted tokens. Delayed delivery. Failed integration.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🔄</div>
+                    <h3>Reactive Fix</h3>
+                    <p>Git resolves conflicts AFTER the crash. Agents lack human intuition about resource conflicts.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solution Section -->
+    <section id="solution">
+        <div class="container">
+            <h2 class="section-title">Our Breakthrough</h2>
+            <div class="solution">
+                <div class="solution-content">
+                    <h3>Prevent Before Collision</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 30px;">Instead of: generate → commit → merge → conflict → resolve</p>
+                    <p style="color: var(--text-muted); margin-bottom: 40px; font-weight: 600;">Neo enables: intent → coordinate → authorize → generate → commit</p>
+
+                    <div class="solution-steps">
+                        <div class="step">
+                            <div class="step-num">1</div>
+                            <h4>Intent Declaration</h4>
+                            <p>Agents declare their intent upfront with file paths and semantic scope.</p>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">2</div>
+                            <h4>Semantic Detection</h4>
+                            <p>AST-based analysis detects symbol-level conflicts and dependencies.</p>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">3</div>
+                            <h4>Risk Scoring</h4>
+                            <p>Objective 0-100 risk quantification with evidence-based reasoning.</p>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">4</div>
+                            <h4>Orchestration</h4>
+                            <p>Intelligent sequencing: one proceeds, others wait with context preserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Test Results -->
+    <section id="tests">
+        <div class="container">
+            <h2 class="section-title">Real-World Validation</h2>
+            <p style="text-align: center; color: var(--text-muted); font-size: 1.1rem; margin-bottom: 20px; max-width: 800px; margin-left: auto; margin-right: auto;">
+                <strong style="color: var(--accent);">Tested with Real Autonomous Agents</strong>
+            </p>
+            <div style="background: rgba(0, 217, 255, 0.1); border: 2px solid rgba(0, 217, 255, 0.3); border-radius: 12px; padding: 30px; margin-bottom: 60px; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
+                <p style="color: var(--accent); font-size: 1.2rem; font-weight: 700; margin-bottom: 10px;">🤖 Agent A: Claude Opus 4.1</p>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">Advanced reasoning, complex logic generation</p>
+                <p style="color: var(--accent); font-size: 1.2rem; font-weight: 700; margin-bottom: 10px;">🤖 Agent B: Claude Sonnet 4</p>
+                <p style="color: var(--text-muted);">Fast iteration, helper functions, utilities</p>
+            </div>
+
+            <div class="test-results">
+                <!-- Medium Risk -->
+                <div class="result-card">
+                    <span class="risk-badge">Medium Risk - Scenario 1</span>
+                    <h3>Overlapping Regions</h3>
+                    <p><strong style="color: var(--accent);">Agent A (Claude Opus):</strong> Refactoring login_user (lines 20-40)<br>
+                       <strong style="color: var(--accent);">Agent B (Claude Sonnet):</strong> Adding validation (lines 25-35)</p>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <span class="metric-label">Risk Score</span>
+                            <span class="metric-value">45/100</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Detection</span>
+                            <span class="metric-value">⚠️ Detected</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Response</span>
+                            <span class="metric-value">Non-Blocking Warning</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Merge Conflicts</span>
+                            <span class="metric-value success">0 ✓</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- High Risk -->
+                <div class="result-card">
+                    <span class="risk-badge high">High Risk - Scenario 2</span>
+                    <h3>Signature Change</h3>
+                    <p><strong style="color: var(--accent);">Agent A (Claude Opus):</strong> Rename login_user → authenticate, change signature<br>
+                       <strong style="color: var(--accent);">Agent B (Claude Sonnet):</strong> Call login_user with old signature</p>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <span class="metric-label">Risk Score</span>
+                            <span class="metric-value">82/100</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Detection</span>
+                            <span class="metric-value">🔴 Critical</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Response</span>
+                            <span class="metric-value">Blocking Confirmation</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Merge Conflicts</span>
+                            <span class="metric-value success">0 ✓</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Impact -->
+            <div style="background: rgba(0, 217, 255, 0.05); border: 2px solid rgba(0, 217, 255, 0.3); border-radius: 12px; padding: 60px; text-align: center; margin-top: 60px;">
+                <h3 style="font-size: 1.5rem; color: var(--accent); margin-bottom: 40px;">Coordination Impact</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px;">
+                    <div>
+                        <div style="font-size: 3.5rem; font-weight: 900; color: #00ff88; margin-bottom: 10px;">100%</div>
+                        <div style="color: var(--text-muted);">Merge Conflicts Prevented</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 3.5rem; font-weight: 900; color: #00ff88; margin-bottom: 10px;">2x</div>
+                        <div style="color: var(--text-muted);">Functions Delivered</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 3.5rem; font-weight: 900; color: #00ff88; margin-bottom: 10px;">&lt;10ms</div>
+                        <div style="color: var(--text-muted);">Detection Latency</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+        <div class="container">
+            <h2 class="section-title">Engineered for Scale</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Sub-10ms Detection</h3>
+                    <p>Ultra-fast conflict checks. Local analysis. Zero network overhead. Always responsive.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🧠</div>
+                    <h3>Semantic Intelligence</h3>
+                    <p>AST-based symbol extraction. Understands function, class, and dependency-level conflicts.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Three-Tier Enforcement</h3>
+                    <p>Generation gate, mutual acknowledgment, auto-escalation with 30-min timeout.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📦</div>
+                    <h3>Checkpoint System</h3>
+                    <p>Agent state preserved during waits. Event-driven resumption. Zero token waste.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Dependency Tracking</h3>
+                    <p>Detects transitive dependencies and sequences agents for optimal execution order.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <h3>Risk Quantification</h3>
+                    <p>Multi-factor analysis. Objective 0-100 scores. Evidence-based decision making.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section>
+        <div class="container">
+            <div class="cta-section">
+                <div class="cta-content">
+                    <h2>Ready for the Future?</h2>
+                    <p>Neo is production-ready for autonomous multi-agent workflows at scale.</p>
+                    <div class="cta-buttons">
+                        <a href="https://github.com/jaykrishna316/Neo" class="btn">→ Explore Neo</a>
+                        <a href="javascript:void(0)" onclick="openPDF()" class="btn">← Read Full Story</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="container">
+        <p>Neo: Conflict-Free Agent Coordination •
+            <a href="https://github.com/jaykrishna316/Neo">GitHub</a> •
+            <a href="https://lnkd.in/gqTvK-4v">LinkedIn</a> •
+            <a href="mailto:jaykrishna.i13@gmail.com">Contact</a>
+        </p>
+        <p style="margin-top: 20px; color: var(--text-muted); font-size: 0.85rem;">
+            Tested with real autonomous agents (Claude Opus + Sonnet). Zero merge conflicts achieved through coordination.
+        </p>
+    </footer>
+
+    <!-- PDF Modal -->
+    <div class="pdf-modal" id="pdfModal">
+        <div class="pdf-content">
+            <div class="pdf-close" onclick="closePDF()">×</div>
+
+            <h1 class="pdf-title">Neo: Agent Coordination Layer</h1>
+
+            <div class="pdf-section">
+                <h2>Executive Summary</h2>
+                <p>Neo is a production-ready coordination layer that prevents merge conflicts before autonomous agents generate code. Instead of resolving conflicts after they happen, Neo detects potential collisions upfront and orchestrates agent workflows intelligently.</p>
+            </div>
+
+            <div class="pdf-section">
+                <h2>The Problem</h2>
+                <p>When autonomous agents work in parallel on code generation, they naturally make conflicting decisions about the same code regions. This results in:</p>
+                <ul class="pdf-list">
+                    <li>Merge conflicts that require manual resolution</li>
+                    <li>Wasted tokens on incompatible code generation</li>
+                    <li>Delayed delivery and integration failures</li>
+                    <li>Zero agent-to-agent coordination or conflict awareness</li>
+                </ul>
+            </div>
+
+            <div class="pdf-section">
+                <h2>Real-World Test Results</h2>
+                <p><strong>Test Scenario: Two Real Autonomous Agents</strong></p>
+                <p style="margin-top: 15px;">Agent A (Claude Opus 4.1) and Agent B (Claude Sonnet 4) were tasked with implementing authentication functions. Without Neo coordination, both agents independently decided to implement the same function with incompatible approaches (sync vs async, different return types).</p>
+
+                <p style="margin-top: 20px; color: var(--accent-2);"><strong>WITHOUT Neo Coordination:</strong></p>
+                <ul class="pdf-list">
+                    <li>1 merge conflict detected</li>
+                    <li>70,874 tokens consumed with zero delivery value</li>
+                    <li>Manual resolution required</li>
+                    <li>50% delivery success rate</li>
+                </ul>
+
+                <p style="margin-top: 20px; color: #00ff88;"><strong>WITH Neo Coordination:</strong></p>
+                <ul class="pdf-list">
+                    <li>0 merge conflicts prevented through coordination</li>
+                    <li>Both agents delivered working, integrated code</li>
+                    <li>Agent B implemented dependency, Agent A used it</li>
+                    <li>100% delivery success rate, zero manual work</li>
+                </ul>
+            </div>
+
+            <div class="pdf-section">
+                <h2>How Neo Works</h2>
+                <p><strong>Instead of:</strong> generate → commit → merge → conflict → resolve</p>
+                <p><strong>Neo enables:</strong> intent → coordinate → authorize → generate → commit</p>
+
+                <p style="margin-top: 20px;">Four-Step Process:</p>
+                <ul class="pdf-list">
+                    <li><strong>Intent Declaration:</strong> Agents declare what they'll implement before generation</li>
+                    <li><strong>Semantic Analysis:</strong> Neo analyzes declarations using AST-based symbol extraction</li>
+                    <li><strong>Risk Scoring:</strong> Objective 0-100 conflict risk assessment</li>
+                    <li><strong>Orchestration:</strong> Intelligent sequencing based on dependencies</li>
+                </ul>
+            </div>
+
+            <div class="pdf-section">
+                <h2>Key Features</h2>
+                <ul class="pdf-list">
+                    <li><strong>⚡ Ultra-Fast Detection:</strong> Sub-10ms latency per check</li>
+                    <li><strong>🧠 Semantic Analysis:</strong> Symbol and dependency-level conflict detection</li>
+                    <li><strong>🔒 Three-Tier Enforcement:</strong> Generation gates, mutual acknowledgment, auto-escalation</li>
+                    <li><strong>📦 Checkpoint System:</strong> Agent state preserved during waits, zero token waste</li>
+                    <li><strong>🔄 Dependency Tracking:</strong> Intelligent sequencing based on code dependencies</li>
+                    <li><strong>📊 Risk Quantification:</strong> Multi-factor analysis with evidence breakdown</li>
+                </ul>
+            </div>
+
+            <div class="pdf-section">
+                <h2>Impact Metrics</h2>
+                <ul class="pdf-list">
+                    <li>100% merge conflict prevention rate</li>
+                    <li>2x functions delivered (both agents' code integrated)</li>
+                    <li>&lt;10ms detection latency with zero network calls</li>
+                    <li>Zero token waste during coordination waits</li>
+                    <li>100% delivery success vs 50% without coordination</li>
+                </ul>
+            </div>
+
+            <div class="pdf-section">
+                <h2>Production Readiness</h2>
+                <p>Neo has been tested with real autonomous agents (Claude Opus + Claude Sonnet) and proven to prevent merge conflicts through intelligent coordination. The system is ready for deployment in multi-agent code generation workflows at scale.</p>
+            </div>
+
+            <div class="pdf-section">
+                <h2>Next Steps</h2>
+                <p>To get started with Neo, visit the GitHub repository or read more about the coordination protocol and implementation details in the project documentation.</p>
+                <ul class="pdf-list">
+                    <li>GitHub: github.com/jaykrishna316/Neo</li>
+                    <li>LinkedIn: lnkd.in/gqTvK-4v</li>
+                    <li>Contact: jaykrishna.i13@gmail.com</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PDF Modal Functions
+        function openPDF() {
+            document.getElementById('pdfModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePDF() {
+            document.getElementById('pdfModal').classList.remove('open');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePDF();
+        });
+
+        // Close modal on outside click
+        document.getElementById('pdfModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('pdfModal')) {
+                closePDF();
+            }
+        });
+
+        // Smooth animations on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animation = 'slide-in 0.8s ease-out forwards';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.problem-card, .feature, .result-card').forEach(el => {
+            el.style.opacity = '0';
+            observer.observe(el);
+        });
+
+        // Mouse move effect on cards
+        document.querySelectorAll('.problem-card, .feature, .result-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', x + 'px');
+                card.style.setProperty('--mouse-y', y + 'px');
+            });
+        });
+    </script>
+</body>
+</html>

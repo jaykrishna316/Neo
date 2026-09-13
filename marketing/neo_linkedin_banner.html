@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo - LinkedIn Banner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            width: 1128px;
+            height: 191px;
+            overflow: hidden;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 60px;
+            position: relative;
+        }
+
+        /* Matrix code background */
+        .matrix-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.08;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #0f172a;
+            overflow: hidden;
+            white-space: pre-wrap;
+            word-break: break-all;
+            pointer-events: none;
+            z-index: 1;
+            line-height: 1.2;
+            animation: matrix-flow 20s linear infinite;
+        }
+
+        .matrix-bg-secondary {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.06;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #1e293b;
+            overflow: hidden;
+            white-space: pre-wrap;
+            word-break: break-all;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Animated background elements */
+        .bg-element {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .bg-circle-1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+            border-radius: 50%;
+            top: -100px;
+            left: -100px;
+        }
+
+        .bg-circle-2 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -80px;
+            right: -80px;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            width: 100%;
+        }
+
+        .mugshot-container {
+            flex-shrink: 0;
+            width: 120px;
+            height: 150px;
+            border: 3px solid #0f172a;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .mugshot-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .mugshot-label {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9px;
+            color: #1e293b;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+        }
+
+        .left-section {
+            flex: 1;
+        }
+
+        .logo-text {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #1e40af 0%, #0891b2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .tagline {
+            font-size: 13px;
+            color: #1e293b;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            line-height: 1.4;
+        }
+
+        .divider {
+            width: 2px;
+            height: 80px;
+            background: linear-gradient(180deg, #1e40af 0%, #0891b2 100%);
+            opacity: 0.8;
+        }
+
+        .right-section {
+            flex: 1;
+            padding-right: 40px;
+        }
+
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30, 64, 175, 0.15);
+            border-radius: 4px;
+            font-size: 10px;
+            color: #1e40af;
+        }
+
+        .github-link-section {
+            position: absolute;
+            bottom: 10px;
+            right: 60px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .github-icon {
+            font-size: 12px;
+        }
+
+        .github-url {
+            font-size: 10px;
+            color: #1e40af;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg">01010110 01000101 01000011 01010100 01001111 01010010 00100000 01010000 01010010 01000101 01010110 01000101 01001110 01010100 01001001 01001111 01001110 00100000 01001001 01001110 01010100 01000101 01001110 01010100 00100000 01000011 01001111 01001110 01000110 01001100 01001001 01000011 01010100 00100000 01000111 01000001 01000101 01010011 01001001 00100000 01010000 01010010 01001111 01010100 01001111 01000011 01001111 01001100 00100000 01001001 01001000 01010000 01010000 01001111 01001001 01001001 01001110 01010100 01001111</div>
+    <div class="matrix-bg-secondary">1101001 0010010 1010101 0100011 1100110 0011001 1001100 0101010 1111000 0010101 1010011 0110010 1001010 0011100 1110101 0100101 1011000 0001011 1100001 0010101 1010110 0111001 0101010 0010011 1001101 0100110 1010101 0011010</div>
+
+    <div class="bg-element bg-circle-1"></div>
+    <div class="bg-element bg-circle-2"></div>
+
+    <div class="content">
+        <div class="mugshot-container">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 150'%3E%3Crect width='120' height='150' fill='%231a1a1a'/%3E%3Ctext x='60' y='75' font-size='12' fill='%23888' text-anchor='middle' dominant-baseline='middle' font-family='monospace'%3E[Image]%3C/text%3E%3C/svg%3E" alt="Keanu Reeves Matrix Mugshot">
+            <div class="mugshot-label">NEO</div>
+        </div>
+
+        <div class="left-section">
+            <div class="logo-text">Neo</div>
+            <div class="tagline">Agent Coordination<br>for Conflict-Free Code</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="right-section">
+            <div class="feature-list">
+                <div class="feature">
+                    <div class="feature-icon">✓</div>
+                    <span>Zero Merge Conflicts</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <span>&lt;10ms Latency</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔒</div>
+                    <span>Semantic Analysis</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="github-link-section">
+        <span class="github-icon">→</span>
+        <span class="github-url">github.com/jaykrishna316/Neo</span>
+    </div>
+</body>
+</html>

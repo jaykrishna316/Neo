@@ -1,0 +1,143 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad-magenta" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff006e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#cc0055;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad-bridge" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8338ec;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff006e;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="256" height="256" fill="#000000"/>
+
+  <!-- Matrix code background (vertical falling lines) -->
+  <g opacity="0.15" stroke="#00d9ff" stroke-width="1">
+    <line x1="40" y1="0" x2="40" y2="256" />
+    <line x1="80" y1="0" x2="80" y2="256" />
+    <line x1="120" y1="0" x2="120" y2="256" />
+    <line x1="136" y1="0" x2="136" y2="256" />
+    <line x1="176" y1="0" x2="176" y2="256" />
+    <line x1="216" y1="0" x2="216" y2="256" />
+  </g>
+
+  <!-- Matrix code characters (background) -->
+  <g fill="#00d9ff" opacity="0.08" font-family="monospace" font-size="8">
+    <text x="30" y="30">101</text>
+    <text x="80" y="50">010</text>
+    <text x="130" y="40">111</text>
+    <text x="180" y="60">001</text>
+    <text x="30" y="90">110</text>
+    <text x="140" y="100">101</text>
+    <text x="200" y="90">011</text>
+    <text x="50" y="150">001</text>
+    <text x="120" y="180">110</text>
+    <text x="180" y="170">100</text>
+  </g>
+
+  <!-- Code Bridge (connecting line with glow) -->
+  <line x1="85" y1="120" x2="171" y2="120" stroke="url(#grad-bridge)" stroke-width="3" opacity="0.8" filter="url(#glow)"/>
+
+  <!-- Code particles on bridge (animated-style) -->
+  <circle cx="100" cy="120" r="2" fill="#00d9ff" opacity="0.7"/>
+  <circle cx="120" cy="120" r="2" fill="#8338ec" opacity="0.7"/>
+  <circle cx="140" cy="120" r="2" fill="#ff006e" opacity="0.7"/>
+  <circle cx="160" cy="120" r="2" fill="#8338ec" opacity="0.7"/>
+
+  <!-- Left Agent (Cyan) - Figure at keyboard -->
+  <!-- Head -->
+  <circle cx="70" cy="70" r="18" fill="none" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)"/>
+
+  <!-- Body -->
+  <rect x="60" y="92" width="20" height="28" fill="none" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)"/>
+
+  <!-- Left arm raised (typing gesture) -->
+  <line x1="60" y1="100" x2="40" y2="85" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+
+  <!-- Right arm -->
+  <line x1="80" y1="100" x2="95" y2="105" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+
+  <!-- Legs -->
+  <line x1="65" y1="120" x2="62" y2="145" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <line x1="75" y1="120" x2="78" y2="145" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+
+  <!-- Right Agent (Magenta) - Figure at keyboard -->
+  <!-- Head -->
+  <circle cx="186" cy="70" r="18" fill="none" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)"/>
+
+  <!-- Body -->
+  <rect x="176" y="92" width="20" height="28" fill="none" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)"/>
+
+  <!-- Left arm -->
+  <line x1="176" y1="100" x2="161" y2="105" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+
+  <!-- Right arm raised (typing gesture) -->
+  <line x1="196" y1="100" x2="216" y2="85" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+
+  <!-- Legs -->
+  <line x1="181" y1="120" x2="178" y2="145" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <line x1="191" y1="120" x2="194" y2="145" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+
+  <!-- Keyboards below agents -->
+  <!-- Left keyboard -->
+  <g fill="none" stroke="url(#grad-cyan)" stroke-width="1.5" opacity="0.8">
+    <rect x="50" y="150" width="40" height="12" rx="2"/>
+    <line x1="55" y1="150" x2="55" y2="162"/>
+    <line x1="62" y1="150" x2="62" y2="162"/>
+    <line x1="69" y1="150" x2="69" y2="162"/>
+    <line x1="76" y1="150" x2="76" y2="162"/>
+    <line x1="83" y1="150" x2="83" y2="162"/>
+  </g>
+
+  <!-- Right keyboard -->
+  <g fill="none" stroke="url(#grad-magenta)" stroke-width="1.5" opacity="0.8">
+    <rect x="166" y="150" width="40" height="12" rx="2"/>
+    <line x1="171" y1="150" x2="171" y2="162"/>
+    <line x1="178" y1="150" x2="178" y2="162"/>
+    <line x1="185" y1="150" x2="185" y2="162"/>
+    <line x1="192" y1="150" x2="192" y2="162"/>
+    <line x1="199" y1="150" x2="199" y2="162"/>
+  </g>
+
+  <!-- Code flowing up from keyboards -->
+  <g stroke="#00d9ff" stroke-width="1.5" fill="none" opacity="0.6">
+    <path d="M 70 150 L 70 135 L 65 125"/>
+    <path d="M 75 150 L 75 140 L 80 130"/>
+  </g>
+
+  <g stroke="#ff006e" stroke-width="1.5" fill="none" opacity="0.6">
+    <path d="M 186 150 L 186 135 L 191 125"/>
+    <path d="M 181 150 L 181 140 L 176 130"/>
+  </g>
+
+  <!-- Central coordination indicator (circle with coordination symbol) -->
+  <circle cx="128" cy="128" r="35" fill="none" stroke="url(#grad-bridge)" stroke-width="1.5" opacity="0.4" filter="url(#glow)"/>
+
+  <!-- Inner sync symbol -->
+  <circle cx="128" cy="128" r="4" fill="url(#grad-bridge)" filter="url(#glow)"/>
+
+  <!-- Top accent - Neo branding area -->
+  <g fill="#00d9ff" opacity="0.3" font-family="monospace" font-size="10" font-weight="bold" text-anchor="middle">
+    <text x="128" y="20">NEO</text>
+  </g>
+
+  <!-- Bottom accent - coordination indicator -->
+  <g fill="none" stroke="#8338ec" stroke-width="1" opacity="0.4">
+    <circle cx="128" cy="225" r="8"/>
+    <circle cx="128" cy="225" r="12"/>
+  </g>
+</svg>
