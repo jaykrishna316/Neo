@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neo - Website Assets</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0a0e27 0%, #1a0033 100%);
+      background-attachment: fixed;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 60px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 3.5em;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #00d9ff, #ff006e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #a0a0a0;
+      margin-bottom: 60px;
+      font-size: 1.1em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+      margin-bottom: 60px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(0, 217, 255, 0.2);
+      border-radius: 12px;
+      padding: 30px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      color: inherit;
+    }
+
+    .card:hover {
+      border-color: rgba(0, 217, 255, 0.6);
+      background: rgba(0, 217, 255, 0.1);
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 217, 255, 0.2);
+    }
+
+    .card h2 {
+      color: #00d9ff;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+    }
+
+    .card p {
+      color: #a0a0a0;
+      line-height: 1.6;
+      font-size: 0.95em;
+      margin-bottom: 15px;
+    }
+
+    .file-info {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      color: #00d9ff;
+      margin-top: 15px;
+    }
+
+    .icon-section {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .icon-preview {
+      display: inline-block;
+      width: 150px;
+      height: 150px;
+      margin: 30px 0;
+      filter: drop-shadow(0 0 20px rgba(0, 217, 255, 0.3));
+    }
+
+    .info-box {
+      background: rgba(51, 56, 236, 0.1);
+      border-left: 4px solid #8338ec;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 40px;
+    }
+
+    .info-box h3 {
+      color: #8338ec;
+      margin-bottom: 10px;
+    }
+
+    .info-box p {
+      color: #b0b0b0;
+      line-height: 1.6;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 40px;
+    }
+
+    .quick-links a {
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      color: #00d9ff;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      font-size: 0.9em;
+    }
+
+    .quick-links a:hover {
+      background: rgba(0, 217, 255, 0.2);
+      border-color: rgba(0, 217, 255, 0.6);
+    }
+
+    .footer {
+      text-align: center;
+      color: #606060;
+      font-size: 0.9em;
+      margin-top: 60px;
+      padding-top: 30px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>NEO</h1>
+    <p class="subtitle">Agent Coordination Layer - Website & Marketing Assets</p>
+
+    <div class="info-box">
+      <h3>🚀 Ready to Deploy</h3>
+      <p>All files in this folder are production-ready. <strong>Start with neo_premium.html</strong> for the main website (place your <code>neo-hero.png</code> image in this folder first). See <strong>SETUP.md</strong> for instructions. No build process needed—just open in a browser or upload to any static hosting (Cloudflare Pages, Vercel, Netlify).</p>
+    </div>
+
+    <div class="icon-section">
+      <h2 style="color: #00d9ff; margin-bottom: 20px;">Neo Icon</h2>
+      <svg class="icon-preview" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#00ff41;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00b81d;stop-opacity:1" />
+          </linearGradient>
+          <linearGradient id="grad-agent-left" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#00ff41;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00d9ff;stop-opacity:1" />
+          </linearGradient>
+          <linearGradient id="grad-agent-right" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#ff006e;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ff6b9d;stop-opacity:1" />
+          </linearGradient>
+          <linearGradient id="grad-git" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#00ff41;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#8338ec;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#ff006e;stop-opacity:1" />
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="glow-strong">
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <rect width="256" height="256" fill="#000000"/>
+        <g opacity="0.3" fill="#00ff41" font-family="'Courier New', monospace" font-size="9">
+          <text x="10" y="25">1</text><text x="10" y="45">0</text><text x="10" y="65">1</text><text x="10" y="85">1</text><text x="10" y="105">0</text>
+          <text x="35" y="20">0</text><text x="35" y="40">1</text><text x="35" y="60">0</text><text x="35" y="80">1</text><text x="35" y="100">1</text>
+          <text x="220" y="15">0</text><text x="220" y="35">1</text><text x="220" y="55">1</text><text x="220" y="75">0</text><text x="220" y="95">1</text>
+          <text x="245" y="25">1</text><text x="245" y="45">0</text><text x="245" y="65">1</text><text x="245" y="85">1</text><text x="245" y="105">0</text>
+        </g>
+        <line x1="128" y1="40" x2="128" y2="100" stroke="url(#grad-git)" stroke-width="2" opacity="0.6" filter="url(#glow)"/>
+        <path d="M 128 70 Q 90 85 60 110" stroke="url(#grad-git)" stroke-width="2" opacity="0.6" fill="none" filter="url(#glow)"/>
+        <path d="M 128 70 Q 166 85 196 110" stroke="url(#grad-git)" stroke-width="2" opacity="0.6" fill="none" filter="url(#glow)"/>
+        <circle cx="128" cy="100" r="5" fill="url(#grad-git)" filter="url(#glow)"/>
+        <circle cx="60" cy="110" r="16" fill="none" stroke="url(#grad-agent-left)" stroke-width="2.5" filter="url(#glow-strong)"/>
+        <circle cx="54" cy="106" r="2.5" fill="#00ff41" filter="url(#glow-strong)"/>
+        <circle cx="66" cy="106" r="2.5" fill="#00ff41" filter="url(#glow-strong)"/>
+        <rect x="48" y="130" width="24" height="32" rx="3" fill="none" stroke="url(#grad-agent-left)" stroke-width="2" filter="url(#glow-strong)"/>
+        <circle cx="196" cy="110" r="16" fill="none" stroke="url(#grad-agent-right)" stroke-width="2.5" filter="url(#glow-strong)"/>
+        <circle cx="190" cy="106" r="2.5" fill="#ff006e" filter="url(#glow-strong)"/>
+        <circle cx="202" cy="106" r="2.5" fill="#ff006e" filter="url(#glow-strong)"/>
+        <rect x="184" y="130" width="24" height="32" rx="3" fill="none" stroke="url(#grad-agent-right)" stroke-width="2" filter="url(#glow-strong)"/>
+        <line x1="76" y1="126" x2="180" y2="126" stroke="url(#grad-git)" stroke-width="2.5" opacity="0.7" filter="url(#glow)" stroke-dasharray="3,3"/>
+      </svg>
+    </div>
+
+    <div class="grid">
+      <a href="neo_premium.html" class="card">
+        <h2>⭐ Premium Landing Page</h2>
+        <p>Professional landing page with your custom hero image. Features test results, problem/solution, and three-tier architecture explanation.</p>
+        <div class="file-info">neo_premium.html (requires neo-hero.png)</div>
+      </a>
+
+      <a href="neo_landing_ultra.html" class="card">
+        <h2>🌐 Ultra Website</h2>
+        <p>Ultra-futuristic landing page with full Neo explanation, real test results, and interactive PDF modal.</p>
+        <div class="file-info">neo_landing_ultra.html</div>
+      </a>
+
+      <a href="neo_linkedin_banner.html" class="card">
+        <h2>📱 LinkedIn Banner</h2>
+        <p>Professional 1128×191px banner for LinkedIn profile with Matrix aesthetic and GitHub link.</p>
+        <div class="file-info">neo_linkedin_banner.html</div>
+      </a>
+
+      <div class="card">
+        <h2>🎨 Icon Asset</h2>
+        <p>Scalable SVG icon featuring two agents, git tree structure, and Matrix code background.</p>
+        <div class="file-info">neo_icon.svg (11 KB)</div>
+      </div>
+    </div>
+
+    <div class="info-box" style="border-left-color: #00d9ff; background: rgba(0, 217, 255, 0.1);">
+      <h3 style="color: #00d9ff;">⚡ Quick Start</h3>
+      <p><strong>Python 3:</strong> Run `python3 -m http.server 8000` then open http://localhost:8000</p>
+      <p style="margin-top: 10px;"><strong>Node.js:</strong> Run `npx http-server` in this folder</p>
+      <p style="margin-top: 10px;"><strong>Deploy:</strong> Upload folder to Cloudflare Pages, Vercel, or Netlify</p>
+    </div>
+
+    <div class="quick-links">
+      <a href="https://github.com/jaykrishna316/Neo" target="_blank">📘 GitHub Repository</a>
+      <a href="README.md" target="_blank">📖 Full Documentation</a>
+    </div>
+
+    <div class="footer">
+      <p>Neo - Agent Coordination Layer for Multi-Agent Code Generation</p>
+      <p style="margin-top: 10px; opacity: 0.6;">Created with Claude Code</p>
+    </div>
+  </div>
+</body>
+</html>
