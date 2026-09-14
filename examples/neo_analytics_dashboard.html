@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo Analytics - Real-Time Coordination Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00d9ff;
+            --secondary: #ff006e;
+            --accent: #8338ec;
+            --dark-bg: #0a0e27;
+            --card-bg: rgba(20, 25, 50, 0.6);
+            --card-border: rgba(0, 217, 255, 0.2);
+            --hot: #ff1744;
+            --warm: #ff9100;
+            --cool: #00bcd4;
+            --cold: #1e88e5;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b8d4;
+            --success: #00e676;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1a1f3a 100%);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(0, 217, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 230, 118, 0.2);
+            border: 1px solid var(--success);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: var(--success);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-meta {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .widget {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .widget-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .widget-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, var(--primary), var(--accent));
+            border-radius: 2px;
+        }
+
+        .heatmap {
+            display: grid;
+            gap: 12px;
+        }
+
+        .heatmap-row {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .heatmap-label {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            font-family: 'Monaco', 'Courier New', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .heatmap-bar {
+            display: flex;
+            align-items: center;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .heatmap-fill {
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            font-size: 0.75em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .heatmap-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1));
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .heatmap-value {
+            position: relative;
+            z-index: 1;
+            color: white;
+        }
+
+        .hot { background: linear-gradient(90deg, #ff1744 0%, #ff5252 100%); color: white; }
+        .warm { background: linear-gradient(90deg, #ff9100 0%, #ffb74d 100%); color: white; }
+        .cool { background: linear-gradient(90deg, #00bcd4 0%, #26c6da 100%); color: white; }
+        .cold { background: linear-gradient(90deg, #1e88e5 0%, #42a5f5 100%); color: white; }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .agent-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .agent-card:hover {
+            background: rgba(0, 217, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .agent-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        .agent-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8em;
+            margin-bottom: 8px;
+        }
+
+        .agent-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .agent-status.active .agent-status-dot {
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(0, 230, 118, 0.5);
+        }
+
+        .agent-status.idle .agent-status-dot {
+            background: var(--text-secondary);
+        }
+
+        .agent-metric {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            font-size: 0.8em;
+            padding: 4px 0;
+        }
+
+        .agent-metric-value {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .timeline {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .insights-box {
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(131, 56, 236, 0.1));
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .insight-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .insight-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .insight-icon {
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .conflict-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .conflict-item {
+            background: rgba(255, 23, 68, 0.1);
+            border-left: 3px solid #ff1744;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 0.85em;
+        }
+
+        .conflict-agents {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .conflict-agent-badge {
+            background: rgba(0, 217, 255, 0.2);
+            border: 1px solid var(--primary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+        }
+
+        .conflict-file {
+            color: var(--primary);
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.8em;
+        }
+
+        .conflict-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75em;
+            margin-top: 4px;
+            padding: 4px 8px;
+            background: rgba(0, 230, 118, 0.2);
+            color: var(--success);
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .grid-2-1 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .grid-2-1 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 217, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 217, 255, 0.5);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0, 217, 255, 0.1);
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Neo Analytics</h1>
+            <div class="subtitle">
+                Real-Time Multi-Agent Coordination Monitor
+                <span class="status-badge">
+                    <span class="status-dot"></span>
+                    System Live
+                </span>
+            </div>
+        </header>
+
+        <!-- Key Metrics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Conflicts Detected</div>
+                <div class="stat-value">24</div>
+                <div class="stat-meta">100% Prevention Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Agents</div>
+                <div class="stat-value">9</div>
+                <div class="stat-meta">12 Total Coordinated</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Events Today</div>
+                <div class="stat-value">487</div>
+                <div class="stat-meta">Avg 20/hour</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Tokens Saved</div>
+                <div class="stat-value">14.4K</div>
+                <div class="stat-meta">Through coordination</div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div class="dashboard-grid">
+            <!-- File Heat Map -->
+            <div class="widget">
+                <div class="widget-title">🔥 File Conflict Heat Map</div>
+                <div class="heatmap">
+                    <div class="heatmap-row">
+                        <div class="heatmap-label">src/auth/login.py</div>
+                        <div class="heatmap-bar">
+                            <div class="heatmap-fill hot" style="width: 95%;">
+                                <span class="heatmap-value">95°</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="heatmap-row">
+                        <div class="heatmap-label">src/db/models.py</div>
+                        <div class="heatmap-bar">
+                            <div class="heatmap-fill warm" style="width: 78%;">
+                                <span class="heatmap-value">78°</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="heatmap-row">
+                        <div class="heatmap-label">src/api/routes.py</div>
+                        <div class="heatmap-bar">
+                            <div class="heatmap-fill cool" style="width: 62%;">
+                                <span class="heatmap-value">62°</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="heatmap-row">
+                        <div class="heatmap-label">src/config/settings.py</div>
+                        <div class="heatmap-bar">
+                            <div class="heatmap-fill cool" style="width: 38%;">
+                                <span class="heatmap-value">38°</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="heatmap-row">
+                        <div class="heatmap-label">src/utils/helpers.py</div>
+                        <div class="heatmap-bar">
+                            <div class="heatmap-fill cold" style="width: 24%;">
+                                <span class="heatmap-value">24°</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="insights-box">
+                    <div class="insight-item">
+                        <span class="insight-icon">💡</span>
+                        <span><strong>Recommendation:</strong> Consider splitting auth module to reduce 8-conflict hot spot</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conflict Timeline -->
+            <div class="widget">
+                <div class="widget-title">📈 Coordination Activity</div>
+                <div class="timeline">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Status & Recent Conflicts -->
+        <div class="grid-2-1">
+            <!-- Active Agents -->
+            <div class="widget">
+                <div class="widget-title">🤖 Active Agents in Flight</div>
+                <div class="agents-grid">
+                    <div class="agent-card">
+                        <div class="agent-name">Groq Fast Agent</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">5</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">234K</span></div>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-name">Claude Instance 1</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">3</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">142K</span></div>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-name">Gemini Agent</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">4</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">87K</span></div>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-name">Claude Instance 2</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">2</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">98K</span></div>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-name">Local Mistral</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">2</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">12K</span></div>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-name">Gemini Agent 2</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">3</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">65K</span></div>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-name">Claude Instance 3</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">1</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">73K</span></div>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-name">Local Llama</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">2</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">8.9K</span></div>
+                    </div>
+                    <div class="agent-card">
+                        <div class="agent-name">Custom Agent</div>
+                        <div class="agent-status active"><span class="agent-status-dot"></span> In Flight</div>
+                        <div class="agent-metric"><span>Tasks:</span> <span class="agent-metric-value">1</span></div>
+                        <div class="agent-metric"><span>Tokens:</span> <span class="agent-metric-value">45K</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Conflicts -->
+            <div class="widget">
+                <div class="widget-title">⚠️ Recent Coordination Events</div>
+                <div class="conflict-list">
+                    <div class="conflict-item">
+                        <div class="conflict-agents">
+                            <span class="conflict-agent-badge">Claude 1</span>
+                            <span style="color: var(--text-secondary);">vs</span>
+                            <span class="conflict-agent-badge">Groq 1</span>
+                        </div>
+                        <div class="conflict-file">src/auth/login.py · login_user()</div>
+                        <span class="conflict-status">✓ Escalated</span>
+                    </div>
+                    <div class="conflict-item">
+                        <div class="conflict-agents">
+                            <span class="conflict-agent-badge">Claude 2</span>
+                            <span style="color: var(--text-secondary);">vs</span>
+                            <span class="conflict-agent-badge">Gemini 1</span>
+                        </div>
+                        <div class="conflict-file">src/db/models.py · User.__init__()</div>
+                        <span class="conflict-status">✓ Prevented</span>
+                    </div>
+                    <div class="conflict-item">
+                        <div class="conflict-agents">
+                            <span class="conflict-agent-badge">Local 1</span>
+                            <span style="color: var(--text-secondary);">vs</span>
+                            <span class="conflict-agent-badge">Claude 1</span>
+                        </div>
+                        <div class="conflict-file">src/auth/login.py · login_user()</div>
+                        <span class="conflict-status">✓ Prevented</span>
+                    </div>
+                    <div class="conflict-item">
+                        <div class="conflict-agents">
+                            <span class="conflict-agent-badge">Groq 1</span>
+                            <span style="color: var(--text-secondary);">vs</span>
+                            <span class="conflict-agent-badge">Gemini 2</span>
+                        </div>
+                        <div class="conflict-file">src/api/routes.py · handle_login()</div>
+                        <span class="conflict-status">✓ Prevented</span>
+                    </div>
+                    <div class="conflict-item">
+                        <div class="conflict-agents">
+                            <span class="conflict-agent-badge">Claude 3</span>
+                            <span style="color: var(--text-secondary);">vs</span>
+                            <span class="conflict-agent-badge">Local 2</span>
+                        </div>
+                        <div class="conflict-file">src/config/settings.py</div>
+                        <span class="conflict-status">✓ Prevented</span>
+                    </div>
+                    <div class="conflict-item">
+                        <div class="conflict-agents">
+                            <span class="conflict-agent-badge">Claude 1</span>
+                            <span style="color: var(--text-secondary);">vs</span>
+                            <span class="conflict-agent-badge">Claude 2</span>
+                        </div>
+                        <div class="conflict-file">src/db/models.py · User.save()</div>
+                        <span class="conflict-status">✓ Prevented</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🚀 Neo Analytics Dashboard • Real-time coordination intelligence for multi-agent systems</p>
+        </div>
+    </div>
+
+    <script>
+        // Timeline Chart
+        const ctx = document.getElementById('timelineChart').getContext('2d');
+        const timelineData = {
+            labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'],
+            datasets: [
+                {
+                    label: 'Coordination Events',
+                    data: [18, 31, 45, 35, 42, 16, 6],
+                    borderColor: '#00d9ff',
+                    backgroundColor: 'rgba(0, 217, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#00d9ff',
+                    pointBorderColor: '#8338ec',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                },
+                {
+                    label: 'Conflicts Detected',
+                    data: [1, 2, 3, 1, 2, 0, 0],
+                    borderColor: '#ff1744',
+                    backgroundColor: 'rgba(255, 23, 68, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#ff1744',
+                    pointBorderColor: '#8338ec',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }
+            ]
+        };
+
+        const timelineChart = new Chart(ctx, {
+            type: 'line',
+            data: timelineData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#b0b8d4',
+                            font: { size: 12 },
+                            usePointStyle: true,
+                            padding: 15
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 217, 255, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#b0b8d4'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#b0b8d4'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

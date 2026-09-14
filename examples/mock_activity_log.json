@@ -1,0 +1,87 @@
+{
+  "metadata": {
+    "organization": "TechCorp AI",
+    "period": "2024-09-14 00:00 - 2024-09-14 23:59",
+    "total_agents": 12,
+    "total_events": 487,
+    "total_conflicts_detected": 24,
+    "total_conflicts_prevented": 24,
+    "prevention_rate": 100.0
+  },
+  "agents": [
+    {"id": "claude-1", "name": "Claude Instance 1", "status": "active", "in_flight_tasks": 3, "tokens_used": 142500},
+    {"id": "claude-2", "name": "Claude Instance 2", "status": "active", "in_flight_tasks": 2, "tokens_used": 98700},
+    {"id": "gpt4-1", "name": "GPT-4 Worker", "status": "idle", "in_flight_tasks": 0, "tokens_used": 156200},
+    {"id": "gemini-1", "name": "Gemini Agent", "status": "active", "in_flight_tasks": 4, "tokens_used": 87300},
+    {"id": "groq-1", "name": "Groq Fast Agent", "status": "active", "in_flight_tasks": 5, "tokens_used": 234100},
+    {"id": "local-1", "name": "Local Mistral", "status": "active", "in_flight_tasks": 2, "tokens_used": 12400},
+    {"id": "claude-3", "name": "Claude Instance 3", "status": "active", "in_flight_tasks": 1, "tokens_used": 73400},
+    {"id": "gpt4-2", "name": "GPT-4 Worker 2", "status": "idle", "in_flight_tasks": 0, "tokens_used": 0},
+    {"id": "gemini-2", "name": "Gemini Agent 2", "status": "active", "in_flight_tasks": 3, "tokens_used": 65200},
+    {"id": "groq-2", "name": "Groq Agent 2", "status": "idle", "in_flight_tasks": 0, "tokens_used": 43100},
+    {"id": "local-2", "name": "Local Llama", "status": "active", "in_flight_tasks": 2, "tokens_used": 8900},
+    {"id": "custom-1", "name": "Custom Agent", "status": "active", "in_flight_tasks": 1, "tokens_used": 45300}
+  ],
+  "files": [
+    {"path": "src/auth/login.py", "conflicts": 8, "writers": 4, "hotness": 95, "last_conflict": "2024-09-14T18:42:00Z", "write_frequency": "high"},
+    {"path": "src/db/models.py", "conflicts": 6, "writers": 3, "hotness": 78, "last_conflict": "2024-09-14T17:15:00Z", "write_frequency": "high"},
+    {"path": "src/api/routes.py", "conflicts": 5, "writers": 3, "hotness": 62, "last_conflict": "2024-09-14T16:30:00Z", "write_frequency": "medium"},
+    {"path": "src/config/settings.py", "conflicts": 3, "writers": 2, "hotness": 38, "last_conflict": "2024-09-14T14:22:00Z", "write_frequency": "medium"},
+    {"path": "src/utils/helpers.py", "conflicts": 2, "writers": 2, "hotness": 24, "last_conflict": "2024-09-14T12:10:00Z", "write_frequency": "low"},
+    {"path": "src/middleware/auth.py", "conflicts": 0, "writers": 1, "hotness": 8, "last_conflict": null, "write_frequency": "low"},
+    {"path": "tests/test_auth.py", "conflicts": 0, "writers": 2, "hotness": 5, "last_conflict": null, "write_frequency": "low"},
+    {"path": "docs/API.md", "conflicts": 0, "writers": 1, "hotness": 2, "last_conflict": null, "write_frequency": "very_low"}
+  ],
+  "functions": [
+    {"path": "src/auth/login.py", "function": "login_user", "conflicts": 6, "agents_editing": 3, "hotness": 92},
+    {"path": "src/auth/login.py", "function": "verify_password", "conflicts": 2, "agents_editing": 2, "hotness": 28},
+    {"path": "src/db/models.py", "function": "User.__init__", "conflicts": 4, "agents_editing": 2, "hotness": 72},
+    {"path": "src/db/models.py", "function": "User.save", "conflicts": 2, "agents_editing": 2, "hotness": 42},
+    {"path": "src/api/routes.py", "function": "handle_login", "conflicts": 3, "agents_editing": 2, "hotness": 58},
+    {"path": "src/api/routes.py", "function": "handle_register", "conflicts": 2, "agents_editing": 2, "hotness": 48}
+  ],
+  "conflict_events": [
+    {"timestamp": "2024-09-14T18:42:00Z", "agent_a": "claude-1", "agent_b": "groq-1", "file": "src/auth/login.py", "function": "login_user", "conflict_type": "overlapping_edit", "severity": "HIGH", "resolution": "ESCALATED"},
+    {"timestamp": "2024-09-14T18:38:15Z", "agent_a": "claude-2", "agent_b": "gemini-1", "file": "src/db/models.py", "function": "User.__init__", "conflict_type": "overlapping_edit", "severity": "HIGH", "resolution": "PREVENTED"},
+    {"timestamp": "2024-09-14T18:35:42Z", "agent_a": "local-1", "agent_b": "claude-1", "file": "src/auth/login.py", "function": "login_user", "conflict_type": "adjacent_edit", "severity": "MEDIUM", "resolution": "PREVENTED"},
+    {"timestamp": "2024-09-14T18:32:10Z", "agent_a": "groq-1", "agent_b": "gemini-2", "file": "src/api/routes.py", "function": "handle_login", "conflict_type": "overlapping_edit", "severity": "HIGH", "resolution": "PREVENTED"},
+    {"timestamp": "2024-09-14T18:28:45Z", "agent_a": "claude-3", "agent_b": "local-2", "file": "src/config/settings.py", "function": null, "conflict_type": "config_conflict", "severity": "MEDIUM", "resolution": "PREVENTED"},
+    {"timestamp": "2024-09-14T17:15:00Z", "agent_a": "claude-1", "agent_b": "claude-2", "file": "src/db/models.py", "function": "User.save", "conflict_type": "overlapping_edit", "severity": "HIGH", "resolution": "PREVENTED"},
+    {"timestamp": "2024-09-14T16:30:00Z", "agent_a": "groq-1", "agent_b": "gemini-1", "file": "src/api/routes.py", "function": "handle_register", "conflict_type": "overlapping_edit", "severity": "HIGH", "resolution": "PREVENTED"},
+    {"timestamp": "2024-09-14T14:22:00Z", "agent_a": "claude-1", "agent_b": "groq-2", "file": "src/config/settings.py", "function": null, "conflict_type": "config_conflict", "severity": "LOW", "resolution": "PREVENTED"}
+  ],
+  "timeline": [
+    {"hour": 0, "conflicts": 1, "events": 18, "active_agents": 3},
+    {"hour": 1, "conflicts": 0, "events": 14, "active_agents": 2},
+    {"hour": 2, "conflicts": 1, "events": 22, "active_agents": 4},
+    {"hour": 3, "conflicts": 0, "events": 11, "active_agents": 2},
+    {"hour": 4, "conflicts": 2, "events": 31, "active_agents": 5},
+    {"hour": 5, "conflicts": 1, "events": 25, "active_agents": 3},
+    {"hour": 6, "conflicts": 0, "events": 19, "active_agents": 3},
+    {"hour": 7, "conflicts": 3, "events": 45, "active_agents": 7},
+    {"hour": 8, "conflicts": 2, "events": 38, "active_agents": 6},
+    {"hour": 9, "conflicts": 1, "events": 28, "active_agents": 4},
+    {"hour": 10, "conflicts": 2, "events": 42, "active_agents": 5},
+    {"hour": 11, "conflicts": 3, "events": 51, "active_agents": 8},
+    {"hour": 12, "conflicts": 1, "events": 35, "active_agents": 5},
+    {"hour": 13, "conflicts": 0, "events": 22, "active_agents": 3},
+    {"hour": 14, "conflicts": 1, "events": 32, "active_agents": 4},
+    {"hour": 15, "conflicts": 1, "events": 28, "active_agents": 4},
+    {"hour": 16, "conflicts": 2, "events": 38, "active_agents": 5},
+    {"hour": 17, "conflicts": 1, "events": 30, "active_agents": 4},
+    {"hour": 18, "conflicts": 2, "events": 44, "active_agents": 6},
+    {"hour": 19, "conflicts": 0, "events": 16, "active_agents": 2},
+    {"hour": 20, "conflicts": 0, "events": 14, "active_agents": 2},
+    {"hour": 21, "conflicts": 0, "events": 11, "active_agents": 1},
+    {"hour": 22, "conflicts": 0, "events": 8, "active_agents": 1},
+    {"hour": 23, "conflicts": 0, "events": 6, "active_agents": 1}
+  ],
+  "insights": {
+    "hottest_file": "src/auth/login.py",
+    "hottest_function": "src/auth/login.py::login_user",
+    "most_active_agent": "groq-1",
+    "highest_conflict_pair": ["claude-1", "groq-1"],
+    "conflict_prevention_value": "24 conflicts prevented = ~14,400 tokens saved",
+    "recommendation": "Consider splitting auth module to reduce contention"
+  }
+}
