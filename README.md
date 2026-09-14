@@ -21,13 +21,43 @@ Neo enables: `intent → coordinate → authorize → generate → commit`
 
 ## Quick Start
 
+### ⚡ Interactive Launcher (Recommended)
+
+After cloning, run:
+
+```bash
+python3 run.py
+```
+
+Choose from an interactive menu:
+1. **View Interactive Dashboard** (Browser) - Visual conflict detection
+2. **Run CLI Demo** (All 5 scenarios) - Terminal simulation
+3. **Simulate 2 Agents** - Watch coordination in action
+4. **View Documentation** - Guides and references
+5. **Run Tests** - Verify installation
+6. Exit
+
+**No configuration needed.** No external dependencies. Works immediately.
+
+👉 **[See GETTING_STARTED.md for detailed walkthroughs](GETTING_STARTED.md)**
+
+---
+
 ### 🎯 Try the Interactive Dashboard
 
-**Open in browser:** `ui_dashboard.html`
+**Via launcher:**
+```bash
+python3 run.py
+# Select option 1
+```
 
-Or view online: [Interactive Dashboard (Published Artifact)](https://claude.ai/code/artifact/ec1168f5-707d-4296-b365-e4747ec9842e)
+**Direct:**
+```bash
+open examples/neo_unified_dashboard.html
+# or view online: https://claude.ai/code/artifact/ec1168f5-707d-4296-b365-e4747ec9842e
+```
 
-Click any scenario button to see:
+Click scenario buttons to see:
 - Developer/agent activity with intent tags
 - Conflict detection and risk scoring
 - Three-tier enforcement gates in action
@@ -35,18 +65,23 @@ Click any scenario button to see:
 
 ### 🔧 Run the CLI Simulation
 
+**Via launcher:**
+```bash
+python3 run.py
+# Select option 2
+```
+
+**Direct:**
 ```bash
 python3 cli_simulation.py
 ```
 
-Runs 7 scenarios demonstrating:
+Runs 5 core scenarios demonstrating:
 1. Overlapping regions → MEDIUM risk warning
 2. Non-overlapping regions → LOW risk (silent)
 3. Signature changes → HIGH risk (blocking)
 4. Entry expiry → stale entries ignored
 5. Multiple agents → conflict detection
-6. Agent pre-generation check with conflict reporting
-7. Intent classification for smarter coordination
 
 ## How Neo Works
 
