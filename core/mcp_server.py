@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Neo MCP Server - Enable Claude Code IDE integration for conflict coordination.
+Neo MCP Server - Enable Claude Code IDE integration for conflict coordination (tenant-isolated).
 
 Exposes Neo's coordination APIs as MCP resources and tools for integration with:
 - Claude Code IDE
@@ -8,7 +8,13 @@ Exposes Neo's coordination APIs as MCP resources and tools for integration with:
 - VS Code extensions
 - Multi-agent Claude sessions
 
+Multitenancy Support:
+- Each tenant (company) has isolated activity logs
+- Conflict checks only see same-tenant work
+- Tenant ID resolved from CLAUDE_TENANT_ID environment variable
+
 Usage:
+    export CLAUDE_TENANT_ID=acme-corp
     python3 -m core.mcp_server
 
 Or as MCP server in Claude Code:
@@ -16,6 +22,8 @@ Or as MCP server in Claude Code:
 """
 
 import json
+import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -38,9 +46,26 @@ from core.activity_log import (
     get_active_entries,
     read_log,
     clear_log,
+    DEFAULT_TENANT_ID,
+    MULTITENANCY_ENABLED,
 )
 from core.pre_gen_check import check_for_conflicts, handle_conflict_response
 from core.risk_classifier import RiskLevel
+
+# Multitenancy configuration
+def resolve_tenant_context(tenant_id: Optional[str] = None) -> str:
+    """Resolve tenant context from parameter or environment."""
+    if tenant_id:
+        return tenant_id
+    return DEFAULT_TENANT_ID
+
+
+def validate_tenant_id(tenant_id: str) -> bool:
+    """Validate tenant ID format (alphanumeric, hyphens, underscores)."""
+    if not tenant_id:
+        return False
+    return bool(re.match(r"^[a-z0-9_-]{1,64}$", tenant_id, re.IGNORECASE))
+
 
 # Initialize MCP server
 server = Server("neo-coordination")
@@ -52,26 +77,26 @@ server = Server("neo-coordination")
 
 @server.list_resources()
 async def list_resources() -> list[Resource]:
-    """List all Neo resources available to clients."""
-    log_file = Path(".devsync/activity-log.json")
+    """List all Neo resources available to clients (tenant-isolated)."""
+    tenant = resolve_tenant_context()
 
     resources = [
         Resource(
-            uri="neo://activity-log",
+            uri=f"neo://tenants/{tenant}/activity-log",
             name="Activity Log",
-            description="Shared activity log of all agent intents and work declarations",
+            description=f"Shared activity log for tenant '{tenant}'",
             mimeType="application/json",
         ),
         Resource(
-            uri="neo://conflict-status",
+            uri=f"neo://tenants/{tenant}/conflict-status",
             name="Conflict Status",
-            description="Current conflict detection status and coordination metrics",
+            description=f"Conflict detection metrics for tenant '{tenant}'",
             mimeType="application/json",
         ),
         Resource(
-            uri="neo://active-entries",
+            uri=f"neo://tenants/{tenant}/active-entries",
             name="Active Entries",
-            description="Currently active work entries that haven't expired (30 min)",
+            description=f"Currently active work for tenant '{tenant}' (30 min expiry)",
             mimeType="application/json",
         ),
     ]
@@ -81,19 +106,22 @@ async def list_resources() -> list[Resource]:
 
 @server.read_resource()
 async def read_resource(uri: str) -> str:
-    """Read resource content by URI."""
-    if uri == "neo://activity-log":
-        log_content = read_log()
+    """Read resource content by URI (tenant-isolated)."""
+    tenant = resolve_tenant_context()
+
+    # Handle tenant-scoped URIs: neo://tenants/{tenant}/...
+    if uri == f"neo://tenants/{tenant}/activity-log":
+        log_content = read_log(tenant_id=tenant)
         return json.dumps(log_content, indent=2)
 
-    elif uri == "neo://active-entries":
-        active = get_active_entries()
+    elif uri == f"neo://tenants/{tenant}/active-entries":
+        active = get_active_entries(tenant_id=tenant)
         return json.dumps(active, indent=2)
 
-    elif uri == "neo://conflict-status":
-        active = get_active_entries()
+    elif uri == f"neo://tenants/{tenant}/conflict-status":
+        active = get_active_entries(tenant_id=tenant)
 
-        # Calculate metrics
+        # Calculate metrics for this tenant only
         files_with_conflicts = {}
         for entry in active:
             file_path = entry.get("file_path")
@@ -103,6 +131,7 @@ async def read_resource(uri: str) -> str:
                 files_with_conflicts[file_path].append(entry.get("developer_id"))
 
         status = {
+            "tenant_id": tenant,
             "active_entries": len(active),
             "files_with_activity": len(files_with_conflicts),
             "potential_conflicts": sum(
@@ -127,11 +156,11 @@ async def read_resource(uri: str) -> str:
 
 @server.list_tools()
 async def list_tools() -> list[Tool]:
-    """List all Neo coordination tools available to clients."""
+    """List all Neo coordination tools available to clients (tenant-isolated)."""
     return [
         Tool(
             name="neo_log_activity",
-            description="Declare agent intent to work on a file. Called before code generation.",
+            description="Declare agent intent to work on a file. Called before code generation (tenant-isolated).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -156,13 +185,17 @@ async def list_tools() -> list[Tool]:
                         "enum": ["feature", "bugfix", "refactor", "chore"],
                         "description": "Category of work being done",
                     },
+                    "tenant_id": {
+                        "type": "string",
+                        "description": f"Tenant ID (company). Defaults to CLAUDE_TENANT_ID={DEFAULT_TENANT_ID}",
+                    },
                 },
                 "required": ["agent_id", "file_path", "intent"],
             },
         ),
         Tool(
             name="neo_check_conflicts",
-            description="Check for conflicts before code generation. Returns risk level and guidance.",
+            description="Check for conflicts before code generation. Tenant-isolated (tenant-isolated).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -182,13 +215,17 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Optional: specific region being modified",
                     },
+                    "tenant_id": {
+                        "type": "string",
+                        "description": f"Tenant ID (company). Defaults to CLAUDE_TENANT_ID={DEFAULT_TENANT_ID}",
+                    },
                 },
                 "required": ["agent_id", "file_path", "intent"],
             },
         ),
         Tool(
             name="neo_get_active_entries",
-            description="Get all currently active work entries (not expired)",
+            description="Get currently active work entries (not expired) for this tenant",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -196,100 +233,201 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Optional: filter by specific file",
                     },
+                    "tenant_id": {
+                        "type": "string",
+                        "description": f"Tenant ID (company). Defaults to CLAUDE_TENANT_ID={DEFAULT_TENANT_ID}",
+                    },
                 },
             },
         ),
         Tool(
             name="neo_clear_log",
-            description="Clear the activity log (for testing/cleanup only)",
-            inputSchema={"type": "object", "properties": {}},
+            description="Clear the activity log for this tenant (for testing/cleanup only)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tenant_id": {
+                        "type": "string",
+                        "description": f"Tenant ID (company). Defaults to CLAUDE_TENANT_ID={DEFAULT_TENANT_ID}",
+                    },
+                },
+            },
         ),
     ]
 
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """Handle tool calls from clients."""
+    """Handle tool calls from clients (tenant-isolated)."""
 
     if name == "neo_log_activity":
+        tenant_id = arguments.get("tenant_id", DEFAULT_TENANT_ID)
+
+        # Validate tenant ID
+        if not validate_tenant_id(tenant_id):
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Invalid tenant ID format: '{tenant_id}'. "
+                    f"Must be alphanumeric with hyphens/underscores (1-64 chars).",
+                )
+            ]
+
         agent_id = arguments.get("agent_id")
         file_path = arguments.get("file_path")
         intent = arguments.get("intent")
         region = arguments.get("region")
         intent_category = arguments.get("intent_category")
 
-        entry = log_activity(
-            developer_id=agent_id,
-            file_path=file_path,
-            intent=intent,
-            region=region,
-            intent_category=intent_category,
-        )
-
-        return [
-            TextContent(
-                type="text",
-                text=f"✓ Logged: {agent_id} on {file_path}\n"
-                f"  Intent: {intent}\n"
-                f"  Region: {region or '(whole file)'}\n"
-                f"  Category: {intent_category or 'general'}",
+        try:
+            entry = log_activity(
+                developer_id=agent_id,
+                file_path=file_path,
+                intent=intent,
+                region=region,
+                intent_category=intent_category,
+                tenant_id=tenant_id,
             )
-        ]
+
+            return [
+                TextContent(
+                    type="text",
+                    text=f"✓ Intent logged for tenant '{tenant_id}'\n"
+                    f"  Agent: {agent_id}\n"
+                    f"  File: {file_path}\n"
+                    f"  Intent: {intent}\n"
+                    f"  Region: {region or '(whole file)'}\n"
+                    f"  Category: {intent_category or 'general'}",
+                )
+            ]
+        except Exception as e:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Error logging activity: {str(e)}",
+                )
+            ]
 
     elif name == "neo_check_conflicts":
+        tenant_id = arguments.get("tenant_id", DEFAULT_TENANT_ID)
+
+        # Validate tenant ID
+        if not validate_tenant_id(tenant_id):
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Invalid tenant ID format: '{tenant_id}'. "
+                    f"Must be alphanumeric with hyphens/underscores (1-64 chars).",
+                )
+            ]
+
         agent_id = arguments.get("agent_id")
         file_path = arguments.get("file_path")
         intent = arguments.get("intent")
         region = arguments.get("region")
 
-        risk, message = check_for_conflicts(
-            agent_id=agent_id,
-            file_path=file_path,
-            intent=intent,
-            region=region,
-        )
+        try:
+            risk, message = check_for_conflicts(
+                agent_id=agent_id,
+                file_path=file_path,
+                intent=intent,
+                region=region,
+                tenant_id=tenant_id,
+            )
 
-        # Format response with guidance
-        guidance = ""
-        if risk == RiskLevel.HIGH:
-            guidance = (
-                "\n\n⚠️  BLOCKING: Coordinate with the conflicting agent before proceeding. "
-                "Neo has detected a high-risk conflict that requires explicit coordination."
-            )
-        elif risk == RiskLevel.MEDIUM:
-            guidance = (
-                "\n\n⚡ WARNING: Overlapping regions detected. Proceed with caution and "
-                "consider coordinating with the other agent."
-            )
-        else:
-            guidance = "\n\n✓ Safe to proceed. No conflicts detected."
+            # Format response with guidance
+            guidance = ""
+            if risk == RiskLevel.HIGH:
+                guidance = (
+                    "\n\n⚠️  BLOCKING: Coordinate with the conflicting agent before proceeding. "
+                    "Neo has detected a high-risk conflict that requires explicit coordination."
+                )
+            elif risk == RiskLevel.MEDIUM:
+                guidance = (
+                    "\n\n⚡ WARNING: Overlapping regions detected. Proceed with caution and "
+                    "consider coordinating with the other agent."
+                )
+            else:
+                guidance = "\n\n✓ Safe to proceed. No conflicts detected."
 
-        return [
-            TextContent(
-                type="text",
-                text=f"Risk Level: {risk.value}\n{message}{guidance}",
-            )
-        ]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Tenant: {tenant_id}\nRisk Level: {risk.value}\n{message}{guidance}",
+                )
+            ]
+        except Exception as e:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Error checking conflicts: {str(e)}",
+                )
+            ]
 
     elif name == "neo_get_active_entries":
-        file_path = arguments.get("file_path")
-        active = get_active_entries(file_path=file_path if file_path else None)
+        tenant_id = arguments.get("tenant_id", DEFAULT_TENANT_ID)
 
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(active, indent=2),
+        # Validate tenant ID
+        if not validate_tenant_id(tenant_id):
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Invalid tenant ID format: '{tenant_id}'. "
+                    f"Must be alphanumeric with hyphens/underscores (1-64 chars).",
+                )
+            ]
+
+        file_path = arguments.get("file_path")
+
+        try:
+            active = get_active_entries(
+                file_path=file_path if file_path else None,
+                tenant_id=tenant_id
             )
-        ]
+
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Active entries for tenant '{tenant_id}':\n\n"
+                    + json.dumps(active, indent=2),
+                )
+            ]
+        except Exception as e:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Error retrieving active entries: {str(e)}",
+                )
+            ]
 
     elif name == "neo_clear_log":
-        clear_log()
-        return [
-            TextContent(
-                type="text",
-                text="✓ Activity log cleared",
-            )
-        ]
+        tenant_id = arguments.get("tenant_id", DEFAULT_TENANT_ID)
+
+        # Validate tenant ID
+        if not validate_tenant_id(tenant_id):
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Invalid tenant ID format: '{tenant_id}'. "
+                    f"Must be alphanumeric with hyphens/underscores (1-64 chars).",
+                )
+            ]
+
+        try:
+            clear_log(tenant_id=tenant_id)
+            return [
+                TextContent(
+                    type="text",
+                    text=f"✓ Activity log cleared for tenant '{tenant_id}'",
+                )
+            ]
+        except Exception as e:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ Error clearing log: {str(e)}",
+                )
+            ]
 
     else:
         raise ValueError(f"Unknown tool: {name}")
