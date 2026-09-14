@@ -99,6 +99,7 @@ print(f'Risk: {risk}')  # Output: Risk Level.MEDIUM
 - ✅ **Smart Checkpointing** - Agents wait without polling; full context preserved
 - ✅ **Production-Ready** - Tested with 5 core scenarios; <10ms overhead validated
 - ✅ **Interactive Dashboards** - D3.js visualizations of conflict detection and ROI metrics
+- ✅ **MCP Server Integration** - Built-in Model Context Protocol server for Claude Code IDE, Cursor, VS Code
 
 ---
 
@@ -454,18 +455,20 @@ MIT License - see [LICENSE](LICENSE) file for details
 - ✅ Speed requirement met (<10ms)
 - ✅ Five scenarios validated
 - ✅ Interactive dashboards built
+- ✅ MCP Server for IDE integration (Claude Code, Cursor, VS Code)
 
 ### Short-term (Q1 2026)
 - [ ] AST-based signature detection (replace keyword heuristics)
 - [ ] File-watch integration for real-time updates
 - [ ] Sentiment analysis for intent quality
 - [ ] Per-project configuration
+- [ ] Enhanced MCP tools (agents registry, expertise matching)
 
 ### Medium-term (Q2 2026)
 - [ ] Synced central log for distributed teams
 - [ ] WebSocket support for real-time notifications
 - [ ] Git integration for staged changes
-- [ ] IDE plugins (Claude Code, Cursor, VS Code)
+- [ ] IDE plugins with UI components
 
 ### Long-term (Q3+ 2026)
 - [ ] Machine learning for false-positive reduction
