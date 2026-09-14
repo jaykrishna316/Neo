@@ -4,10 +4,13 @@
 import time
 import sys
 from typing import Optional
+from pathlib import Path
 
-from activity_log import log_activity, read_log, clear_log, log_entry_age_seconds
-from pre_gen_check import check_for_conflicts, handle_conflict_response
-from risk_classifier import RiskLevel
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from core.activity_log import log_activity, read_log, clear_log, log_entry_age_seconds
+from core.pre_gen_check import check_for_conflicts, handle_conflict_response
+from core.risk_classifier import RiskLevel
 
 
 class DeveloperSession:
@@ -700,7 +703,7 @@ def show_activity_log():
 def main():
     print("="*70)
     print("PRE-GENERATION CONFLICT WARNING POC")
-    print("Enhanced with 13 Advanced Scenarios")
+    print("Core 5 Scenarios")
     print("="*70)
 
     # Run basic developer scenarios (1-5)
@@ -719,46 +722,21 @@ def main():
     scenario_5_multiple_developers()
     time.sleep(0.5)
 
-    # Run agent integration scenarios (6-7)
-    scenario_6_agent_conflict_detection()
-    time.sleep(0.5)
-
-    scenario_7_intent_classification()
-    time.sleep(0.5)
-
-    # Run advanced scenarios (8-13)
-    scenario_8_cascading_conflicts()
-    time.sleep(0.5)
-
-    scenario_9_race_conditions()
-    time.sleep(0.5)
-
-    scenario_10_conflict_resolution()
-    time.sleep(0.5)
-
-    scenario_11_pattern_prediction()
-    time.sleep(0.5)
-
-    scenario_12_multifile_atomic()
-    time.sleep(0.5)
-
-    scenario_13_realtime_events()
+    # Advanced scenarios (6-13) require additional modules and are commented out for MVP
+    # Uncomment when agent_integration, intent_classifier, and other modules are ready
 
     # Show final state
     show_activity_log()
 
     print("\n" + "="*70)
-    print("POC COMPLETE - All 13 Scenarios Demonstrated")
+    print("POC COMPLETE - Core 5 Scenarios Demonstrated")
     print("="*70)
     print("\n📊 What You've Seen:")
-    print("   ✓ Basic conflict detection (scenarios 1-5)")
-    print("   ✓ Agent integration (scenarios 6-7)")
-    print("   ✓ Cascading conflicts (scenario 8)")
-    print("   ✓ Race conditions (scenario 9)")
-    print("   ✓ Resolution suggestions (scenario 10)")
-    print("   ✓ Pattern-based prediction (scenario 11)")
-    print("   ✓ Multi-file atomic changes (scenario 12)")
-    print("   ✓ Real-time events & expertise (scenario 13)")
+    print("   ✓ Overlapping regions - MEDIUM risk warning")
+    print("   ✓ Non-overlapping regions - LOW risk (silent pass)")
+    print("   ✓ Signature changes - HIGH risk (blocking)")
+    print("   ✓ Entry expiry - 30-minute timeout prevents false positives")
+    print("   ✓ Multiple developers - cascading conflict detection")
 
 
 if __name__ == "__main__":
