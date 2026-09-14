@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neo-coordination"
+version = "0.1.0"
+description = "A production-oriented coordination layer for preventing conflicting work before autonomous agents execute code"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Neo Contributors", email = "support@neo-coordination.dev"}
+]
+keywords = ["agent", "coordination", "conflict-detection", "multi-agent", "autonomous", "ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Office/Business",
+    "Topic :: System :: Monitoring",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "pylint>=2.17",
+    "mypy>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jaykrishna316/Neo"
+Documentation = "https://github.com/jaykrishna316/Neo/tree/main/docs"
+Repository = "https://github.com/jaykrishna316/Neo.git"
+Issues = "https://github.com/jaykrishna316/Neo/issues"
+
+[tool.setuptools]
+packages = ["agents", "core", "examples"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.pylint.messages_control]
+disable = [
+    "C0330", "C0326",  # Bad whitespace
+    "R0913",           # Too many arguments
+    "R0914",           # Too many local variables
+]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "--cov=agents --cov=core --cov-report=html --cov-report=term-missing"
