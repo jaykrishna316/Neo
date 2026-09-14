@@ -51,9 +51,9 @@ Shows:
 
 ---
 
-### 3️⃣ Simulate 2 Agents
-Spawn two simulated agents and watch them interact:
+### 3️⃣ Simulate 2 Agents (Side-by-Side View)
 
+**Option A: In-Terminal Simulation (from run.py menu)**
 Choose conflict level:
 - **LOW** - Different functions in same file
 - **MEDIUM** - Overlapping line ranges
@@ -61,7 +61,26 @@ Choose conflict level:
 
 Shows real-time coordination and decision-making.
 
-**Best for:** Testing with your own coding agents, seeing coordination in action
+**Option B: Two-Terminal Live Demo** (See conflicts happen in real-time)
+```bash
+# Terminal 1
+python3 -c "
+from core.activity_log import log_activity
+log_activity('Agent-Claude', 'src/auth.py', 'Add OAuth2', 'authenticate_user function')
+print('✓ Agent A declared intent. Waiting for Agent B...')
+import time; time.sleep(5)
+"
+
+# Terminal 2 (while Terminal 1 is waiting)
+python3 -c "
+from core.pre_gen_check import check_for_conflicts
+risk, msg = check_for_conflicts('Agent-Devin', 'src/auth.py', 'Add validation', 'authenticate_user function')
+print(f'Agent B sees: {risk.value} risk')
+print(f'Message: {msg}')
+"
+```
+
+**Best for:** Visual demos, understanding real-time coordination, showing stakeholders
 
 ---
 
