@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Pre-generation conflict checking API for Neo coordination layer."""
+"""Pre-generation conflict checking API for Neo coordination layer (tenant-isolated)."""
 
 from typing import Tuple, Optional
-from core.activity_log import get_active_entries
+from core.activity_log import get_active_entries, DEFAULT_TENANT_ID
 from core.risk_classifier import RiskLevel, classify_risk
 
 
@@ -11,23 +11,29 @@ def check_for_conflicts(
     file_path: str,
     intent: str,
     region: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> Tuple[RiskLevel, str]:
     """
-    Check for conflicts before code generation.
+    Check for conflicts before code generation (tenant-isolated).
 
     Args:
         agent_id: Unique identifier for the agent
         file_path: Path to the file being modified
         intent: Description of what the agent intends to do
         region: Specific region (lines/function) being modified
+        tenant_id: Tenant ID (company). Defaults to CLAUDE_TENANT_ID env var.
+                  Conflict checks only see same-tenant work.
 
     Returns:
         Tuple of (RiskLevel, message) indicating conflict risk and details
     """
-    # Get all active entries from the activity log
-    active_entries = get_active_entries()
+    # Resolve tenant context
+    resolved_tenant = tenant_id or DEFAULT_TENANT_ID
 
-    # Filter entries for the same file from other agents
+    # Get active entries for this tenant only (conflict checks are per-tenant)
+    active_entries = get_active_entries(tenant_id=resolved_tenant)
+
+    # Filter entries for the same file from other agents (same tenant only)
     same_file_entries = [
         entry for entry in active_entries
         if entry.get('file_path') == file_path and entry.get('developer_id') != agent_id
@@ -84,14 +90,16 @@ def check_for_conflicts(
 
 def handle_conflict_response(
     risk_level: RiskLevel,
-    auto_confirm: bool = False
+    auto_confirm: bool = False,
+    tenant_id: Optional[str] = None
 ) -> bool:
     """
-    Handle user/agent response to conflict risk.
+    Handle user/agent response to conflict risk (tenant-isolated).
 
     Args:
         risk_level: The risk level returned from check_for_conflicts
         auto_confirm: Whether to auto-confirm for MEDIUM risk (for demos)
+        tenant_id: Tenant ID (company). For audit/logging purposes (not currently used).
 
     Returns:
         True if generation should proceed, False if blocked
