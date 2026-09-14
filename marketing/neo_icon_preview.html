@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo Icon Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #000 0%, #0a0e27 100%);
+            color: #fff;
+            padding: 60px 40px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #00d9ff 0%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #a0a0a0;
+            font-size: 1.2rem;
+            margin-bottom: 60px;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 50px;
+            margin-bottom: 80px;
+        }
+
+        .preview-card {
+            background: rgba(20, 20, 40, 0.5);
+            border: 2px solid rgba(0, 217, 255, 0.2);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .preview-card:hover {
+            border-color: rgba(0, 217, 255, 0.6);
+            background: rgba(20, 20, 40, 0.8);
+            transform: translateY(-8px);
+        }
+
+        .preview-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #00d9ff;
+        }
+
+        .preview-card p {
+            color: #a0a0a0;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        .icon-display {
+            background: #000;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-display svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .favicon-preview {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .favicon-preview svg {
+            width: 80px;
+            height: 80px;
+        }
+
+        .sizes {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .size-demo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .size-demo svg {
+            border-radius: 6px;
+            background: #000;
+            padding: 10px;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .size-16 { width: 16px; height: 16px; }
+        .size-32 { width: 32px; height: 32px; }
+        .size-64 { width: 64px; height: 64px; }
+        .size-128 { width: 128px; height: 128px; }
+
+        .size-label {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        .download-section {
+            background: rgba(0, 217, 255, 0.1);
+            border: 2px solid rgba(0, 217, 255, 0.3);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .download-section h2 {
+            color: #00d9ff;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d9ff 0%, #ff006e 100%);
+            color: white;
+            padding: 14px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.4);
+        }
+
+        .description {
+            background: rgba(30, 41, 59, 0.5);
+            border-left: 4px solid #00d9ff;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 60px;
+            color: #a0a0a0;
+            line-height: 1.8;
+        }
+
+        .description h3 {
+            color: #00d9ff;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .description ul {
+            list-style: none;
+            margin-left: 20px;
+        }
+
+        .description li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .description li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #ff006e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Neo Icon</h1>
+        <p class="subtitle">Conflict-Free Agent Coordination</p>
+
+        <div class="description">
+            <h3>Icon Design Concept</h3>
+            <p>
+                The Neo icon represents the core value proposition: two autonomous agents coordinating seamlessly through code bridges,
+                preventing conflicts before they happen. Matrix-style code flows in the background, symbolizing the semantic analysis
+                layer that powers intelligent coordination.
+            </p>
+            <h3 style="margin-top: 20px;">Design Elements:</h3>
+            <ul>
+                <li><strong>Two Stylized Agents</strong> - Cyan and Magenta representing Agent A and Agent B</li>
+                <li><strong>Code Bridge</strong> - Gradient line connecting the agents (coordination in action)</li>
+                <li><strong>Typing Gesture</strong> - Raised arms on both agents (code generation)</li>
+                <li><strong>Keyboards</strong> - Representing development and code input</li>
+                <li><strong>Matrix Code Background</strong> - Vertical lines and binary representing semantic analysis</li>
+                <li><strong>Glow Effects</strong> - Neon futuristic aesthetic matching the brand</li>
+            </ul>
+        </div>
+
+        <div class="download-section">
+            <h2>Download Icon</h2>
+            <p style="color: #a0a0a0; margin-bottom: 25px;">Available in SVG format - scalable to any size</p>
+            <a href="neo_icon.svg" download="neo_icon.svg" class="download-btn">↓ Download SVG</a>
+            <a href="neo_icon.svg" class="download-btn">→ View SVG</a>
+        </div>
+
+        <div class="preview-grid">
+            <div class="preview-card">
+                <h2>Favicon (16px - 32px)</h2>
+                <p>Perfect for browser tabs, bookmarks, and small UI elements</p>
+                <div class="favicon-preview" id="favicon-demo"></div>
+            </div>
+
+            <div class="preview-card">
+                <h2>Logo (128px+)</h2>
+                <p>Use as website logo, app icon, or branding materials</p>
+                <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 8px; margin-bottom: 20px;">
+                    <svg viewBox="0 0 256 256" width="150" height="150" xmlns="http://www.w3.org/2000/svg" id="logo-demo"></svg>
+                </div>
+            </div>
+
+            <div class="preview-card">
+                <h2>Social Media (64px - 256px)</h2>
+                <p>LinkedIn profile, Twitter, GitHub, and social platforms</p>
+                <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 8px; margin-bottom: 20px;">
+                    <svg viewBox="0 0 256 256" width="120" height="120" xmlns="http://www.w3.org/2000/svg" id="social-demo"></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-card" style="grid-column: 1 / -1; text-align: center;">
+            <h2>Icon at Different Sizes</h2>
+            <p>The icon maintains clarity and visual impact across all scales</p>
+            <div class="sizes">
+                <div class="size-demo">
+                    <svg viewBox="0 0 256 256" class="size-16" xmlns="http://www.w3.org/2000/svg" id="size-16"></svg>
+                    <span class="size-label">16px (Favicon)</span>
+                </div>
+                <div class="size-demo">
+                    <svg viewBox="0 0 256 256" class="size-32" xmlns="http://www.w3.org/2000/svg" id="size-32"></svg>
+                    <span class="size-label">32px (Small)</span>
+                </div>
+                <div class="size-demo">
+                    <svg viewBox="0 0 256 256" class="size-64" xmlns="http://www.w3.org/2000/svg" id="size-64"></svg>
+                    <span class="size-label">64px (Medium)</span>
+                </div>
+                <div class="size-demo">
+                    <svg viewBox="0 0 256 256" class="size-128" xmlns="http://www.w3.org/2000/svg" id="size-128"></svg>
+                    <span class="size-label">128px (Large)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SVG content
+        const svgContent = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad-magenta" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff006e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#cc0055;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad-bridge" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8338ec;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff006e;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" fill="#000000"/>
+  <g opacity="0.15" stroke="#00d9ff" stroke-width="1">
+    <line x1="40" y1="0" x2="40" y2="256" />
+    <line x1="80" y1="0" x2="80" y2="256" />
+    <line x1="120" y1="0" x2="120" y2="256" />
+    <line x1="136" y1="0" x2="136" y2="256" />
+    <line x1="176" y1="0" x2="176" y2="256" />
+    <line x1="216" y1="0" x2="216" y2="256" />
+  </g>
+  <g fill="#00d9ff" opacity="0.08" font-family="monospace" font-size="8">
+    <text x="30" y="30">101</text>
+    <text x="80" y="50">010</text>
+    <text x="130" y="40">111</text>
+    <text x="180" y="60">001</text>
+    <text x="30" y="90">110</text>
+    <text x="140" y="100">101</text>
+    <text x="200" y="90">011</text>
+    <text x="50" y="150">001</text>
+    <text x="120" y="180">110</text>
+    <text x="180" y="170">100</text>
+  </g>
+  <line x1="85" y1="120" x2="171" y2="120" stroke="url(#grad-bridge)" stroke-width="3" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="100" cy="120" r="2" fill="#00d9ff" opacity="0.7"/>
+  <circle cx="120" cy="120" r="2" fill="#8338ec" opacity="0.7"/>
+  <circle cx="140" cy="120" r="2" fill="#ff006e" opacity="0.7"/>
+  <circle cx="160" cy="120" r="2" fill="#8338ec" opacity="0.7"/>
+  <circle cx="70" cy="70" r="18" fill="none" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)"/>
+  <rect x="60" y="92" width="20" height="28" fill="none" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)"/>
+  <line x1="60" y1="100" x2="40" y2="85" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <line x1="80" y1="100" x2="95" y2="105" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <line x1="65" y1="120" x2="62" y2="145" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <line x1="75" y1="120" x2="78" y2="145" stroke="url(#grad-cyan)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <circle cx="186" cy="70" r="18" fill="none" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)"/>
+  <rect x="176" y="92" width="20" height="28" fill="none" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)"/>
+  <line x1="176" y1="100" x2="161" y2="105" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <line x1="196" y1="100" x2="216" y2="85" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <line x1="181" y1="120" x2="178" y2="145" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <line x1="191" y1="120" x2="194" y2="145" stroke="url(#grad-magenta)" stroke-width="2.5" filter="url(#glow)" stroke-linecap="round"/>
+  <g fill="none" stroke="url(#grad-cyan)" stroke-width="1.5" opacity="0.8">
+    <rect x="50" y="150" width="40" height="12" rx="2"/>
+    <line x1="55" y1="150" x2="55" y2="162"/>
+    <line x1="62" y1="150" x2="62" y2="162"/>
+    <line x1="69" y1="150" x2="69" y2="162"/>
+    <line x1="76" y1="150" x2="76" y2="162"/>
+    <line x1="83" y1="150" x2="83" y2="162"/>
+  </g>
+  <g fill="none" stroke="url(#grad-magenta)" stroke-width="1.5" opacity="0.8">
+    <rect x="166" y="150" width="40" height="12" rx="2"/>
+    <line x1="171" y1="150" x2="171" y2="162"/>
+    <line x1="178" y1="150" x2="178" y2="162"/>
+    <line x1="185" y1="150" x2="185" y2="162"/>
+    <line x1="192" y1="150" x2="192" y2="162"/>
+    <line x1="199" y1="150" x2="199" y2="162"/>
+  </g>
+  <g stroke="#00d9ff" stroke-width="1.5" fill="none" opacity="0.6">
+    <path d="M 70 150 L 70 135 L 65 125"/>
+    <path d="M 75 150 L 75 140 L 80 130"/>
+  </g>
+  <g stroke="#ff006e" stroke-width="1.5" fill="none" opacity="0.6">
+    <path d="M 186 150 L 186 135 L 191 125"/>
+    <path d="M 181 150 L 181 140 L 176 130"/>
+  </g>
+  <circle cx="128" cy="128" r="35" fill="none" stroke="url(#grad-bridge)" stroke-width="1.5" opacity="0.4" filter="url(#glow)"/>
+  <circle cx="128" cy="128" r="4" fill="url(#grad-bridge)" filter="url(#glow)"/>
+  <g fill="#00d9ff" opacity="0.3" font-family="monospace" font-size="10" font-weight="bold" text-anchor="middle">
+    <text x="128" y="20">NEO</text>
+  </g>
+  <g fill="none" stroke="#8338ec" stroke-width="1" opacity="0.4">
+    <circle cx="128" cy="225" r="8"/>
+    <circle cx="128" cy="225" r="12"/>
+  </g>
+</svg>`;
+
+        // Populate all SVG containers
+        const elements = document.querySelectorAll('[id$="-demo"], [id^="size-"]');
+        elements.forEach(el => {
+            el.innerHTML = svgContent;
+        });
+    </script>
+</body>
+</html>
