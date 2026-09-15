@@ -145,11 +145,12 @@ class MCPConflictServer:
         """Send notification to a specific IDE type"""
         try:
             handlers = self.notification_handlers.get(ide_type, [])
+            notification_dict = notification.to_dict()
             for handler in handlers:
                 if asyncio.iscoroutinefunction(handler):
-                    await handler(notification)
+                    await handler(notification_dict)
                 else:
-                    handler(notification)
+                    handler(notification_dict)
             return True
         except Exception as e:
             logger.error(f"Failed to send to {ide_type}: {e}")
@@ -230,7 +231,10 @@ async def notify_ide_of_conflict(
 
 def setup_mcp_handlers():
     """Setup IDE-specific notification handlers"""
-    from core.adapters import claude_code_adapter, devin_adapter, openai_adapter
+    try:
+        from core.adapters import claude_code_adapter, devin_adapter, openai_adapter
+    except ImportError:
+        from adapters import claude_code_adapter, devin_adapter, openai_adapter
 
     server = get_mcp_server()
 
