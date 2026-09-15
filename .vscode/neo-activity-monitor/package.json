@@ -1,0 +1,71 @@
+{
+  "name": "neo-activity-monitor",
+  "displayName": "Neo Activity Monitor",
+  "description": "Real-time activity log monitoring for collaborative development",
+  "version": "1.0.0",
+  "publisher": "neo",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "activationEvents": [
+    "workspaceContains:.activity_log",
+    "onCommand:neo-activity-monitor.start",
+    "onView:neo-activity-monitor"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "neo-activity-monitor",
+          "name": "Neo Activity Monitor",
+          "when": "workspaceHasNeoRepo"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "neo-activity-monitor.start",
+        "title": "Neo: Start Activity Monitor"
+      },
+      {
+        "command": "neo-activity-monitor.subscribe",
+        "title": "Neo: Subscribe to Notifications"
+      },
+      {
+        "command": "neo-activity-monitor.startEditing",
+        "title": "Neo: Start Editing (Acquire Lock)"
+      },
+      {
+        "command": "neo-activity-monitor.finishEditing",
+        "title": "Neo: Finish Editing (Release Lock)"
+      },
+      {
+        "command": "neo-activity-monitor.viewWorkflow",
+        "title": "Neo: View Workflow State"
+      },
+      {
+        "command": "neo-activity-monitor.refreshNotifications",
+        "title": "Neo: Refresh Notifications"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "neo-activity-monitor.startEditing",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.70.0",
+    "@types/node": "14.x"
+  },
+  "dependencies": {
+    "axios": "^1.4.0"
+  }
+}

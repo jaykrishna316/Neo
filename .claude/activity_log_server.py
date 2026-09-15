@@ -12,9 +12,16 @@ from typing import Dict, List, Tuple
 import difflib
 import threading
 
+from workflow_state_machine import WorkflowStateMachine, WorkflowState
+from notification_manager import NotificationManager, NotificationType, NotificationChannel
+
 app = Flask(__name__)
 STORAGE_DIR = Path("./activity_log_storage")
 LOCK = threading.Lock()  # Prevent concurrent writes
+
+# Global managers
+state_machines = {}  # file::function -> WorkflowStateMachine
+notification_manager = NotificationManager()
 
 # Ensure storage directory exists
 STORAGE_DIR.mkdir(exist_ok=True)
@@ -28,6 +35,242 @@ STORAGE_DIR.mkdir(exist_ok=True)
 def health():
     """Health check endpoint"""
     return jsonify({"status": "ok", "service": "activity-log-server"}), 200
+
+
+# ========== PHASE 3: Notification Endpoints ==========
+
+
+@app.route("/api/subscribe", methods=["POST"])
+def subscribe_notifications():
+    """Subscribe to notifications"""
+    try:
+        data = request.json
+        developer = data.get("developer")
+        channel = data.get("channel", "webhook")  # webhook, email, slack, polling
+        endpoint = data.get("endpoint", "")
+        notify_on = data.get("notify_on")  # List of notification types or None for all
+
+        if not developer:
+            return jsonify({"error": "Missing developer"}), 400
+
+        result = notification_manager.subscribe(
+            developer, NotificationChannel[channel.upper()], endpoint, notify_on
+        )
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/notifications", methods=["GET"])
+def get_notifications():
+    """Poll for notifications (for developers using polling channel)"""
+    try:
+        developer = request.args.get("developer")
+        since = request.args.get("since")  # ISO timestamp
+
+        if not developer:
+            return jsonify({"error": "Missing developer"}), 400
+
+        notifications = notification_manager.get_notifications(developer, since)
+        return jsonify({"notifications": notifications}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/workflow/state", methods=["GET"])
+def get_workflow_state():
+    """Get current workflow state for a function"""
+    try:
+        file_path = request.args.get("file_path")
+        function_name = request.args.get("function_name")
+
+        if not all([file_path, function_name]):
+            return jsonify({"error": "Missing file_path or function_name"}), 400
+
+        key = f"{file_path}::{function_name}"
+
+        if key not in state_machines:
+            return jsonify({"state": "available", "message": "No active workflow"}), 200
+
+        state = state_machines[key].get_state()
+        return jsonify(state), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ========== PHASE 4: Workflow State Machine Endpoints ==========
+
+
+@app.route("/api/start_editing", methods=["POST"])
+def start_editing_endpoint():
+    """
+    Developer starts editing - REQUIRED before any coding
+    Acquires lock and notifies other developers
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+
+        if not all([developer, file_path, function_name]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        key = f"{file_path}::{function_name}"
+
+        # Get or create state machine
+        if key not in state_machines:
+            state_machines[key] = WorkflowStateMachine(file_path, function_name)
+
+        machine = state_machines[key]
+
+        # Try to start editing
+        allowed, message, new_state = machine.start_editing(developer)
+
+        if allowed:
+            # Notify others if this is first developer
+            if new_state == WorkflowState.EDITING:
+                notification_manager.notify(
+                    "all",
+                    NotificationType.LOCK_ACQUIRED,
+                    {
+                        "developer": developer,
+                        "file": file_path,
+                        "function": function_name,
+                        "message": message,
+                    },
+                    file_path,
+                    function_name,
+                )
+
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "message": message,
+                        "lock_acquired": True,
+                        "state": new_state.value,
+                        "developer": developer,
+                    }
+                ),
+                200,
+            )
+        else:
+            # Notify waiting developer
+            blocked_devs = machine.waiting_developers
+            notification_manager.notify(
+                developer,
+                NotificationType.LOCK_BLOCKED,
+                {
+                    "blocking_developer": machine.current_editor,
+                    "file": file_path,
+                    "function": function_name,
+                    "message": message,
+                    "queue_position": blocked_devs.index(developer) + 1
+                    if developer in blocked_devs
+                    else 0,
+                },
+                file_path,
+                function_name,
+            )
+
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": message,
+                        "lock_acquired": False,
+                        "state": new_state.value,
+                        "blocking_developer": machine.current_editor,
+                        "waiting_in_queue": blocked_devs.index(developer) + 1
+                        if developer in blocked_devs
+                        else 0,
+                    }
+                ),
+                200,
+            )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/finish_editing", methods=["POST"])
+def finish_editing_endpoint():
+    """
+    Developer finishes editing and releases lock
+    Notifies next waiting developer
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+
+        if not all([developer, file_path, function_name]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        key = f"{file_path}::{function_name}"
+
+        if key not in state_machines:
+            return jsonify({"error": "No active workflow"}), 400
+
+        machine = state_machines[key]
+        success, message, new_state = machine.finish_editing(developer)
+
+        if success:
+            # Notify that lock is released
+            notification_manager.notify(
+                "all",
+                NotificationType.LOCK_RELEASED,
+                {
+                    "developer": developer,
+                    "file": file_path,
+                    "function": function_name,
+                    "message": message,
+                },
+                file_path,
+                function_name,
+            )
+
+            # If someone was waiting, notify them specifically
+            if machine.waiting_developers:
+                next_dev = machine.waiting_developers[0]
+                notification_manager.notify(
+                    next_dev,
+                    NotificationType.REVIEW_REQUESTED,
+                    {
+                        "from_developer": developer,
+                        "file": file_path,
+                        "function": function_name,
+                        "action": "Review my changes, then you can edit",
+                        "branch": data.get("branch", "unknown"),
+                        "pr_link": data.get("pr_link"),
+                    },
+                    file_path,
+                    function_name,
+                )
+
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "message": message,
+                        "state": new_state.value,
+                        "next_developer": machine.waiting_developers[0]
+                        if machine.waiting_developers
+                        else None,
+                    }
+                ),
+                200,
+            )
+        else:
+            return jsonify({"success": False, "message": message}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/log_change", methods=["POST"])
