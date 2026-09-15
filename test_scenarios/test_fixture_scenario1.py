@@ -18,10 +18,20 @@ class AuthService:
 
         Expected conflict: MEDIUM risk (same function)
         """
+        import logging
+        logger = logging.getLogger("AuthService")
+        logger.info(f"Auth attempt: {username}")
+
         if not username or not password:
+            logger.warning("Auth failed: missing credentials")
             return False
 
-        return self.verify_credentials(username, password)
+        result = self.verify_credentials(username, password)
+        if not result:
+            logger.warning(f"Auth failed: {username}")
+        else:
+            logger.info(f"Auth succeeded: {username}")
+        return result
 
     def verify_credentials(self, username: str, password: str) -> bool:
         """Verify credentials against database"""
