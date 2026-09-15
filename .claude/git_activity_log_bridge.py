@@ -10,15 +10,32 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 
+# Try to import activity log client for server mode
+try:
+    from activity_log_client import ActivityLogClient
+    HAS_CLIENT = True
+except ImportError:
+    HAS_CLIENT = False
+
 
 class GitActivityLogBridge:
     """Bridge between Git workflow and Activity Log"""
 
-    def __init__(self, repo_path: str = ".", github_token: Optional[str] = None):
+    def __init__(self, repo_path: str = ".", github_token: Optional[str] = None, server_url: Optional[str] = None):
         self.repo_path = Path(repo_path)
         self.activity_log_dir = self.repo_path / ".activity_log"
         self.github_token = github_token or os.getenv("GITHUB_TOKEN")
         self.github_api = self._init_github_api()
+
+        # Check for activity log server URL (for distributed testing)
+        self.server_url = server_url or os.getenv("ACTIVITY_LOG_SERVER")
+        self.activity_log_client = None
+        if self.server_url and HAS_CLIENT:
+            try:
+                self.activity_log_client = ActivityLogClient(self.server_url)
+            except Exception:
+                # Fall back to local files if server unavailable
+                pass
 
     def _init_github_api(self):
         """Initialize GitHub API client"""
@@ -73,9 +90,16 @@ class GitActivityLogBridge:
                 text=True
             ).strip()
 
+        # Use server if available
+        if self.activity_log_client:
+            try:
+                return self.activity_log_client.get_conflicts(base_branch, head_branch)
+            except Exception:
+                pass  # Fall back to local files
+
         high_conflicts = []
 
-        # Scan activity log for HIGH conflicts
+        # Scan activity log for HIGH conflicts (local files)
         changes_dir = self.activity_log_dir / "changes"
         if not changes_dir.exists():
             return []
