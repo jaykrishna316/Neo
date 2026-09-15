@@ -617,6 +617,331 @@ def record_rollback():
         return jsonify({"error": str(e)}), 500
 
 
+# ========== PHASE 5: PR Management & Auto-Approver Assignment ==========
+
+
+@app.route("/api/create_pr", methods=["POST"])
+def create_pr_endpoint():
+    """
+    Developer creates a PR after finishing edits
+    Records PR in activity log and prepares for next developer review
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+        pr_number = data.get("pr_number")
+        pr_link = data.get("pr_link")
+        branch = data.get("branch")
+
+        if not all([developer, file_path, function_name, pr_number]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        key = f"{file_path}::{function_name}"
+
+        if key not in state_machines:
+            return jsonify({"error": "No active workflow"}), 400
+
+        machine = state_machines[key]
+
+        # Record PR creation
+        pr_record = {
+            "timestamp": datetime.now().isoformat(),
+            "developer": developer,
+            "file_path": file_path,
+            "function_name": function_name,
+            "pr_number": pr_number,
+            "pr_link": pr_link,
+            "branch": branch,
+            "status": "OPEN",
+        }
+
+        with LOCK:
+            pr_file = (
+                STORAGE_DIR
+                / f"pr_{file_path.replace('/', '_')}_{function_name}_{pr_number}.json"
+            )
+            pr_file.write_text(json.dumps(pr_record, indent=2))
+
+        # Update state machine
+        machine.create_pr(int(pr_number))
+
+        # Notify next developer about PR
+        if machine.waiting_developers:
+            next_dev = machine.waiting_developers[0]
+            notification_manager.notify(
+                next_dev,
+                NotificationType.APPROVAL_NEEDED,
+                {
+                    "from_developer": developer,
+                    "file": file_path,
+                    "function": function_name,
+                    "pr_number": pr_number,
+                    "pr_link": pr_link,
+                    "branch": branch,
+                    "action": "review_pull_merge",
+                },
+                file_path,
+                function_name,
+            )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"PR {pr_number} created and recorded",
+                    "pr_number": pr_number,
+                    "state": machine.current_state.value,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/review_options", methods=["GET"])
+def review_options_endpoint():
+    """
+    Get options for next developer to review and handle PR
+    Returns: pull (get code), review (review changes), merge (merge PR), discard
+    """
+    try:
+        developer = request.args.get("developer")
+        file_path = request.args.get("file_path")
+        function_name = request.args.get("function_name")
+
+        if not all([developer, file_path, function_name]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        key = f"{file_path}::{function_name}"
+
+        if key not in state_machines:
+            return jsonify({"error": "No active workflow"}), 400
+
+        machine = state_machines[key]
+
+        # Check if this developer is next in queue
+        if not machine.waiting_developers or machine.waiting_developers[0] != developer:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": f"Not your turn yet. Current editor: {machine.current_editor}",
+                    }
+                ),
+                200,
+            )
+
+        # Get latest PR for this function
+        with LOCK:
+            changes_dir = STORAGE_DIR
+            pattern = f"pr_{file_path.replace('/', '_')}_{function_name}_*.json"
+            pr_files = sorted(list(changes_dir.glob(pattern)))
+
+            latest_pr = None
+            if pr_files:
+                with open(pr_files[-1]) as f:
+                    latest_pr = json.load(f)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "developer": developer,
+                    "file_path": file_path,
+                    "function_name": function_name,
+                    "latest_pr": latest_pr,
+                    "options": {
+                        "pull": {
+                            "action": "pull",
+                            "description": "Pull and review the code changes",
+                            "next_step": "You can review, then merge or discard",
+                        },
+                        "review": {
+                            "action": "review",
+                            "description": "View code diff for this PR",
+                            "next_step": "Decide to merge or discard",
+                        },
+                        "merge": {
+                            "action": "merge",
+                            "description": "Merge this PR to your branch and continue editing",
+                            "next_step": "You acquire lock and can make more changes",
+                        },
+                        "discard": {
+                            "action": "discard",
+                            "description": "Discard these changes and start fresh",
+                            "next_step": "You acquire lock with clean state",
+                        },
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/complete_review", methods=["POST"])
+def complete_review_endpoint():
+    """
+    Developer completes review and chooses action: merge or discard
+    Then acquires lock to continue editing
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+        action = data.get("action")  # "merge" or "discard"
+
+        if not all([developer, file_path, function_name, action]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        if action not in ["merge", "discard"]:
+            return jsonify({"error": "Invalid action. Must be 'merge' or 'discard'"}), 400
+
+        key = f"{file_path}::{function_name}"
+
+        if key not in state_machines:
+            return jsonify({"error": "No active workflow"}), 400
+
+        machine = state_machines[key]
+
+        # Record the review action
+        review_record = {
+            "timestamp": datetime.now().isoformat(),
+            "developer": developer,
+            "file_path": file_path,
+            "function_name": function_name,
+            "action": action,
+            "status": "REVIEWED",
+        }
+
+        with LOCK:
+            review_file = (
+                STORAGE_DIR
+                / "changes"
+                / f"review_{file_path.replace('/', '_')}_{function_name}_{datetime.now().isoformat().replace(':', '-')}.json"
+            )
+            review_file.write_text(json.dumps(review_record, indent=2))
+
+        # Notify about review completion
+        notification_manager.notify(
+            "all",
+            NotificationType.APPROVED,
+            {
+                "developer": developer,
+                "file": file_path,
+                "function": function_name,
+                "action": action,
+            },
+            file_path,
+            function_name,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"Review completed. Action: {action}",
+                    "action": action,
+                    "next_step": f"You can now acquire lock to continue editing",
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/merge_to_main", methods=["POST"])
+def merge_to_main_endpoint():
+    """
+    Merge PR to main branch
+    Automatically adds all developers who touched the file as approvers
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+        pr_number = data.get("pr_number")
+        merge_commit_sha = data.get("merge_commit_sha", "unknown")
+
+        if not all([developer, file_path, function_name, pr_number]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        key = f"{file_path}::{function_name}"
+
+        if key not in state_machines:
+            return jsonify({"error": "No active workflow"}), 400
+
+        machine = state_machines[key]
+
+        # Get all developers who participated
+        all_developers = list(machine.all_developers)
+
+        # Record merge
+        merge_record = {
+            "timestamp": datetime.now().isoformat(),
+            "developer": developer,
+            "file_path": file_path,
+            "function_name": function_name,
+            "pr_number": pr_number,
+            "merged_to": "main",
+            "all_approvers": all_developers,
+            "merge_commit_sha": merge_commit_sha,
+            "status": "MERGED",
+        }
+
+        with LOCK:
+            merge_file = (
+                STORAGE_DIR
+                / f"merge_{file_path.replace('/', '_')}_{function_name}_{pr_number}.json"
+            )
+            merge_file.write_text(json.dumps(merge_record, indent=2))
+
+        # Update state machine
+        machine.merge_to_main(merge_commit_sha)
+
+        # Notify all developers that merge happened
+        notification_manager.notify(
+            "all",
+            NotificationType.MERGED,
+            {
+                "file": file_path,
+                "function": function_name,
+                "pr_number": pr_number,
+                "merged_by": developer,
+                "all_approvers": all_developers,
+            },
+            file_path,
+            function_name,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"PR {pr_number} merged to main",
+                    "pr_number": pr_number,
+                    "merged_to": "main",
+                    "all_approvers_required": all_developers,
+                    "state": machine.current_state.value,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ========== Helper Functions ==========
 
 
