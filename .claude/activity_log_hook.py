@@ -2,67 +2,48 @@
 """
 Activity Log Hook for Neo
 Integrates with Claude Code to track changes
+Uses full activity_log_manager for conflict detection and merge gate
 Can be triggered on: agent commit, file save, branch push
 """
 
-import json
-import os
 import sys
 from pathlib import Path
-from datetime import datetime
-from dataclasses import dataclass, asdict
-
-@dataclass
-class Change:
-    developer: str
-    file_path: str
-    function_name: str
-    branch: str
-    timestamp: str
-    verbal_description: str  # What the developer is trying to accomplish
-    conflict_severity: str
-    related_changes: list = None
+from activity_log_manager import ActivityLogManager, MergeGate
 
 class ActivityLogHook:
     def __init__(self, repo_root: str = "."):
         self.repo_root = Path(repo_root)
-        self.activity_log_dir = self.repo_root / ".activity_log"
-        self.activity_log_dir.mkdir(exist_ok=True)
-
-        # Create .gitignore for activity log
-        gitignore = self.activity_log_dir / ".gitignore"
-        if not gitignore.exists():
-            gitignore.write_text("*.json\n")
+        self.manager = ActivityLogManager(repo_root)
+        self.merge_gate = MergeGate(repo_root)
 
     def log_change(self, developer: str, file_path: str, function_name: str,
-                   branch: str, verbal_description: str,
-                   conflict_severity: str = "unknown",
-                   related_changes: list = None):
-        """Log a change to activity log"""
-
-        timestamp = datetime.now().isoformat()
-
-        change = Change(
+                   old_code: str, new_code: str, branch: str, verbal_description: str):
+        """Log a change with full conflict detection and auto-push"""
+        change = self.manager.log_change(
             developer=developer,
             file_path=file_path,
             function_name=function_name,
-            branch=branch,
-            timestamp=timestamp,
-            verbal_description=verbal_description,
-            conflict_severity=conflict_severity,
-            related_changes=related_changes or []
+            old_code=old_code,
+            new_code=new_code,
+            feature_branch=branch,
+            verbal_description=verbal_description
         )
-
-        # Save to JSON
-        log_file = self.activity_log_dir / f"{timestamp.replace(':', '-')}__{developer.replace(' ', '_')}__change.json"
-        log_file.write_text(json.dumps(asdict(change), indent=2))
-
         return change
+
+    def check_merge_status(self, file_path: str, function_name: str):
+        """Check if changes can be merged to main"""
+        status = self.merge_gate.get_merge_status(file_path, function_name)
+        return status
+
+    def record_approval(self, developer: str, file_path: str, function_name: str):
+        """Record developer approval for merge"""
+        approvals = self.merge_gate.record_approval(developer, file_path, function_name)
+        return approvals
 
 if __name__ == "__main__":
     # Can be called from Claude Code hooks
-    if len(sys.argv) < 5:
-        print("Usage: activity_log_hook.py <developer> <file> <function> <branch> <description> [severity] [related]")
+    if len(sys.argv) < 6:
+        print("Usage: activity_log_hook.py <developer> <file> <function> <branch> <description> <old_code> <new_code>")
         sys.exit(1)
 
     hook = ActivityLogHook()
@@ -72,17 +53,17 @@ if __name__ == "__main__":
     function_name = sys.argv[3]
     branch = sys.argv[4]
     description = sys.argv[5]
-    severity = sys.argv[6] if len(sys.argv) > 6 else "unknown"
-    related = sys.argv[7].split(",") if len(sys.argv) > 7 else []
+    old_code = sys.argv[6] if len(sys.argv) > 6 else ""
+    new_code = sys.argv[7] if len(sys.argv) > 7 else ""
 
     change = hook.log_change(
         developer=developer,
         file_path=file_path,
         function_name=function_name,
+        old_code=old_code,
+        new_code=new_code,
         branch=branch,
-        verbal_description=description,
-        conflict_severity=severity,
-        related_changes=related
+        verbal_description=description
     )
 
     print(f"✅ Logged change by {developer} to {function_name}")
