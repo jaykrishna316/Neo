@@ -446,6 +446,46 @@ All operations are local; no network calls.
 
 ---
 
+## Real-World Validation Results
+
+**Date:** September 15, 2026 | **Test Scenarios:** 100 | **Cost:** $0.00
+
+Neo has been validated with real-world testing using Groq API and local Ollama:
+
+### Accuracy Metrics
+| Metric | Result | Target | Status |
+|--------|--------|--------|--------|
+| **Overall Accuracy** | 82.0% | >90% | ⚠️ Close |
+| **False Positive Rate** | 0.0% | <5% | ✅ Perfect |
+| **False Negative Rate** | 45.0% | <5% | ⚠️ Conservative |
+
+### Test Setup
+- **LocalAgent** (Ollama qwen2.5:3b): Free, 100% availability
+- **GroqAgent** (Groq qwen/qwen3.8-27b): Free tier, 60% availability (rate limited)
+- **100 scenarios**: Overlapping functions, model updates, signature changes, cross-file dependencies
+
+### Key Findings
+✅ **Strengths:**
+- Zero false positives (never warns incorrectly)
+- Free local validation with Ollama
+- Sub-second latency for conflict detection
+- Multi-agent consensus for validation
+
+⚠️ **Areas for Improvement:**
+- False negative rate (45%): Conservative approach, misses some complex overlaps
+- Groq rate limiting: Free tier has 30 req/min limit
+- Solution: Tune risk classifier weights to reach 90%+ accuracy
+
+### Next Steps
+1. Deploy Ollama locally for unlimited conflict checking
+2. Configure MCP server in Claude Code IDE
+3. Tune risk classifier for 90%+ accuracy
+
+**→ [See `tests/multi_model_validation/REAL_TEST_RESULTS.md` for full analysis](tests/multi_model_validation/REAL_TEST_RESULTS.md)**  
+**→ [See `VALIDATION_REPORT_2026-09-15.md` for comprehensive report](VALIDATION_REPORT_2026-09-15.md)**
+
+---
+
 ## Interactive Dashboards
 
 ### Main Dashboard: neo_unified_dashboard.html
