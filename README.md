@@ -116,6 +116,17 @@ Neo is a **production-oriented reference implementation** with:
 
 **Status:** Ready for integration into IDEs, agent frameworks, and CI/CD pipelines
 
+### 🚧 Work In Progress: IDE Integration
+
+Real-time conflict notifications are being integrated into:
+- **Claude Code** - MCP server for VS Code, JetBrains, and CLI
+- **Devin** - Adapter for autonomous agent workflows
+- **OpenAI** - Integration for ChatGPT plugins and API
+
+**See:** [`docs/MCP_IDE_INTEGRATION.md`](docs/MCP_IDE_INTEGRATION.md) for implementation details and test scenarios.
+
+**ETA:** Beta by end of September 2026
+
 ---
 
 ## Enterprise Deployment (Optional)
