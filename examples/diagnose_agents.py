@@ -29,7 +29,7 @@ try:
 
         # Pick first model to use
         if models:
-            first_model = models[0].get("name", "mistral").split(":")[0]
+            first_model = models[0].get("name", "qwen2.5:3b")
             print(f"\n  ℹ️  Will use model: {first_model}")
 
             # Test /api/generate with first model
@@ -97,7 +97,7 @@ else:
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "mixtral-8x7b-32768",
+                    "model": "llama-3.3-70b-versatile",
                     "messages": [{"role": "user", "content": "Say CONFLICT or NO_CONFLICT"}],
                     "max_tokens": 10,
                     "temperature": 0.1
