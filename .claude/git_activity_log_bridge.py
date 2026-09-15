@@ -264,8 +264,6 @@ class GitActivityLogBridge:
                 text=True
             ).strip()
 
-        print(f"\n🔍 Checking activity log for HIGH conflicts...")
-
         # Find HIGH conflicts
         conflicts = self.find_high_conflicts_in_pr("main", head_branch)
 
@@ -278,15 +276,6 @@ class GitActivityLogBridge:
 
         # Get required approvers
         approvers = self.get_required_approvers("main", head_branch)
-
-        print(f"🔴 Found {len(conflicts)} HIGH conflict(s)")
-        for conflict in conflicts:
-            print(f"   └─ {conflict['file']}::{conflict['function']}")
-            print(f"      Developers: {', '.join(conflict['developers_involved'])}")
-
-        print(f"\n👥 Adding {len(approvers)} required approvers...")
-        for approver in approvers:
-            print(f"   ✅ {approver}")
 
         # Find PR number
         pr_number = self.get_pr_number_from_branch(head_branch)
@@ -303,7 +292,6 @@ class GitActivityLogBridge:
         result = self.add_required_reviewers_to_pr(pr_number, approvers)
 
         if result["success"]:
-            print(f"\n✅ Added reviewers to PR #{pr_number}")
             return {
                 "success": True,
                 "pr_number": pr_number,
@@ -447,8 +435,3 @@ if [ ! -z "$GITHUB_TOKEN" ]; then
 fi
 """)
     post_merge.chmod(0o755)
-
-    print("✅ Git hooks installed:")
-    print("   - pre-commit: Activity log recording")
-    print("   - pre-push: Merge gate enforcement")
-    print("   - post-merge: Auto-add approvers")
