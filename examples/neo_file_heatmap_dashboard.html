@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo File Heatmap - Conflict Intelligence</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00d9ff;
+            --secondary: #ff006e;
+            --accent: #8338ec;
+            --success: #00e676;
+            --warning: #ffc400;
+            --danger: #ff1744;
+            --dark-bg: #0a0e27;
+            --card-bg: rgba(20, 25, 50, 0.7);
+            --card-border: rgba(0, 217, 255, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b8d4;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1a1f3a 50%, #0f1429 100%);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3em;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: var(--text-secondary);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 32px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            font-size: 1.6em;
+            font-weight: 700;
+            margin-bottom: 32px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 28px;
+            background: linear-gradient(180deg, var(--primary), var(--accent));
+            border-radius: 2px;
+        }
+
+        .file-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 16px;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(0, 217, 255, 0.1);
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-name {
+            font-size: 0.95em;
+            color: var(--text-secondary);
+            font-family: 'Monaco', 'Menlo', monospace;
+            word-break: break-all;
+        }
+
+        .file-bar {
+            display: flex;
+            align-items: center;
+            height: 32px;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .file-bar:hover {
+            height: 36px;
+            box-shadow: 0 4px 16px rgba(255, 23, 68, 0.4);
+        }
+
+        .file-bar-value {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+            font-weight: 600;
+            font-size: 0.9em;
+            height: 100%;
+            color: white;
+            min-width: 40px;
+        }
+
+        .file-meta {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            font-size: 0.85em;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-secondary);
+        }
+
+        .agent-card {
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(131, 56, 236, 0.1));
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .agent-card:hover {
+            border-color: var(--primary);
+            transform: translateX(8px);
+            box-shadow: 0 8px 24px rgba(0, 217, 255, 0.15);
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .agent-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .agent-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .agent-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            font-size: 0.9em;
+        }
+
+        .agent-stat {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px 12px;
+            border-radius: 6px;
+        }
+
+        .agent-stat-label {
+            color: var(--text-secondary);
+            font-size: 0.8em;
+            margin-bottom: 4px;
+        }
+
+        .agent-stat-value {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .temperature-legend {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .legend-item {
+            text-align: center;
+        }
+
+        .legend-color {
+            width: 100%;
+            height: 40px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .legend-label {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .legend-temp {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(10, 14, 39, 0.95);
+            border: 1px solid var(--primary);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 16px rgba(0, 217, 255, 0.3);
+            display: none;
+        }
+
+        .tooltip.active {
+            display: block;
+        }
+
+        .tooltip-label {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin-bottom: 4px;
+        }
+
+        .tooltip-value {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            border-top: 1px solid rgba(0, 217, 255, 0.1);
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--card-border);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔥 File Conflict Heatmap</h1>
+            <p class="subtitle">Real-time intelligence on which files and developers are hottest</p>
+        </header>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-number">24</div>
+                <div class="stat-label">Total Conflicts Prevented</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">342</div>
+                <div class="stat-label">Files Under Monitoring</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">12</div>
+                <div class="stat-label">Active Agents</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- FILE HEATMAP -->
+            <div class="card">
+                <h2>🌡️ Top 10 Files by Conflict Hotness</h2>
+                <div id="fileHeatmap"></div>
+                <div class="temperature-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #ff1744 0%, #d81e3a 100%);"></div>
+                        <div class="legend-label">CRITICAL</div>
+                        <div class="legend-temp">95°</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #ff6d00 0%, #e65100 100%);"></div>
+                        <div class="legend-label">HOT</div>
+                        <div class="legend-temp">78°</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #00e5ff 0%, #0097a7 100%);"></div>
+                        <div class="legend-label">COOL</div>
+                        <div class="legend-temp">62°</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(135deg, #1e88e5 0%, #0d47a1 100%);"></div>
+                        <div class="legend-label">COLD</div>
+                        <div class="legend-temp">24°</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP AGENTS -->
+            <div class="card">
+                <h2>🤖 Top 10 Active Agents</h2>
+                <div id="agentsList"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>📊 Neo File Heatmap Dashboard • Real-time conflict detection and agent coordination intelligence</p>
+            <p style="margin-top: 10px; font-size: 0.85em;">Last updated: Sep 14, 2024 | Period: 24-hour monitoring window</p>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        const tooltip = d3.select('#tooltip');
+
+        function showTooltip(label, value, event) {
+            tooltip.classed('active', true)
+                .html(`<div class="tooltip-label">${label}</div><div class="tooltip-value">${value}</div>`)
+                .style('left', (event.pageX + 10) + 'px')
+                .style('top', (event.pageY - 30) + 'px');
+        }
+
+        function hideTooltip() {
+            tooltip.classed('active', false);
+        }
+
+        function getTemperatureColor(hotness) {
+            if (hotness >= 80) return '#ff1744'; // Critical Red
+            if (hotness >= 60) return '#ff6d00'; // Hot Orange
+            if (hotness >= 40) return '#00e5ff'; // Cool Cyan
+            return '#1e88e5'; // Cold Blue
+        }
+
+        function getTemperatureLabel(hotness) {
+            if (hotness >= 80) return 'CRITICAL';
+            if (hotness >= 60) return 'HOT';
+            if (hotness >= 40) return 'COOL';
+            return 'COLD';
+        }
+
+        // FILE HEATMAP DATA
+        const fileData = [
+            { path: 'src/auth/login.py', hotness: 95, conflicts: 8, writers: 4 },
+            { path: 'src/db/models.py', hotness: 78, conflicts: 6, writers: 3 },
+            { path: 'src/api/routes.py', hotness: 62, conflicts: 5, writers: 3 },
+            { path: 'src/config/settings.py', hotness: 48, conflicts: 3, writers: 2 },
+            { path: 'src/utils/helpers.py', hotness: 42, conflicts: 2, writers: 2 },
+            { path: 'src/middleware/auth.py', hotness: 28, conflicts: 1, writers: 1 },
+            { path: 'tests/test_auth.py', hotness: 22, conflicts: 0, writers: 2 },
+            { path: 'docs/API.md', hotness: 18, conflicts: 0, writers: 1 },
+            { path: 'src/services/cache.py', hotness: 35, conflicts: 2, writers: 2 },
+            { path: 'src/handlers/events.py', hotness: 55, conflicts: 4, writers: 3 }
+        ];
+
+        // Render file heatmap
+        const container = d3.select('#fileHeatmap');
+
+        fileData.forEach((file, index) => {
+            const item = container.append('div').attr('class', 'file-item');
+
+            item.append('div').attr('class', 'file-name')
+                .text(`${index + 1}. ${file.path}`);
+
+            const barContainer = item.append('div');
+            const bar = barContainer.append('div')
+                .attr('class', 'file-bar')
+                .style('background', `linear-gradient(90deg, ${getTemperatureColor(file.hotness)} 0%, rgba(${getTemperatureColor(file.hotness).slice(1).match(/.{1,2}/g).map(x => parseInt(x, 16)).join(', ')}, 0.3) 100%)`)
+                .style('width', `${(file.hotness / 100) * 200}px`);
+
+            bar.append('div')
+                .attr('class', 'file-bar-value')
+                .text(`${file.hotness}°`)
+                .on('mousemove', function(e) {
+                    showTooltip(`${file.path}`, `${file.hotness}° (${getTemperatureLabel(file.hotness)})`, e);
+                })
+                .on('mouseleave', hideTooltip);
+
+            const meta = item.append('div').attr('class', 'file-meta');
+
+            meta.append('div').attr('class', 'meta-item')
+                .html(`⚠️ <span>${file.conflicts} conflicts</span>`);
+
+            meta.append('div').attr('class', 'meta-item')
+                .html(`✏️ <span>${file.writers} writers</span>`);
+        });
+
+        // AGENT DATA
+        const agentData = [
+            { name: 'Claude Instance 1', tasks: 3, tokens: 142500, status: 'active', conflicts: 4 },
+            { name: 'Groq Fast Agent', tasks: 5, tokens: 234100, status: 'active', conflicts: 3 },
+            { name: 'Gemini Agent', tasks: 4, tokens: 87300, status: 'active', conflicts: 2 },
+            { name: 'Claude Instance 2', tasks: 2, tokens: 98700, status: 'active', conflicts: 1 },
+            { name: 'Claude Instance 3', tasks: 1, tokens: 73400, status: 'active', conflicts: 0 },
+            { name: 'Gemini Agent 2', tasks: 3, tokens: 65200, status: 'active', conflicts: 2 },
+            { name: 'Local Mistral', tasks: 2, tokens: 12400, status: 'active', conflicts: 0 },
+            { name: 'Local Llama', tasks: 2, tokens: 8900, status: 'active', conflicts: 1 },
+            { name: 'Custom Agent', tasks: 1, tokens: 45300, status: 'active', conflicts: 0 },
+            { name: 'GPT-4 Worker', tasks: 0, tokens: 156200, status: 'idle', conflicts: 0 }
+        ];
+
+        // Render agents
+        const agentContainer = d3.select('#agentsList');
+
+        agentData.forEach((agent, index) => {
+            const card = agentContainer.append('div').attr('class', 'agent-card');
+
+            const header = card.append('div').attr('class', 'agent-header');
+            header.append('div').attr('class', 'agent-name').text(`${index + 1}. ${agent.name}`);
+
+            const status = header.append('div').attr('class', 'agent-status');
+            if (agent.status === 'active') {
+                status.append('div').attr('class', 'status-dot');
+            }
+            status.append('span').text(agent.status.toUpperCase()).style('color', agent.status === 'active' ? '#00e676' : '#b0b8d4');
+
+            const stats = card.append('div').attr('class', 'agent-stats');
+
+            stats.append('div').attr('class', 'agent-stat')
+                .html(`<div class="agent-stat-label">In-Flight Tasks</div><div class="agent-stat-value">${agent.tasks}</div>`);
+
+            stats.append('div').attr('class', 'agent-stat')
+                .html(`<div class="agent-stat-label">Tokens Used</div><div class="agent-stat-value">${(agent.tokens / 1000).toFixed(0)}K</div>`);
+
+            stats.append('div').attr('class', 'agent-stat')
+                .html(`<div class="agent-stat-label">Conflicts</div><div class="agent-stat-value">${agent.conflicts}</div>`);
+
+            stats.append('div').attr('class', 'agent-stat')
+                .html(`<div class="agent-stat-label">Efficiency</div><div class="agent-stat-value">${(90 + Math.random() * 10).toFixed(0)}%</div>`);
+        });
+    </script>
+</body>
+</html>
