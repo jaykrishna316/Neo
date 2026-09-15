@@ -66,12 +66,6 @@ class EnhancedActivityLogManager:
         lock_result = self.lock_manager.acquire_lock(
             file_path, function_name, developer, severity, timeout_minutes
         )
-
-        if lock_result.get("locked"):
-            print(f"❌ {lock_result['message']}")
-            return lock_result
-
-        print(f"✅ {lock_result['message']}")
         return lock_result
 
     def log_change(self, developer: str, file_path: str, function_name: str,
@@ -118,8 +112,6 @@ class EnhancedActivityLogManager:
         log_file = self.log_dir / "changes" / f"{file_path.replace('/', '_')}_{function_name}_{change_id.replace(':', '-')}.json"
         log_file.write_text(json.dumps(change_record, indent=2))
 
-        print(self._format_change_output(change_record))
-
         # On HIGH conflict: Auto-push and offer merge strategies
         if conflict_severity == ConflictSeverity.HIGH:
             self._handle_high_conflict(change_record, related_changes)
@@ -132,9 +124,6 @@ class EnhancedActivityLogManager:
 
     def _handle_high_conflict(self, change_record: Dict, related_developers: List[str]):
         """Handle HIGH conflict: auto-push, suggest merge strategies, track escalation"""
-
-        print(f"\n🔴 HIGH CONFLICT DETECTED - Activating merge gate")
-        print(f"   Auto-pushing to: {change_record['branch']}")
 
         # Log auto-push
         push_log = {
@@ -162,9 +151,6 @@ class EnhancedActivityLogManager:
 
         escalation_file = self.log_dir / "escalations" / f"{change_record['file'].replace('/', '_')}_{change_record['function']}_escalation.json"
         escalation_file.write_text(json.dumps(escalation, indent=2))
-
-        print(f"   ⏰ Escalation timeout: 30 minutes")
-        print(f"   📋 Awaiting approvals from: {', '.join(related_developers + [change_record['developer']])}")
 
     def get_merge_strategies(self, file_path: str, function_name: str) -> Dict:
         """
@@ -224,20 +210,14 @@ class EnhancedActivityLogManager:
         if approval_status == "approved":
             if developer not in approvals["approved_by"]:
                 approvals["approved_by"].append(developer)
-            # Remove from rejected if previously rejected
             if developer in approvals["rejected_by"]:
                 approvals["rejected_by"].remove(developer)
 
-            print(f"✅ {developer} APPROVED merge of {function_name}")
-
-        else:  # rejected
+        else:
             if developer not in approvals["rejected_by"]:
                 approvals["rejected_by"].append(developer)
-            # Remove from approved if previously approved
             if developer in approvals["approved_by"]:
                 approvals["approved_by"].remove(developer)
-
-            print(f"❌ {developer} REJECTED merge of {function_name}")
 
         approvals["last_update"] = datetime.now().isoformat()
         approval_file.write_text(json.dumps(approvals, indent=2))
@@ -340,9 +320,6 @@ class EnhancedActivityLogManager:
         rollback_file = self.log_dir / "rollbacks" / f"{file_path.replace('/', '_')}_{function_name}_{datetime.now().isoformat().replace(':', '-')}.json"
         rollback_file.write_text(json.dumps(rollback_record, indent=2))
 
-        print(f"📝 Rollback recorded: {function_name}")
-        print(f"   Reason: {reason}")
-
         return rollback_record
 
     # ========== Helper Methods ==========
@@ -398,27 +375,3 @@ class EnhancedActivityLogManager:
         diff = list(difflib.unified_diff(old_lines, new_lines, lineterm=''))
         return len([l for l in diff if l.startswith('+') or l.startswith('-')])
 
-    def _format_change_output(self, record: Dict) -> str:
-        """Format change record for console output"""
-
-        severity_icon = "🔴" if record["conflict_severity"] == "high" else \
-                       "🟡" if record["conflict_severity"] == "medium" else "✅"
-
-        output = f"""
-{severity_icon} CHANGE LOGGED
-   Developer: {record['developer']}
-   File: {record['file']}
-   Function: {record['function']}
-   Branch: {record['branch']}
-   Description: {record['description']}
-   Lines changed: {record['line_changes']}
-   Severity: {record['conflict_severity'].upper()}
-"""
-
-        if record.get("related_changes"):
-            output += f"   Conflicts with: {', '.join(record['related_changes'])}\n"
-
-        if record.get("downstream_impacts", {}).get("critical_impacts"):
-            output += f"   ⚠️  CRITICAL DOWNSTREAM: {len(record['downstream_impacts']['critical_impacts'])} functions affected\n"
-
-        return output

@@ -23,12 +23,9 @@ class GitActivityLogBridge:
     def _init_github_api(self):
         """Initialize GitHub API client"""
         try:
-            # Try importing requests for GitHub API calls
             import requests
             return requests
         except ImportError:
-            print("⚠️  requests library not installed. GitHub integration disabled.")
-            print("   Install with: pip install requests")
             return None
 
     def get_repo_info(self) -> Dict:
@@ -53,8 +50,8 @@ class GitActivityLogBridge:
                     "repo": repo,
                     "origin": origin
                 }
-        except Exception as e:
-            print(f"⚠️  Could not parse git repo info: {e}")
+        except Exception:
+            pass
 
         return None
 
@@ -164,8 +161,8 @@ class GitActivityLogBridge:
                 prs = response.json()
                 if prs:
                     return prs[0]["number"]
-        except Exception as e:
-            print(f"⚠️  Could not find PR: {e}")
+        except Exception:
+            pass
 
         return None
 
@@ -177,7 +174,6 @@ class GitActivityLogBridge:
         """
 
         if not self.github_api or not self.github_token:
-            print("⚠️  GitHub API not configured")
             return {"success": False, "reason": "No GitHub token"}
 
         try:
@@ -264,9 +260,6 @@ class GitActivityLogBridge:
                 text=True
             ).strip()
 
-        print(f"\n🔍 Checking activity log for HIGH conflicts...")
-
-        # Find HIGH conflicts
         conflicts = self.find_high_conflicts_in_pr("main", head_branch)
 
         if not conflicts:
@@ -276,17 +269,7 @@ class GitActivityLogBridge:
                 "message": "No HIGH conflicts - standard approval flow"
             }
 
-        # Get required approvers
         approvers = self.get_required_approvers("main", head_branch)
-
-        print(f"🔴 Found {len(conflicts)} HIGH conflict(s)")
-        for conflict in conflicts:
-            print(f"   └─ {conflict['file']}::{conflict['function']}")
-            print(f"      Developers: {', '.join(conflict['developers_involved'])}")
-
-        print(f"\n👥 Adding {len(approvers)} required approvers...")
-        for approver in approvers:
-            print(f"   ✅ {approver}")
 
         # Find PR number
         pr_number = self.get_pr_number_from_branch(head_branch)
@@ -299,11 +282,9 @@ class GitActivityLogBridge:
                 "instructions": f"Manually add these as reviewers: {', '.join(approvers)}"
             }
 
-        # Add reviewers to PR
         result = self.add_required_reviewers_to_pr(pr_number, approvers)
 
         if result["success"]:
-            print(f"\n✅ Added reviewers to PR #{pr_number}")
             return {
                 "success": True,
                 "pr_number": pr_number,
@@ -447,8 +428,3 @@ if [ ! -z "$GITHUB_TOKEN" ]; then
 fi
 """)
     post_merge.chmod(0o755)
-
-    print("✅ Git hooks installed:")
-    print("   - pre-commit: Activity log recording")
-    print("   - pre-push: Merge gate enforcement")
-    print("   - post-merge: Auto-add approvers")
