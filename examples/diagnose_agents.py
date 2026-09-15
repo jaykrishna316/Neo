@@ -97,7 +97,7 @@ else:
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "llama-3.3-70b-versatile",
+                    "model": "qwen/qwen3.8-27b",
                     "messages": [{"role": "user", "content": "Say CONFLICT or NO_CONFLICT"}],
                     "max_tokens": 10,
                     "temperature": 0.1

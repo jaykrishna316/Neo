@@ -81,8 +81,8 @@ class GroqAgent:
 
     def __init__(self):
         self.api_key = os.getenv("GROQ_API_KEY")
-        self.model = "llama-3.3-70b-versatile"  # Latest stable Groq model
-        self.agent_id = "groq-llama33"
+        self.model = "qwen/qwen3.8-27b"  # Available on this API key
+        self.agent_id = "groq-qwen38"
         self.base_url = "https://api.groq.com/openai/v1/chat/completions"
 
         if not self.api_key:
