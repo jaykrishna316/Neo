@@ -1,0 +1,35 @@
+{
+  "activity_log": {
+    "enabled": true,
+    "storage": "git",
+    "log_dir": ".activity_log",
+    "auto_push_on_high": true,
+    "description": "Local POC storage - can migrate to database later"
+  },
+
+  "merge_gate": {
+    "enabled": true,
+    "enforce_on_high_conflict": true,
+    "requires_all_approval": true,
+    "description": "Blocks merge to main until all developers approve HIGH conflicts"
+  },
+
+  "conflict_detection": {
+    "low_threshold": 0.1,
+    "medium_threshold": 0.5,
+    "high_threshold": 0.5,
+    "description": "Overlap ratio thresholds for conflict severity"
+  },
+
+  "notifications": {
+    "high_conflict": "immediate",
+    "medium_conflict": "hourly_digest",
+    "low_conflict": "none",
+    "description": "Notification schedule by conflict severity"
+  },
+
+  "defaults": {
+    "functions_are_small": true,
+    "description": "Increases HIGH conflict sensitivity for small functions"
+  }
+}
