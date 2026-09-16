@@ -76,7 +76,10 @@ class WorkflowStateMachine:
         Developer finishes editing and releases lock
         Returns: (success, message, next_state)
         """
-        if self.state == WorkflowState.EDITING and self.current_editor == developer:
+        if self.current_editor == developer and self.state in [
+            WorkflowState.EDITING,
+            WorkflowState.CONFLICT_WAITING,
+        ]:
             self._transition_to(WorkflowState.BOTH_DONE, developer, "Finished editing")
 
             # If others waiting, notify them
