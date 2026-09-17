@@ -8,7 +8,10 @@ Transforms the activity log into queryable development history.
 
 from typing import Dict, List, Optional, Set, Tuple
 from datetime import datetime, timedelta
-from .event_model import Event, EventType
+try:
+    from .event_model import Event, EventType
+except ImportError:
+    from event_model import Event, EventType
 
 
 class DevelopmentMemory:

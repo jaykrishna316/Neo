@@ -14,8 +14,12 @@ import threading
 
 from workflow_state_machine import WorkflowStateMachine, WorkflowState
 from notification_manager import NotificationManager, NotificationType, NotificationChannel
-from event_model import Event, EventType, EventFactory
-from development_memory import DevelopmentMemory
+try:
+    from event_model import Event, EventType, EventFactory
+    from development_memory import DevelopmentMemory
+except ImportError:
+    from .event_model import Event, EventType, EventFactory
+    from .development_memory import DevelopmentMemory
 
 app = Flask(__name__)
 STORAGE_DIR = Path("./activity_log_storage")
