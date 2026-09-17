@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo 2.0 State Machine with Events</title>
+    <style>
+        :root {
+            --fg: #222;
+            --bg: #fff;
+            --border: #ddd;
+            --accent: #0066cc;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --fg: #eee;
+                --bg: #1a1a1a;
+                --border: #444;
+                --accent: #66b3ff;
+            }
+        }
+        :root[data-theme="dark"] {
+            --fg: #eee;
+            --bg: #1a1a1a;
+            --border: #444;
+            --accent: #66b3ff;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            margin: 0 0 24px 0;
+            font-size: 14px;
+            color: currentColor;
+            opacity: 0.7;
+        }
+        figure {
+            margin: 0 0 32px 0;
+            padding: 20px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        figcaption {
+            margin-top: 12px;
+            font-size: 13px;
+            color: currentColor;
+            opacity: 0.85;
+        }
+        svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .section-title {
+            margin-top: 32px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .event-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .event-card {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .event-card.intent {
+            border-left: 4px solid #ff6b6b;
+        }
+        .event-card.resource {
+            border-left: 4px solid #4ecdc4;
+        }
+        .event-card.work {
+            border-left: 4px solid #45b7d1;
+        }
+        .event-card.context {
+            border-left: 4px solid #96ceb4;
+        }
+        .event-card.handoff {
+            border-left: 4px solid #ffeaa7;
+        }
+        .event-card.review {
+            border-left: 4px solid #dfe6e9;
+        }
+        .event-card.git {
+            border-left: 4px solid #74b9ff;
+        }
+        .event-card.system {
+            border-left: 4px solid #a29bfe;
+        }
+        .event-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .legend {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            font-size: 13px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .state-transition-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin: 16px 0;
+        }
+        .state-transition-table th,
+        .state-transition-table td {
+            border: 1px solid var(--border);
+            padding: 8px;
+            text-align: left;
+        }
+        .state-transition-table th {
+            background: var(--bg);
+            font-weight: 600;
+        }
+        .state-name {
+            font-weight: 600;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Neo 2.0: Complete State & Event Architecture</h1>
+        <p class="subtitle">10 workflow states driven by ~32 development lifecycle events across 5 phases</p>
+
+        <!-- Workflow States Diagram -->
+        <figure>
+            <svg viewBox="0 0 1200 700" role="img" aria-label="Neo 2.0 workflow state machine showing 10 states and valid transitions">
+                <defs>
+                    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="currentColor"/>
+                    </marker>
+                </defs>
+
+                <!-- Phase labels -->
+                <text x="50" y="30" font-size="11" font-weight="600" fill="currentColor" opacity="0.7">Phase 1: Intent</text>
+                <text x="280" y="30" font-size="11" font-weight="600" fill="currentColor" opacity="0.7">Phase 2: Handoff</text>
+                <text x="520" y="30" font-size="11" font-weight="600" fill="currentColor" opacity="0.7">Phase 3: Context</text>
+                <text x="760" y="30" font-size="11" font-weight="600" fill="currentColor" opacity="0.7">Phase 4: Provenance</text>
+                <text x="1050" y="30" font-size="11" font-weight="600" fill="currentColor" opacity="0.7">Phase 5: Autonomy</text>
+
+                <!-- State boxes -->
+                <!-- AVAILABLE -->
+                <rect x="20" y="60" width="120" height="60" fill="#e8f4f8" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="80" y="85" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">AVAILABLE</text>
+                <text x="80" y="105" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Ready for edit</text>
+
+                <!-- EDITING -->
+                <rect x="170" y="60" width="120" height="60" fill="#d4f1f4" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="230" y="85" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">EDITING</text>
+                <text x="230" y="105" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Dev holding lock</text>
+
+                <!-- CONFLICT_WAITING -->
+                <rect x="320" y="60" width="140" height="60" fill="#ffe0e0" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="390" y="85" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">CONFLICT_WAITING</text>
+                <text x="390" y="105" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Waiting for lock</text>
+
+                <!-- BOTH_DONE -->
+                <rect x="500" y="60" width="120" height="60" fill="#d1f2eb" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="560" y="85" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">BOTH_DONE</text>
+                <text x="560" y="105" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Edits complete</text>
+
+                <!-- HANDOFF_PENDING (Neo 2.0) -->
+                <rect x="650" y="60" width="140" height="60" fill="#ffeaa7" stroke="currentColor" stroke-width="2" rx="4"/>
+                <text x="720" y="85" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">HANDOFF_PENDING</text>
+                <text x="720" y="105" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Neo 2.0 Phase 2</text>
+
+                <!-- PENDING_REVIEW -->
+                <rect x="320" y="180" width="140" height="60" fill="#e8d4f1" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="390" y="205" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">PENDING_REVIEW</text>
+                <text x="390" y="225" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Review in progress</text>
+
+                <!-- IN_PR -->
+                <rect x="800" y="60" width="120" height="60" fill="#dfe6e9" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="860" y="85" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">IN_PR</text>
+                <text x="860" y="105" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">PR created</text>
+
+                <!-- APPROVED -->
+                <rect x="950" y="60" width="120" height="60" fill="#c7ecee" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="1010" y="85" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">APPROVED</text>
+                <text x="1010" y="105" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Ready to merge</text>
+
+                <!-- MERGED -->
+                <rect x="1100" y="60" width="120" height="60" fill="#a9dfbf" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="1160" y="85" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">MERGED</text>
+                <text x="1160" y="105" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Merged to main</text>
+
+                <!-- ROLLED_BACK -->
+                <rect x="450" y="280" width="120" height="60" fill="#fadbd8" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="510" y="305" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">ROLLED_BACK</text>
+                <text x="510" y="325" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">Reverted</text>
+
+                <!-- Transitions -->
+                <!-- AVAILABLE -> EDITING -->
+                <line x1="140" y1="90" x2="170" y2="90" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="155" y="80" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.7">start_editing</text>
+
+                <!-- EDITING -> BOTH_DONE -->
+                <line x1="290" y1="90" x2="500" y2="90" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="395" y="80" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.7">finish_editing</text>
+
+                <!-- EDITING -> CONFLICT_WAITING -->
+                <line x1="230" y1="120" x2="350" y2="120" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+                <text x="290" y="135" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.7">conflict detected</text>
+
+                <!-- CONFLICT_WAITING -> PENDING_REVIEW -->
+                <line x1="390" y1="120" x2="390" y2="180" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="410" y="150" font-size="9" fill="currentColor" opacity="0.7">lock released</text>
+
+                <!-- BOTH_DONE -> HANDOFF_PENDING -->
+                <line x1="620" y1="90" x2="650" y2="90" stroke="currentColor" stroke-width="2" marker-end="url(#arrow)"/>
+                <text x="635" y="80" font-size="9" fill="currentColor" text-anchor="middle" font-weight="600">HANDOFF</text>
+
+                <!-- HANDOFF_PENDING -> IN_PR -->
+                <line x1="790" y1="90" x2="800" y2="90" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="795" y="80" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.7">create_pr</text>
+
+                <!-- IN_PR -> APPROVED -->
+                <line x1="920" y1="90" x2="950" y2="90" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="935" y="80" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.7">approval</text>
+
+                <!-- APPROVED -> MERGED -->
+                <line x1="1070" y1="90" x2="1100" y2="90" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="1085" y="80" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.7">merge</text>
+
+                <!-- MERGED -> ROLLED_BACK -->
+                <line x1="1160" y1="120" x2="570" y2="280" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="900" y="200" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.7">rollback</text>
+
+                <!-- Alternative paths -->
+                <!-- BOTH_DONE -> IN_PR (skip handoff) -->
+                <line x1="600" y1="100" x2="820" y2="100" stroke="currentColor" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+                <text x="710" y="118" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.6">alt: skip phase 2</text>
+
+                <!-- IN_PR -> BOTH_DONE (reject) -->
+                <line x1="860" y1="60" x2="560" y2="120" stroke="currentColor" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+                <text x="680" y="60" font-size="9" fill="currentColor" text-anchor="middle" opacity="0.6">rejected</text>
+
+                <!-- ROLLED_BACK -> EDITING -->
+                <line x1="510" y1="280" x2="230" y2="120" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3,3"/>
+                <text x="340" y="200" font-size="9" fill="currentColor" opacity="0.7">re-edit</text>
+
+                <!-- Pending review -> both done -->
+                <line x1="390" y1="240" x2="560" y2="120" stroke="currentColor" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#arrow)"/>
+                <text x="440" y="190" font-size="9" fill="currentColor" opacity="0.6">continue edits</text>
+
+                <!-- Timeline marker -->
+                <line x1="40" y1="420" x2="1180" y2="420" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+                <text x="40" y="445" font-size="11" font-weight="600" fill="currentColor">Development Timeline →</text>
+            </svg>
+            <figcaption>
+                <strong>Neo 2.0 Workflow State Machine:</strong> 10 states connected by event-driven transitions. The new HANDOFF_PENDING state (Phase 2) enables temporal coordination independent of PRs. States flow from AVAILABLE → EDITING → CONFLICT_WAITING (if needed) → BOTH_DONE → HANDOFF_PENDING → IN_PR → APPROVED → MERGED. Rollbacks to ROLLED_BACK can trigger re-editing.
+            </figcaption>
+        </figure>
+
+        <!-- Event Categories -->
+        <div class="section-title">32 Development Lifecycle Events (5 Phases)</div>
+
+        <div class="section-title" style="font-size: 14px; font-weight: 500; margin-top: 20px; margin-bottom: 12px;">
+            Phase 1: Intent Lifecycle (6 events)
+        </div>
+        <div class="event-grid">
+            <div class="event-card intent">
+                <div class="event-title">DEVELOPER_REGISTERED</div>
+                <p>Developer joins coordination system</p>
+            </div>
+            <div class="event-card intent">
+                <div class="event-title">INTENT_DECLARED</div>
+                <p>Developer declares what they'll work on</p>
+            </div>
+            <div class="event-card intent">
+                <div class="event-title">INTENT_UPDATED</div>
+                <p>Developer updates their declared intent</p>
+            </div>
+            <div class="event-card intent">
+                <div class="event-title">INTENT_AUTHORIZED</div>
+                <p>Intent approved by coordination system</p>
+            </div>
+            <div class="event-card intent">
+                <div class="event-title">INTENT_BLOCKED</div>
+                <p>Intent blocked due to conflict (HIGH risk)</p>
+            </div>
+            <div class="event-card intent">
+                <div class="event-title">INTENT_EXPIRED</div>
+                <p>Intent aged out (30+ min without completion)</p>
+            </div>
+        </div>
+
+        <div class="section-title" style="font-size: 14px; font-weight: 500; margin-top: 20px; margin-bottom: 12px;">
+            Phase 2: Handoff Coordination (3 events)
+        </div>
+        <div class="event-grid">
+            <div class="event-card handoff">
+                <div class="event-title">HANDOFF_CREATED</div>
+                <p>Work completed, handoff initiated</p>
+            </div>
+            <div class="event-card handoff">
+                <div class="event-title">HANDOFF_ACKNOWLEDGED</div>
+                <p>Next dev acknowledges and understands prior work</p>
+            </div>
+            <div class="event-card handoff">
+                <div class="event-title">HANDOFF_CONSUMED</div>
+                <p>Handoff information used by next developer</p>
+            </div>
+        </div>
+
+        <div class="section-title" style="font-size: 14px; font-weight: 500; margin-top: 20px; margin-bottom: 12px;">
+            Phase 3: Context Management (5 events)
+        </div>
+        <div class="event-grid">
+            <div class="event-card context">
+                <div class="event-title">CONTEXT_SNAPSHOT_CREATED</div>
+                <p>Checkpoint: function state, imports, deps</p>
+            </div>
+            <div class="event-card context">
+                <div class="event-title">CONTEXT_INVALIDATED</div>
+                <p>Another dev changed a symbol we depend on</p>
+            </div>
+            <div class="event-card context">
+                <div class="event-title">CONTEXT_SYNC_REQUIRED</div>
+                <p>Paused dev needs to sync before resuming</p>
+            </div>
+            <div class="event-card context">
+                <div class="event-title">CONTEXT_REVALIDATING</div>
+                <p>Checking if snapshot still valid</p>
+            </div>
+            <div class="event-card context">
+                <div class="event-title">CONTEXT_REVALIDATED</div>
+                <p>Snapshot still valid, safe to resume</p>
+            </div>
+        </div>
+
+        <div class="section-title" style="font-size: 14px; font-weight: 500; margin-top: 20px; margin-bottom: 12px;">
+            Phase 4: Work & Review Lifecycle (7 events)
+        </div>
+        <div class="event-grid">
+            <div class="event-card work">
+                <div class="event-title">WORK_STARTED</div>
+                <p>Developer begins code generation</p>
+            </div>
+            <div class="event-card work">
+                <div class="event-title">WORK_PAUSED</div>
+                <p>Work paused due to conflict or sync needed</p>
+            </div>
+            <div class="event-card work">
+                <div class="event-title">WORK_RESUMED</div>
+                <p>Developer resumes from checkpoint</p>
+            </div>
+            <div class="event-card work">
+                <div class="event-title">WORK_COMPLETED</div>
+                <p>Developer marks work finished</p>
+            </div>
+            <div class="event-card review">
+                <div class="event-title">REVIEW_REQUESTED</div>
+                <p>Code review requested for PR</p>
+            </div>
+            <div class="event-card review">
+                <div class="event-title">REVIEW_STARTED</div>
+                <p>Reviewer begins analyzing changes</p>
+            </div>
+            <div class="event-card review">
+                <div class="event-title">REVIEW_COMPLETED</div>
+                <p>Review finished, approval/rejection</p>
+            </div>
+        </div>
+
+        <div class="section-title" style="font-size: 14px; font-weight: 500; margin-top: 20px; margin-bottom: 12px;">
+            Phase 4: Provenance & Resource Coordination (6 events)
+        </div>
+        <div class="event-grid">
+            <div class="event-card resource">
+                <div class="event-title">RESOURCE_CLAIMED</div>
+                <p>Developer claims lock on file/function</p>
+            </div>
+            <div class="event-card resource">
+                <div class="event-title">RESOURCE_RELEASED</div>
+                <p>Lock released, resource available</p>
+            </div>
+            <div class="event-card resource">
+                <div class="event-title">RESOURCE_CONFLICT_DETECTED</div>
+                <p>Overlap detected, risk calculated</p>
+            </div>
+            <div class="event-card git">
+                <div class="event-title">BRANCH_CREATED</div>
+                <p>Feature branch created from base</p>
+            </div>
+            <div class="event-card git">
+                <div class="event-title">COMMIT_CREATED</div>
+                <p>Commit recorded with developer provenance</p>
+            </div>
+            <div class="event-card git">
+                <div class="event-title">PR_CREATED</div>
+                <p>Pull request opened for review</p>
+            </div>
+        </div>
+
+        <div class="section-title" style="font-size: 14px; font-weight: 500; margin-top: 20px; margin-bottom: 12px;">
+            Phase 5: Autonomy & System Events (5 events)
+        </div>
+        <div class="event-grid">
+            <div class="event-card git">
+                <div class="event-title">PR_MERGED</div>
+                <p>Pull request merged to main branch</p>
+            </div>
+            <div class="event-card system">
+                <div class="event-title">STATE_TRANSITION</div>
+                <p>Any workflow state change recorded</p>
+            </div>
+            <div class="event-card system">
+                <div class="event-title">ERROR_OCCURRED</div>
+                <p>Error event for tracking failures</p>
+            </div>
+            <div class="event-card system">
+                <div class="event-title">NOTIFICATION_SENT</div>
+                <p>Notification to developer about event</p>
+            </div>
+            <div class="event-card system">
+                <div class="event-title">INTENT_CANCELLED</div>
+                <p>Developer cancels declared intent</p>
+            </div>
+        </div>
+
+        <!-- State Transition Rules -->
+        <div class="section-title">Valid State Transitions</div>
+        <table class="state-transition-table">
+            <thead>
+                <tr>
+                    <th>Current State</th>
+                    <th>Valid Next States</th>
+                    <th>Event Trigger</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="state-name">AVAILABLE</td>
+                    <td>EDITING</td>
+                    <td>start_editing() / WORK_STARTED</td>
+                </tr>
+                <tr>
+                    <td class="state-name">EDITING</td>
+                    <td>BOTH_DONE, CONFLICT_WAITING</td>
+                    <td>finish_editing() / WORK_COMPLETED or resource conflict</td>
+                </tr>
+                <tr>
+                    <td class="state-name">CONFLICT_WAITING</td>
+                    <td>PENDING_REVIEW</td>
+                    <td>lock released / RESOURCE_RELEASED event</td>
+                </tr>
+                <tr>
+                    <td class="state-name">PENDING_REVIEW</td>
+                    <td>BOTH_DONE</td>
+                    <td>continue_editing()</td>
+                </tr>
+                <tr>
+                    <td class="state-name">BOTH_DONE</td>
+                    <td>IN_PR, HANDOFF_PENDING, EDITING</td>
+                    <td>create_pr() or create_handoff() (Phase 2)</td>
+                </tr>
+                <tr>
+                    <td class="state-name">HANDOFF_PENDING</td>
+                    <td>IN_PR, EDITING</td>
+                    <td>HANDOFF_CREATED → create_pr() (Phase 2)</td>
+                </tr>
+                <tr>
+                    <td class="state-name">IN_PR</td>
+                    <td>APPROVED, BOTH_DONE</td>
+                    <td>record_approval() / REVIEW_COMPLETED</td>
+                </tr>
+                <tr>
+                    <td class="state-name">APPROVED</td>
+                    <td>MERGED</td>
+                    <td>merge_to_main() / PR_MERGED</td>
+                </tr>
+                <tr>
+                    <td class="state-name">MERGED</td>
+                    <td>ROLLED_BACK</td>
+                    <td>rollback() / critical issue detected</td>
+                </tr>
+                <tr>
+                    <td class="state-name">ROLLED_BACK</td>
+                    <td>EDITING, AVAILABLE</td>
+                    <td>restart_work() / WORK_STARTED</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Key Mechanisms -->
+        <div class="section-title">Key Neo 2.0 Mechanisms</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div style="padding: 16px; border: 1px solid var(--border); border-radius: 6px;">
+                <div style="font-weight: 600; margin-bottom: 8px;">Phase 1: Intent Declaration</div>
+                <p style="margin: 0; font-size: 13px; opacity: 0.85;">
+                    Agents declare intent before work begins. Neo records INTENT_DECLARED events and enforces authorization gates. Conflicts at this stage prevent wasted generation.
+                </p>
+            </div>
+            <div style="padding: 16px; border: 1px solid var(--border); border-radius: 6px;">
+                <div style="font-weight: 600; margin-bottom: 8px;">Phase 2: Temporal Handoff (Neo 2.0)</div>
+                <p style="margin: 0; font-size: 13px; opacity: 0.85;">
+                    When work completes, HANDOFF_PENDING state enables transfer of context independent of PRs. Next dev can CONSUME prior work's findings, dependencies, and risks without merging yet.
+                </p>
+            </div>
+            <div style="padding: 16px; border: 1px solid var(--border); border-radius: 6px;">
+                <div style="font-weight: 600; margin-bottom: 8px;">Phase 3: Context Invalidation</div>
+                <p style="margin: 0; font-size: 13px; opacity: 0.85;">
+                    When paused agent's context becomes stale (another dev changed a dependency), CONTEXT_INVALIDATED fires. Paused dev is woken to REVALIDATE or re-analyze before resuming.
+                </p>
+            </div>
+            <div style="padding: 16px; border: 1px solid var(--border); border-radius: 6px;">
+                <div style="font-weight: 600; margin-bottom: 8px;">Phase 4: Reviewer Provenance</div>
+                <p style="margin: 0; font-size: 13px; opacity: 0.85;">
+                    Every COMMIT_CREATED and REVIEW_* event captures who did what and when. Enables traceability, audit trails, and blame analysis for complex edits across multiple agents.
+                </p>
+            </div>
+            <div style="padding: 16px; border: 1px solid var(--border); border-radius: 6px;">
+                <div style="font-weight: 600; margin-bottom: 8px;">Phase 5: Agent Autonomy</div>
+                <p style="margin: 0; font-size: 13px; opacity: 0.85;">
+                    Events feed an autonomy engine that learns which conflicts are real vs. false positives. Over time, Neo improves risk scoring and adapts decision gates.
+                </p>
+            </div>
+            <div style="padding: 16px; border: 1px solid var(--border); border-radius: 6px;">
+                <div style="font-weight: 600; margin-bottom: 8px;">Development Memory</div>
+                <p style="margin: 0; font-size: 13px; opacity: 0.85;">
+                    All events append to Development Memory queryable by resource, actor, time range, or type. Enables pattern discovery: "Who typically works on this function?" "What changed in the last hour?"
+                </p>
+            </div>
+        </div>
+
+        <div class="section-title">Event Flow Example: Two-Developer Scenario</div>
+        <div style="padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: monospace; line-height: 1.6; overflow-x: auto;">
+            <div>1. DEVELOPER_REGISTERED (dev1)</div>
+            <div>2. INTENT_DECLARED (dev1 on auth.py::login)</div>
+            <div>3. WORK_STARTED (dev1)</div>
+            <div>4. STATE_TRANSITION (AVAILABLE → EDITING)</div>
+            <div>5. RESOURCE_CLAIMED (dev1 on auth.py::login)</div>
+            <div style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
+                6. DEVELOPER_REGISTERED (dev2)</div>
+            <div>7. INTENT_DECLARED (dev2 on auth.py::login)  ← <span style="color: #ff6b6b;">SAME RESOURCE!</span></div>
+            <div>8. RESOURCE_CONFLICT_DETECTED (dev1 ↔ dev2, risk: 85)</div>
+            <div>9. INTENT_BLOCKED (dev2)</div>
+            <div>10. STATE_TRANSITION (AVAILABLE → CONFLICT_WAITING)</div>
+            <div>11. WORK_PAUSED (dev2, checkpoint saved)</div>
+            <div style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
+                12. WORK_COMPLETED (dev1)</div>
+            <div>13. STATE_TRANSITION (EDITING → BOTH_DONE)</div>
+            <div>14. HANDOFF_CREATED (dev1 → dev2)</div>
+            <div>15. STATE_TRANSITION (BOTH_DONE → HANDOFF_PENDING)</div>
+            <div>16. RESOURCE_RELEASED (auth.py::login)</div>
+            <div style="margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px;">
+                17. HANDOFF_ACKNOWLEDGED (dev2)</div>
+            <div>18. CONTEXT_SNAPSHOT_CREATED (dev2, prior work snapshot)</div>
+            <div>19. WORK_RESUMED (dev2, from checkpoint)</div>
+            <div>20. STATE_TRANSITION (CONFLICT_WAITING → PENDING_REVIEW)</div>
+            <div>21. WORK_COMPLETED (dev2)</div>
+            <div>22. STATE_TRANSITION (BOTH_DONE → IN_PR)</div>
+            <div>23. BRANCH_CREATED (feature/auth-oauth2)</div>
+            <div>24. COMMIT_CREATED (dev2, with dev1 as co-author via provenance)</div>
+            <div>25. PR_CREATED (#123)</div>
+            <div>26. REVIEW_REQUESTED (#123)</div>
+            <div>27. REVIEW_COMPLETED (approved)</div>
+            <div>28. STATE_TRANSITION (IN_PR → APPROVED)</div>
+            <div>29. PR_MERGED (merge commit abc123)</div>
+            <div>30. STATE_TRANSITION (APPROVED → MERGED)</div>
+        </div>
+
+        <div class="legend" style="margin-top: 32px;">
+            <div class="legend-item">
+                <div class="legend-box" style="background: #ff6b6b; opacity: 0.2; border: 1px solid #ff6b6b;"></div>
+                <span><strong>Intent Lifecycle:</strong> 6 events (Phase 1)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #ffeaa7; opacity: 0.2; border: 1px solid #ffeaa7;"></div>
+                <span><strong>Handoff Coordination:</strong> 3 events (Phase 2 - Neo 2.0)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #96ceb4; opacity: 0.2; border: 1px solid #96ceb4;"></div>
+                <span><strong>Context Management:</strong> 5 events (Phase 3)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #45b7d1; opacity: 0.2; border: 1px solid #45b7d1;"></div>
+                <span><strong>Work Lifecycle:</strong> 4 events (Phase 4)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #dfe6e9; opacity: 0.2; border: 1px solid #dfe6e9;"></div>
+                <span><strong>Review & Git:</strong> 7 + 6 events (Phase 4-5)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="background: #a29bfe; opacity: 0.2; border: 1px solid #a29bfe;"></div>
+                <span><strong>System Events:</strong> 5 events (Phase 5)</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
