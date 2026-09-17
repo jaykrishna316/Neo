@@ -14,6 +14,8 @@ import threading
 
 from workflow_state_machine import WorkflowStateMachine, WorkflowState
 from notification_manager import NotificationManager, NotificationType, NotificationChannel
+from event_model import Event, EventType, EventFactory
+from development_memory import DevelopmentMemory
 
 app = Flask(__name__)
 STORAGE_DIR = Path("./activity_log_storage")
@@ -22,6 +24,7 @@ LOCK = threading.Lock()  # Prevent concurrent writes
 # Global managers
 state_machines = {}  # file::function -> WorkflowStateMachine
 notification_manager = NotificationManager()
+development_memory = DevelopmentMemory()  # Neo 2.0: Development Memory
 developer_registry = {}  # developer -> {"type": "agent" or "human", "subscribed_at": timestamp}
 
 # Ensure storage directory exists
@@ -59,6 +62,15 @@ def register_developer():
             "type": dev_type,
             "registered_at": datetime.now().isoformat(),
         }
+
+        # Neo 2.0: Record developer registration event
+        event = Event(
+            event_type=EventType.DEVELOPER_REGISTERED,
+            actor=developer,
+            actor_type=dev_type,
+            details={"developer_type": dev_type}
+        )
+        development_memory.record_event(event)
 
         return (
             jsonify(
@@ -167,6 +179,25 @@ def start_editing_endpoint():
         allowed, message, new_state = machine.start_editing(developer)
 
         if allowed:
+            # Neo 2.0: Record intent and resource claim events
+            resource_key = f"{file_path}::{function_name}"
+            actor_type = developer_registry.get(developer, {}).get("type", "human")
+
+            event_intent = EventFactory.intent_declared(
+                actor=developer,
+                actor_type=actor_type,
+                resource=resource_key,
+                details={"file": file_path, "function": function_name}
+            )
+            development_memory.record_event(event_intent)
+
+            event_claim = EventFactory.resource_claimed(
+                actor=developer,
+                actor_type=actor_type,
+                resource=resource_key
+            )
+            development_memory.record_event(event_claim)
+
             # Notify others if this is first developer
             if new_state == WorkflowState.EDITING:
                 notification_manager.notify(
@@ -257,6 +288,19 @@ def finish_editing_endpoint():
         success, message, new_state = machine.finish_editing(developer)
 
         if success:
+            # Neo 2.0: Record work completion event
+            resource_key = f"{file_path}::{function_name}"
+            actor_type = developer_registry.get(developer, {}).get("type", "human")
+
+            event_complete = EventFactory.work_completed(
+                actor=developer,
+                actor_type=actor_type,
+                resource=resource_key,
+                summary=data.get("summary", f"Completed editing {function_name}"),
+                task_id=data.get("task_id")
+            )
+            development_memory.record_event(event_complete)
+
             # Notify that lock is released
             notification_manager.notify(
                 "all",
@@ -1212,6 +1256,92 @@ def _create_escalation(change_record: Dict, related_developers: List[str]):
             / f"{change_record['file'].replace('/', '_')}_{change_record['function']}_escalation.json"
         )
         escalation_file.write_text(json.dumps(escalation, indent=2))
+
+
+# ========== NEO 2.0: Development Memory Endpoints ==========
+
+
+@app.route("/api/development_history", methods=["GET"])
+def get_development_history():
+    """Get complete development history for a resource (file::function)"""
+    try:
+        resource = request.args.get("resource")
+        if not resource:
+            return jsonify({"error": "Missing resource parameter"}), 400
+
+        history = development_memory.get_development_history(resource)
+        return jsonify(history), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/actor_activity", methods=["GET"])
+def get_actor_activity():
+    """Get all activity for an actor (developer or agent)"""
+    try:
+        actor = request.args.get("actor")
+        limit = int(request.args.get("limit", 100))
+
+        if not actor:
+            return jsonify({"error": "Missing actor parameter"}), 400
+
+        activity = development_memory.get_actor_activity(actor, limit)
+        return jsonify({"actor": actor, "activity": activity}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/resource_history", methods=["GET"])
+def get_resource_history():
+    """Get all events for a specific resource (file, symbol, branch, etc)"""
+    try:
+        resource = request.args.get("resource")
+        limit = int(request.args.get("limit", 100))
+
+        if not resource:
+            return jsonify({"error": "Missing resource parameter"}), 400
+
+        history = development_memory.get_resource_history(resource, limit)
+        return jsonify({"resource": resource, "history": history}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/recent_activity", methods=["GET"])
+def get_recent_activity():
+    """Get recent activity for a resource (last N hours)"""
+    try:
+        resource = request.args.get("resource")
+        hours_ago = int(request.args.get("hours", 24))
+
+        if not resource:
+            return jsonify({"error": "Missing resource parameter"}), 400
+
+        activity = development_memory.get_recent_activity_for_resource(resource, hours_ago)
+        return jsonify({"resource": resource, "hours_ago": hours_ago, "activity": activity}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/development_memory/statistics", methods=["GET"])
+def get_memory_statistics():
+    """Get development memory statistics"""
+    try:
+        stats = development_memory.get_statistics()
+        return jsonify(stats), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/development_memory/all_events", methods=["GET"])
+def get_all_events():
+    """Get all recorded events (for debugging/audit)"""
+    try:
+        limit = int(request.args.get("limit", 1000))
+        events = development_memory.get_all_events(limit)
+        return jsonify({"total_events": len(development_memory.events), "events": events}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
