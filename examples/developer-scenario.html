@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo 2.0: Two-Developer Scenario with Context Staleness</title>
+    <style>
+        :root {
+            --fg: #222;
+            --bg: #fff;
+            --border: #ddd;
+            --accent: #0066cc;
+            --dev1: #4ecdc4;
+            --dev2: #ff6b9d;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --fg: #eee;
+                --bg: #1a1a1a;
+                --border: #444;
+                --accent: #66b3ff;
+            }
+        }
+        :root[data-theme="dark"] {
+            --fg: #eee;
+            --bg: #1a1a1a;
+            --border: #444;
+            --accent: #66b3ff;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 28px;
+        }
+        .subtitle {
+            margin: 0 0 32px 0;
+            font-size: 14px;
+            color: currentColor;
+            opacity: 0.7;
+        }
+        .timeline {
+            display: grid;
+            grid-template-columns: 80px 1fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .timeline-header {
+            display: contents;
+        }
+        .timeline-header > div {
+            font-weight: 600;
+            font-size: 12px;
+            opacity: 0.7;
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .step {
+            display: contents;
+        }
+        .step-time {
+            font-weight: 600;
+            font-family: monospace;
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+        .step-event {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+            font-size: 13px;
+        }
+        .step-dev1 {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            border-left: 3px solid var(--dev1);
+            background: rgba(78, 205, 196, 0.08);
+        }
+        .step-dev2 {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            border-left: 3px solid var(--dev2);
+            background: rgba(255, 107, 157, 0.08);
+        }
+        .step-dev1, .step-dev2 {
+            font-size: 12px;
+        }
+        .state-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 2px 2px 2px 0;
+        }
+        .state-available {
+            background: #e8f4f8;
+            color: #0a6fa0;
+        }
+        .state-editing {
+            background: #d4f1f4;
+            color: #0a6fa0;
+        }
+        .state-conflict {
+            background: #ffe0e0;
+            color: #c41e3a;
+        }
+        .state-pending {
+            background: #e8d4f1;
+            color: #6a4c93;
+        }
+        .state-both {
+            background: #d1f2eb;
+            color: #0a7e5e;
+        }
+        .state-handoff {
+            background: #ffeaa7;
+            color: #8b5a00;
+        }
+        .state-pr {
+            background: #dfe6e9;
+            color: #2d3436;
+        }
+        .state-approved {
+            background: #c7ecee;
+            color: #0b7265;
+        }
+        .state-merged {
+            background: #a9dfbf;
+            color: #0b5345;
+        }
+        .event-type {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 4px;
+            background: var(--accent);
+            color: white;
+            opacity: 0.8;
+        }
+        .phase-1 { background: #ff6b6b; }
+        .phase-2 { background: #ffeaa7; }
+        .phase-3 { background: #96ceb4; }
+        .phase-4 { background: #45b7d1; }
+        .phase-5 { background: #a29bfe; }
+        .critical {
+            border-left: 4px solid #ff0000;
+            background: rgba(255, 0, 0, 0.05);
+            padding: 12px;
+            border-radius: 4px;
+            margin: 8px 0;
+            font-weight: 500;
+        }
+        .section {
+            margin: 40px 0;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+        }
+        .code-block {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 12px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            margin: 12px 0;
+        }
+        .highlight {
+            background: #ffff00;
+            opacity: 0.3;
+            padding: 1px 3px;
+        }
+        .conflict-marker {
+            border: 2px dashed #ff6b6b;
+            padding: 8px;
+            margin: 8px 0;
+            border-radius: 4px;
+        }
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        .legend-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin: 12px 0;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: var(--bg);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Two-Developer Scenario: Hitting All States + Context Staleness</h1>
+        <p class="subtitle">Complete walkthrough with Alice (Dev 1) and Bob (Dev 2) on a shared authentication module</p>
+
+        <!-- Scenario Setup -->
+        <div class="section">
+            <div class="section-title">🎬 Scenario Setup</div>
+            <p>
+                <strong>Task:</strong> Refactor user authentication in <code>auth.py</code><br>
+                <strong>Dev 1 (Alice):</strong> Refactoring <code>login_user()</code> function (lines 20-60)<br>
+                <strong>Dev 2 (Bob):</strong> Adding email validation to same function (lines 30-50)<br>
+                <strong>Twist:</strong> Alice changes <code>validate_email()</code> signature, which Bob depends on
+            </p>
+            <p><strong>Resources involved:</strong></p>
+            <ul>
+                <li><code>auth.py::login_user()</code> - Main editing location</li>
+                <li><code>validators.py::validate_email()</code> - Dependency that will change</li>
+            </ul>
+        </div>
+
+        <!-- Timeline -->
+        <div class="section">
+            <div class="section-title">⏱️ Complete Timeline: 30 Events</div>
+
+            <div class="timeline">
+                <div class="timeline-header">
+                    <div>Time</div>
+                    <div>Event (Phase)</div>
+                    <div>Alice (Dev 1)</div>
+                    <div>Bob (Dev 2)</div>
+                </div>
+
+                <!-- 00:00 - Initialization -->
+                <div class="step">
+                    <div class="step-time">00:00</div>
+                    <div class="step-event"><span class="event-type phase-1">Phase 1</span>DEVELOPER_REGISTERED</div>
+                    <div class="step-dev1">✓ Alice registers in Neo</div>
+                    <div class="step-dev2"></div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:01</div>
+                    <div class="step-event"><span class="event-type phase-1">Phase 1</span>INTENT_DECLARED</div>
+                    <div class="step-dev1">
+                        <strong>Intent:</strong> "Refactor login_user for readability"<br>
+                        <strong>Resource:</strong> auth.py::login_user<br>
+                        <strong>Region:</strong> lines 20-60
+                    </div>
+                    <div class="step-dev2"></div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:02</div>
+                    <div class="step-event"><span class="event-type phase-1">Phase 1</span>INTENT_AUTHORIZED</div>
+                    <div class="step-dev1">
+                        <span class="state-badge state-available">AVAILABLE</span> → <span class="state-badge state-editing">EDITING</span>
+                    </div>
+                    <div class="step-dev2"></div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:03</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>WORK_STARTED</div>
+                    <div class="step-dev1">
+                        Begins generating code<br>
+                        <strong>State:</strong> EDITING
+                    </div>
+                    <div class="step-dev2"></div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:04</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>RESOURCE_CLAIMED</div>
+                    <div class="step-dev1">
+                        Acquires exclusive lock on auth.py::login_user
+                    </div>
+                    <div class="step-dev2"></div>
+                </div>
+
+                <!-- Bob appears -->
+                <div class="step">
+                    <div class="step-time">00:05</div>
+                    <div class="step-event"><span class="event-type phase-1">Phase 1</span>DEVELOPER_REGISTERED</div>
+                    <div class="step-dev1">Still working...</div>
+                    <div class="step-dev2">✓ Bob registers in Neo</div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:06</div>
+                    <div class="step-event"><span class="event-type phase-1">Phase 1</span>INTENT_DECLARED</div>
+                    <div class="step-dev1">Still working (5 min elapsed)</div>
+                    <div class="step-dev2">
+                        <strong>Intent:</strong> "Add email validation to login"<br>
+                        <strong>Resource:</strong> auth.py::login_user<br>
+                        <strong>Region:</strong> lines 30-50<br>
+                        ⚠️ <strong>SAME FILE & OVERLAPPING REGION!</strong>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:07</div>
+                    <div class="step-event"><span class="event-type phase-1">Phase 1</span>RESOURCE_CONFLICT_DETECTED</div>
+                    <div class="step-dev1">Unaware, continues refactoring</div>
+                    <div class="step-dev2">
+                        🔴 <strong>CONFLICT DETECTED!</strong><br>
+                        Risk Score: 85/100 (HIGH)<br>
+                        Conflicting with: Alice
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:08</div>
+                    <div class="step-event"><span class="event-type phase-1">Phase 1</span>INTENT_BLOCKED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        <span class="state-badge state-available">AVAILABLE</span> → <span class="state-badge state-conflict">CONFLICT_WAITING</span><br>
+                        Must choose: WAIT, COLLABORATE, or WRAP_UP_REQUEST
+                    </div>
+                </div>
+
+                <!-- Bob chooses to WAIT -->
+                <div class="step">
+                    <div class="step-time">00:09</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>WORK_PAUSED</div>
+                    <div class="step-dev1">Still working...</div>
+                    <div class="step-dev2">
+                        <strong>Decision:</strong> WAIT<br>
+                        Bob chooses to pause and wait for lock release
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:10</div>
+                    <div class="step-event"><span class="event-type phase-3">Phase 3</span>CONTEXT_SNAPSHOT_CREATED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        <strong>Checkpoint saved:</strong><br>
+                        • tokens_generated: 287<br>
+                        • intent: "Add email validation"<br>
+                        • prompt_context: [2500 chars]<br>
+                        • depends_on: validators.validate_email()<br>
+                        <span class="state-badge state-conflict">CONFLICT_WAITING</span> → <span class="state-badge state-pending">WAITING</span>
+                    </div>
+                </div>
+
+                <!-- Alice continues and makes critical change -->
+                <div class="step">
+                    <div class="step-time">00:15</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>WORK_COMPLETED</div>
+                    <div class="step-dev1">
+                        <strong>Finished refactoring login_user</strong><br>
+                        Also changed: validate_email() signature<br>
+                        (was: validate_email(email) → bool)<br>
+                        (now: validate_email(email, strict=False) → dict)<br>
+                        <span class="state-badge state-editing">EDITING</span> → <span class="state-badge state-both">BOTH_DONE</span>
+                    </div>
+                    <div class="step-dev2">Still waiting... (5 min paused)</div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:16</div>
+                    <div class="step-event"><span class="event-type phase-2">Phase 2</span>HANDOFF_CREATED</div>
+                    <div class="step-dev1">
+                        <strong>Handoff initiated:</strong><br>
+                        • What changed: Refactored login_user<br>
+                        • Risks: validate_email signature changed<br>
+                        • Dependencies modified: validators.py<br>
+                        <span class="state-badge state-both">BOTH_DONE</span> → <span class="state-badge state-handoff">HANDOFF_PENDING</span>
+                    </div>
+                    <div class="step-dev2">Event: lock_removed! Alice finished!</div>
+                </div>
+
+                <!-- CRITICAL: Context invalidation detection -->
+                <div class="step">
+                    <div class="step-time">00:17</div>
+                    <div class="step-event"><span class="event-type phase-3">Phase 3</span>CONTEXT_INVALIDATED ⚠️</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        <div class="critical">
+                            🚨 <strong>CONTEXT STALE!</strong><br>
+                            Alice changed validate_email() signature!<br>
+                            Your checkpoint depends on old signature.<br>
+                            Cannot resume safely.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:18</div>
+                    <div class="step-event"><span class="event-type phase-3">Phase 3</span>CONTEXT_SYNC_REQUIRED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        <strong>Sync required before resuming</strong><br>
+                        Neo blocks immediate resume<br>
+                        Bob must re-analyze his intent against Alice's changes
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:19</div>
+                    <div class="step-event"><span class="event-type phase-3">Phase 3</span>CONTEXT_REVALIDATING</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        <strong>Re-analyzing checkpoint:</strong><br>
+                        ✗ Old: validate_email(email) → bool<br>
+                        ✓ New: validate_email(email, strict=False) → dict<br>
+                        Bob's code must adapt to return dict, not bool
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:20</div>
+                    <div class="step-event"><span class="event-type phase-3">Phase 3</span>CONTEXT_REVALIDATED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        ✓ Checkpoint revalidated<br>
+                        Bob can now resume safely<br>
+                        New context: validators.validate_email returns dict
+                    </div>
+                </div>
+
+                <!-- Bob resumes -->
+                <div class="step">
+                    <div class="step-time">00:21</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>WORK_RESUMED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        <strong>Resuming from checkpoint</strong><br>
+                        Context restored (287 prior tokens)<br>
+                        Continues with adapted code<br>
+                        <span class="state-badge state-pending">WAITING</span> → <span class="state-badge state-editing">EDITING</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:22</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>WORK_COMPLETED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        ✓ Email validation code complete<br>
+                        Adapted for new validate_email() signature<br>
+                        <span class="state-badge state-editing">EDITING</span> → <span class="state-badge state-both">BOTH_DONE</span>
+                    </div>
+                </div>
+
+                <!-- Handoff consumption -->
+                <div class="step">
+                    <div class="step-time">00:23</div>
+                    <div class="step-event"><span class="event-type phase-2">Phase 2</span>HANDOFF_ACKNOWLEDGED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        Bob acknowledges Alice's handoff<br>
+                        Understands the refactoring and risks
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:24</div>
+                    <div class="step-event"><span class="event-type phase-2">Phase 2</span>HANDOFF_CONSUMED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        Bob consumed handoff information<br>
+                        Adapted code accordingly<br>
+                        <span class="state-badge state-both">BOTH_DONE</span> → <span class="state-badge state-handoff">HANDOFF_PENDING</span>
+                    </div>
+                </div>
+
+                <!-- PR creation -->
+                <div class="step">
+                    <div class="step-time">00:25</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>BRANCH_CREATED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        Branch: feature/auth-refactor<br>
+                        Base: main (abc123)
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:26</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>COMMIT_CREATED (x2)</div>
+                    <div class="step-dev1">
+                        Commit: "Refactor login_user"<br>
+                        Author: Alice
+                    </div>
+                    <div class="step-dev2">
+                        Commit: "Add email validation"<br>
+                        Co-authors: Alice (via provenance)<br>
+                        Context: Alice's handoff
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:27</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>PR_CREATED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        PR #456 opened<br>
+                        <span class="state-badge state-handoff">HANDOFF_PENDING</span> → <span class="state-badge state-pr">IN_PR</span>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:28</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>REVIEW_REQUESTED</div>
+                    <div class="step-dev1">Requested as reviewer</div>
+                    <div class="step-dev2">PR review requested</div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:29</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>REVIEW_COMPLETED</div>
+                    <div class="step-dev1">✓ Approved</div>
+                    <div class="step-dev2"></div>
+                </div>
+
+                <div class="step">
+                    <div class="step-time">00:30</div>
+                    <div class="step-event"><span class="event-type phase-4">Phase 4</span>PR_MERGED</div>
+                    <div class="step-dev1"></div>
+                    <div class="step-dev2">
+                        ✓ Merged to main<br>
+                        <span class="state-badge state-pr">IN_PR</span> → <span class="state-badge state-approved">APPROVED</span> → <span class="state-badge state-merged">MERGED</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- State Machine Journey -->
+        <div class="section">
+            <div class="section-title">🔄 State Machine Journey</div>
+            <p><strong>Alice's State Path (Dev 1):</strong></p>
+            <div class="code-block">
+AVAILABLE
+    ↓ (INTENT_AUTHORIZED)
+EDITING
+    ↓ (WORK_COMPLETED @ 00:15)
+BOTH_DONE
+    ↓ (HANDOFF_CREATED @ 00:16)
+HANDOFF_PENDING
+            </div>
+
+            <p><strong>Bob's State Path (Dev 2):</strong></p>
+            <div class="code-block">
+AVAILABLE
+    ↓ (INTENT_DECLARED, hit conflict)
+CONFLICT_WAITING
+    ↓ (chose WAIT, checkpoint saved)
+WAITING
+    ↓ (lock_removed event, but context stale)
+WAITING (revalidating)
+    ↓ (CONTEXT_REVALIDATED @ 00:20)
+EDITING (resumed from checkpoint)
+    ↓ (WORK_COMPLETED @ 00:22)
+BOTH_DONE
+    ↓ (HANDOFF_CONSUMED @ 00:24)
+HANDOFF_PENDING
+    ↓ (BRANCH_CREATED)
+IN_PR
+    ↓ (REVIEW_COMPLETED, approved)
+APPROVED
+    ↓ (PR_MERGED)
+MERGED
+            </div>
+        </div>
+
+        <!-- Events Fired -->
+        <div class="section">
+            <div class="section-title">📡 All 30 Events Fired (Organized by Phase)</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Event</th>
+                        <th>Phase</th>
+                        <th>Actor</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>DEVELOPER_REGISTERED</td>
+                        <td>1</td>
+                        <td>Alice</td>
+                        <td>Joins coordination system</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>INTENT_DECLARED</td>
+                        <td>1</td>
+                        <td>Alice</td>
+                        <td>auth.py::login_user, refactor</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>INTENT_AUTHORIZED</td>
+                        <td>1</td>
+                        <td>Neo</td>
+                        <td>No conflicts, proceed</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>WORK_STARTED</td>
+                        <td>4</td>
+                        <td>Alice</td>
+                        <td>Begins code generation</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>RESOURCE_CLAIMED</td>
+                        <td>4</td>
+                        <td>Alice</td>
+                        <td>Locks auth.py::login_user</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>DEVELOPER_REGISTERED</td>
+                        <td>1</td>
+                        <td>Bob</td>
+                        <td>Joins coordination system</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td>INTENT_DECLARED</td>
+                        <td>1</td>
+                        <td>Bob</td>
+                        <td>auth.py::login_user, add validation</td>
+                    </tr>
+                    <tr style="background: rgba(255, 107, 157, 0.1);">
+                        <td>8</td>
+                        <td><strong>RESOURCE_CONFLICT_DETECTED</strong></td>
+                        <td>4</td>
+                        <td>Neo</td>
+                        <td><strong>Alice & Bob on same file, risk: 85/100</strong></td>
+                    </tr>
+                    <tr style="background: rgba(255, 107, 157, 0.1);">
+                        <td>9</td>
+                        <td><strong>INTENT_BLOCKED</strong></td>
+                        <td>1</td>
+                        <td>Neo</td>
+                        <td><strong>Bob's intent blocked, must wait/collaborate</strong></td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>WORK_PAUSED</td>
+                        <td>4</td>
+                        <td>Bob</td>
+                        <td>Bob chooses WAIT</td>
+                    </tr>
+                    <tr style="background: rgba(150, 206, 180, 0.1);">
+                        <td>11</td>
+                        <td><strong>CONTEXT_SNAPSHOT_CREATED</strong></td>
+                        <td>3</td>
+                        <td>Neo</td>
+                        <td><strong>Bob's checkpoint: 287 tokens, depends on validate_email()</strong></td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>WORK_COMPLETED</td>
+                        <td>4</td>
+                        <td>Alice</td>
+                        <td>Finished refactoring, changed validate_email() signature</td>
+                    </tr>
+                    <tr>
+                        <td>13</td>
+                        <td>HANDOFF_CREATED</td>
+                        <td>2</td>
+                        <td>Alice</td>
+                        <td>Work ready for handoff, risks documented</td>
+                    </tr>
+                    <tr style="background: rgba(150, 206, 180, 0.1);">
+                        <td>14</td>
+                        <td><strong>CONTEXT_INVALIDATED</strong></td>
+                        <td>3</td>
+                        <td>Neo</td>
+                        <td><strong>Bob's checkpoint stale! validate_email() signature changed!</strong></td>
+                    </tr>
+                    <tr style="background: rgba(150, 206, 180, 0.1);">
+                        <td>15</td>
+                        <td><strong>CONTEXT_SYNC_REQUIRED</strong></td>
+                        <td>3</td>
+                        <td>Neo</td>
+                        <td><strong>Bob must re-sync before resuming</strong></td>
+                    </tr>
+                    <tr style="background: rgba(150, 206, 180, 0.1);">
+                        <td>16</td>
+                        <td><strong>CONTEXT_REVALIDATING</strong></td>
+                        <td>3</td>
+                        <td>Neo</td>
+                        <td><strong>Re-analyzing Bob's intent against new validate_email()</strong></td>
+                    </tr>
+                    <tr style="background: rgba(150, 206, 180, 0.1);">
+                        <td>17</td>
+                        <td><strong>CONTEXT_REVALIDATED</strong></td>
+                        <td>3</td>
+                        <td>Neo</td>
+                        <td><strong>Bob can safely resume, dependencies updated</strong></td>
+                    </tr>
+                    <tr>
+                        <td>18</td>
+                        <td>WORK_RESUMED</td>
+                        <td>4</td>
+                        <td>Bob</td>
+                        <td>Resumes from checkpoint with new context</td>
+                    </tr>
+                    <tr>
+                        <td>19</td>
+                        <td>WORK_COMPLETED</td>
+                        <td>4</td>
+                        <td>Bob</td>
+                        <td>Email validation complete, adapted for new signature</td>
+                    </tr>
+                    <tr>
+                        <td>20</td>
+                        <td>HANDOFF_ACKNOWLEDGED</td>
+                        <td>2</td>
+                        <td>Bob</td>
+                        <td>Bob acknowledges Alice's handoff</td>
+                    </tr>
+                    <tr>
+                        <td>21</td>
+                        <td>HANDOFF_CONSUMED</td>
+                        <td>2</td>
+                        <td>Bob</td>
+                        <td>Bob consumed handoff, adapted his code</td>
+                    </tr>
+                    <tr>
+                        <td>22</td>
+                        <td>BRANCH_CREATED</td>
+                        <td>4</td>
+                        <td>Neo</td>
+                        <td>feature/auth-refactor from main</td>
+                    </tr>
+                    <tr>
+                        <td>23</td>
+                        <td>COMMIT_CREATED</td>
+                        <td>4</td>
+                        <td>Alice</td>
+                        <td>Refactor commit (Alice author)</td>
+                    </tr>
+                    <tr>
+                        <td>24</td>
+                        <td>COMMIT_CREATED</td>
+                        <td>4</td>
+                        <td>Bob</td>
+                        <td>Validation commit (Bob author, Alice co-author via provenance)</td>
+                    </tr>
+                    <tr>
+                        <td>25</td>
+                        <td>PR_CREATED</td>
+                        <td>4</td>
+                        <td>Neo</td>
+                        <td>PR #456 created for review</td>
+                    </tr>
+                    <tr>
+                        <td>26</td>
+                        <td>REVIEW_REQUESTED</td>
+                        <td>4</td>
+                        <td>Neo</td>
+                        <td>Alice requested as reviewer</td>
+                    </tr>
+                    <tr>
+                        <td>27</td>
+                        <td>REVIEW_STARTED</td>
+                        <td>4</td>
+                        <td>Alice</td>
+                        <td>Alice begins reviewing</td>
+                    </tr>
+                    <tr>
+                        <td>28</td>
+                        <td>REVIEW_COMPLETED</td>
+                        <td>4</td>
+                        <td>Alice</td>
+                        <td>Approved with comments</td>
+                    </tr>
+                    <tr>
+                        <td>29</td>
+                        <td>STATE_TRANSITION</td>
+                        <td>5</td>
+                        <td>Neo</td>
+                        <td>IN_PR → APPROVED</td>
+                    </tr>
+                    <tr>
+                        <td>30</td>
+                        <td>PR_MERGED</td>
+                        <td>4</td>
+                        <td>Neo</td>
+                        <td>Merged to main (commit xyz789)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Context Invalidation Deep Dive -->
+        <div class="section">
+            <div class="section-title">🔍 Context Invalidation Deep Dive (Phase 3)</div>
+
+            <p><strong>What happened:</strong></p>
+            <ol>
+                <li><strong>00:10:</strong> Bob's checkpoint saved with <code>validate_email()</code> dependency</li>
+                <li><strong>00:15:</strong> Alice finishes and changes <code>validate_email()</code> signature:
+                    <div class="code-block">
+# Alice's change:
+# OLD: def validate_email(email: str) → bool
+# NEW: def validate_email(email: str, strict: bool = False) → dict
+                    </div>
+                </li>
+                <li><strong>00:16:</strong> Handoff created, includes: "validate_email signature changed"</li>
+                <li><strong>00:17:</strong> Neo detects: <strong>CONTEXT_INVALIDATED</strong>
+                    <p>Bob's checkpoint references old signature. His code expects:</p>
+                    <div class="code-block">
+result = validate_email(email)  # expects: bool
+if result:  # ✗ WRONG! Now returns dict, not bool!
+    proceed()
+                    </div>
+                </li>
+                <li><strong>00:18-20:</strong> Context revalidation process:
+                    <div class="code-block">
+# Neo re-analyzes Bob's intent with new dependency:
+OLD ASSUMPTION: validate_email(email) → bool
+NEW REALITY: validate_email(email, strict=False) → dict
+
+# Bob's code must adapt:
+result = validate_email(email)  # returns: {'valid': True, 'normalized': 'user@example.com'}
+if result['valid']:  # ✓ CORRECT! Check dict key
+    proceed()
+                    </div>
+                </li>
+                <li><strong>00:20:</strong> CONTEXT_REVALIDATED: Bob can safely resume with new dependency info</li>
+                <li><strong>00:21:</strong> Bob resumes from checkpoint, continues with corrected code</li>
+            </ol>
+
+            <p><strong>Why this matters:</strong></p>
+            <ul>
+                <li><strong>Without Phase 3:</strong> Bob resumes, generates code expecting bool, creates broken code that passes type checks but fails at runtime ❌</li>
+                <li><strong>With Phase 3:</strong> Neo detects stale context, forces re-sync, Bob's code adapts to new signature ✓</li>
+            </ul>
+        </div>
+
+        <!-- Development Memory -->
+        <div class="section">
+            <div class="section-title">💾 Development Memory Queries (After scenario completes)</div>
+            <p>All 30 events stored in Development Memory, queryable by:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Query</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>get_actor_activity("Alice")</code></td>
+                        <td>12 events (DEVELOPER_REGISTERED, INTENT_DECLARED, WORK_STARTED, RESOURCE_CLAIMED, WORK_COMPLETED, HANDOFF_CREATED, REVIEW_REQUESTED, REVIEW_STARTED, REVIEW_COMPLETED, COMMIT_CREATED, etc.)</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_actor_activity("Bob")</code></td>
+                        <td>18 events (DEVELOPER_REGISTERED through PR_MERGED, including WORK_PAUSED, CONTEXT_INVALIDATED, CONTEXT_REVALIDATED, WORK_RESUMED, etc.)</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_resource_history("auth.py::login_user")</code></td>
+                        <td>Entire workflow: INTENT_DECLARED (Alice) → RESOURCE_CLAIMED → CONFLICT_DETECTED (Bob) → WORK_COMPLETED (Alice) → HANDOFF_CREATED → HANDOFF_ACKNOWLEDGED (Bob) → HANDOFF_CONSUMED (Bob)</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_events_by_type(CONTEXT_INVALIDATED)</code></td>
+                        <td>1 event showing Bob's context stale at 00:17</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_events_by_type(RESOURCE_CONFLICT_DETECTED)</code></td>
+                        <td>1 event showing conflict at 00:07 (risk: 85/100)</td>
+                    </tr>
+                    <tr>
+                        <td><code>get_development_history("auth.py::login_user")</code></td>
+                        <td>{"resource": "auth.py::login_user", "actors_involved": ["Alice", "Bob"], "total_events": 20, "conflicts_detected": 1, "context_invalidations": 1, "duration_minutes": 30}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Key Learnings -->
+        <div class="section">
+            <div class="section-title">✨ Key Learnings</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+                <div>
+                    <h4 style="margin-top: 0;">1. Conflict Detection (Phase 1)</h4>
+                    <p>Neo detected Alice & Bob working on overlapping code regions <strong>before code generation</strong>, preventing merge conflicts.</p>
+                </div>
+                <div>
+                    <h4 style="margin-top: 0;">2. Checkpoint & Pause (Phase 4 + 2)</h4>
+                    <p>Bob paused with a saved checkpoint (287 tokens), avoiding wasted generation. Resumed after Alice finished.</p>
+                </div>
+                <div>
+                    <h4 style="margin-top: 0;">3. Context Invalidation (Phase 3)</h4>
+                    <p>When Alice changed <code>validate_email()</code> signature, Neo detected Bob's context stale and forced re-sync <strong>before resume</strong>.</p>
+                </div>
+                <div>
+                    <h4 style="margin-top: 0;">4. Temporal Handoff (Phase 2)</h4>
+                    <p>Handoff captured not just code but intent, dependencies, and risks. Bob could understand Alice's work even before PR review.</p>
+                </div>
+                <div>
+                    <h4 style="margin-top: 0;">5. Provenance (Phase 4)</h4>
+                    <p>Every commit tracked who did what. Bob's commit was co-authored with Alice (via handoff), preserving credit.</p>
+                </div>
+                <div>
+                    <h4 style="margin-top: 0;">6. Development Memory (Phase 1-5)</h4>
+                    <p>30 events queryable by actor, resource, time, type. Enables: "What conflicts happened?" "Who depends on this?" "What changed?"</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison: Without Neo -->
+        <div class="section">
+            <div class="section-title">⚖️ Without Neo 2.0: How This Scenario Fails</div>
+            <p><strong>Timeline without Neo:</strong></p>
+            <div class="code-block" style="background: rgba(255, 107, 157, 0.08); border-left: 4px solid #ff6b6b;">
+00:00-05:00  Alice works on login_user (no coordination)
+00:05-15:00  Bob ALSO works on login_user (no conflict detection)
+             Both generate code independently
+             Alice changes validate_email() signature
+             Bob's code still uses old signature
+
+00:15:00     Alice commits: "Refactor login_user"
+             validate_email() signature: () → dict
+
+00:16:00     Bob commits: "Add email validation"
+             Bob's code calls validate_email() expecting bool
+             ✗ TYPE MISMATCH
+
+00:17:00     Tests run during CI
+             ✗ FAILURE: TypeError at runtime
+               "cannot index boolean with 'valid'"
+
+00:18:00     Merge conflict in PR review
+             Alice: "I changed the signature"
+             Bob: "I relied on the old signature"
+             ✗ Manual resolution required
+
+00:25:00     Revert Alice's commit? Revert Bob's? Rebase?
+             ✗ COORDINATION OVERHEAD, TOKENS WASTED
+
+Total cost: Manual coordination, failed builds, token waste, developer friction
+            </div>
+
+            <p><strong>Timeline WITH Neo 2.0:</strong></p>
+            <div class="code-block" style="background: rgba(150, 206, 180, 0.08); border-left: 4px solid #96ceb4;">
+00:00-06:00  Alice works on login_user (Neo coordinates)
+             Bob declares intent on same resource
+
+00:07:00     ✓ CONFLICT DETECTED (risk: 85/100)
+             Bob paused, checkpoint saved
+
+00:15:00     ✓ Alice finishes, handoff created
+             Changes to validate_email() documented in handoff
+
+00:17:00     ✓ CONTEXT_INVALIDATED fires
+             Bob's checkpoint stale (depends on old signature)
+
+00:18-20:00  ✓ CONTEXT_REVALIDATED
+             Neo re-analyzes Bob's code with new signature
+
+00:21:00     ✓ Bob resumes, code adapted automatically
+             Now uses: result['valid'] instead of result
+
+00:24-30:00  ✓ PR created, commits co-authored, merged cleanly
+             All dependencies aligned, no conflicts
+
+Total cost: ~30 minutes, zero conflicts, zero rework, full coordination
