@@ -20,12 +20,16 @@ try:
     from temporal_handoff_engine import TemporalHandoffEngine
     from dependency_graph import DependencyGraph
     from reviewer_provenance_engine import ReviewerProvenanceEngine
+    from context_invalidation_engine import ContextInvalidationEngine
+    from agent_autonomy_engine import AgentAutonomyEngine, AgentAutonomyPolicy, AutonomyLevel
 except ImportError:
     from .event_model import Event, EventType, EventFactory
     from .development_memory import DevelopmentMemory
     from .temporal_handoff_engine import TemporalHandoffEngine
     from .dependency_graph import DependencyGraph
     from .reviewer_provenance_engine import ReviewerProvenanceEngine
+    from .context_invalidation_engine import ContextInvalidationEngine
+    from .agent_autonomy_engine import AgentAutonomyEngine, AgentAutonomyPolicy, AutonomyLevel
 
 app = Flask(__name__)
 STORAGE_DIR = Path("./activity_log_storage")
@@ -37,7 +41,14 @@ notification_manager = NotificationManager()
 development_memory = DevelopmentMemory()  # Neo 2.0: Development Memory
 temporal_handoff_engine = TemporalHandoffEngine(development_memory)  # Neo 2.0: Temporal Handoff
 dependency_graph = DependencyGraph()  # Neo 2.0: Dependency Graph
+context_invalidation_engine = ContextInvalidationEngine(development_memory, dependency_graph)  # Neo 2.0: Phase 3
 reviewer_provenance_engine = ReviewerProvenanceEngine(development_memory, dependency_graph)  # Neo 2.0: Phase 4
+agent_autonomy_engine = AgentAutonomyEngine(  # Neo 2.0: Phase 5
+    development_memory,
+    context_invalidation_engine,
+    temporal_handoff_engine,
+    dependency_graph
+)
 developer_registry = {}  # developer -> {"type": "agent" or "human", "subscribed_at": timestamp}
 
 # Ensure storage directory exists
@@ -1576,6 +1587,263 @@ def explain_reviewer_relevance():
             }), 404
 
         return jsonify(explanation), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# Neo 2.0 Phase 5: Agent Autonomy Engine
+# ============================================================================
+
+@app.route("/api/register_agent_policy", methods=["POST"])
+def register_agent_policy():
+    """
+    Register or update an agent's autonomy policy.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "autonomy_level": "sync_and_revalidate",
+        "can_auto_sync": true,
+        "can_auto_revalidate": true,
+        "can_auto_consume_handoffs": false
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        if not agent_id:
+            return jsonify({"error": "agent_id required"}), 400
+
+        autonomy_level = AutonomyLevel(data.get("autonomy_level", "sync_and_revalidate"))
+
+        policy = AgentAutonomyPolicy(
+            agent_id=agent_id,
+            autonomy_level=autonomy_level,
+            can_auto_sync=data.get("can_auto_sync", True),
+            can_auto_revalidate=data.get("can_auto_revalidate", True),
+            can_auto_consume_handoffs=data.get("can_auto_consume_handoffs", False),
+            can_auto_resolve_conflicts=data.get("can_auto_resolve_conflicts", False),
+            max_retry_attempts=int(data.get("max_retry_attempts", 3)),
+            rollback_on_failure=data.get("rollback_on_failure", True),
+            notify_human_on_failure=data.get("notify_human_on_failure", True),
+        )
+
+        success, message = agent_autonomy_engine.register_agent_policy(policy)
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "policy": policy.to_dict()
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/execute_auto_sync", methods=["POST"])
+def execute_auto_sync():
+    """
+    Execute autonomous context sync for an agent.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "resource": "service.py::query"
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        resource = data.get("resource")
+
+        if not agent_id or not resource:
+            return jsonify({"error": "agent_id and resource required"}), 400
+
+        success, message, workflow_id = agent_autonomy_engine.execute_auto_sync(agent_id, resource)
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "workflow_id": workflow_id
+        }), 200 if success else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/execute_auto_revalidate", methods=["POST"])
+def execute_auto_revalidate():
+    """
+    Execute autonomous context revalidation for an agent.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "resource": "service.py::query"
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        resource = data.get("resource")
+
+        if not agent_id or not resource:
+            return jsonify({"error": "agent_id and resource required"}), 400
+
+        success, message, workflow_id = agent_autonomy_engine.execute_auto_revalidate(agent_id, resource)
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "workflow_id": workflow_id
+        }), 200 if success else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/execute_auto_consume_handoff", methods=["POST"])
+def execute_auto_consume_handoff():
+    """
+    Execute autonomous handoff consumption for an agent.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "handoff_id": "handoff_xxxxx"
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        handoff_id = data.get("handoff_id")
+
+        if not agent_id or not handoff_id:
+            return jsonify({"error": "agent_id and handoff_id required"}), 400
+
+        success, message, workflow_id = agent_autonomy_engine.execute_auto_consume_handoff(
+            agent_id, handoff_id
+        )
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "workflow_id": workflow_id
+        }), 200 if success else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/execute_full_workflow_orchestration", methods=["POST"])
+def execute_full_workflow_orchestration():
+    """
+    Execute full autonomous workflow orchestration for an agent.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "resource": "order.py::process",
+        "include_sync": true,
+        "include_revalidate": true,
+        "include_consume_handoff": true,
+        "handoff_id": "handoff_xxxxx"
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        resource = data.get("resource")
+
+        if not agent_id or not resource:
+            return jsonify({"error": "agent_id and resource required"}), 400
+
+        success, message, workflow_id = agent_autonomy_engine.execute_full_workflow_orchestration(
+            agent_id=agent_id,
+            resource=resource,
+            include_sync=data.get("include_sync", True),
+            include_revalidate=data.get("include_revalidate", True),
+            include_consume_handoff=data.get("include_consume_handoff", False),
+            handoff_id=data.get("handoff_id")
+        )
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "workflow_id": workflow_id
+        }), 200 if success else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_workflow_status", methods=["GET"])
+def get_workflow_status():
+    """
+    Get status of an autonomous workflow.
+
+    Query parameters:
+    - workflow_id: workflow to get status for
+    """
+    try:
+        workflow_id = request.args.get("workflow_id")
+
+        if not workflow_id:
+            return jsonify({"error": "workflow_id required"}), 400
+
+        workflow = agent_autonomy_engine.get_workflow_status(workflow_id)
+
+        if not workflow:
+            return jsonify({"error": f"Workflow {workflow_id} not found"}), 404
+
+        return jsonify(workflow), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_agent_workflows", methods=["GET"])
+def get_agent_workflows():
+    """
+    Get active workflows for an agent.
+
+    Query parameters:
+    - agent_id: (optional) filter by agent
+    """
+    try:
+        agent_id = request.args.get("agent_id")
+
+        workflows = agent_autonomy_engine.get_active_workflows(agent_id)
+
+        return jsonify({
+            "agent_id": agent_id,
+            "workflows": workflows,
+            "count": len(workflows)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_workflow_history", methods=["GET"])
+def get_workflow_history():
+    """
+    Get workflow execution history.
+
+    Query parameters:
+    - agent_id: (optional) filter by agent
+    - limit: (optional) limit results
+    """
+    try:
+        agent_id = request.args.get("agent_id")
+        limit = int(request.args.get("limit", 100))
+
+        workflows = agent_autonomy_engine.get_workflow_history(agent_id, limit)
+
+        return jsonify({
+            "agent_id": agent_id,
+            "workflows": workflows,
+            "count": len(workflows)
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
