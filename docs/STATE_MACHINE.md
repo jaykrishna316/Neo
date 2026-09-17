@@ -2,7 +2,16 @@
 
 ## Overview
 
-The Neo coordination state machine manages multi-agent file access by detecting conflicts before code generation and enforcing safe execution through state transitions. Agents move through distinct states as they encounter conflicts, pause, and resume work.
+**Neo 1.0** (core/): Manages conflict detection and checkpoint-based work pausing with 8 states and 1 event type.
+
+**Neo 2.0** (.claude/): Enterprise-ready multi-phase architecture with 10 workflow states driven by ~32 development lifecycle events across 5 phases:
+- **Phase 1**: Intent Declaration (6 events)
+- **Phase 2**: Temporal Handoff (3 events) - Independent of PR/MR creation
+- **Phase 3**: Context Invalidation (5 events) - Detects stale paused contexts
+- **Phase 4**: Work Lifecycle & Review (7 events) - Tracks all operations
+- **Phase 5**: Provenance & Agent Autonomy (6 events) - Audit trail + learning
+
+This document covers both versions. Neo 1.0 is production-ready; Neo 2.0 is under active development in `.claude/` with phase-based testing.
 
 ## States
 
@@ -333,5 +342,152 @@ See `examples/state-diagram.html` for interactive diagram showing:
 
 ---
 
-**For implementation**: See `core/coordination_machine.py`  
-**For usage examples**: See `examples/lean_agents.py` and `examples/cli_demo.py`
+## Neo 2.0 Architecture (In `.claude/`)
+
+### Workflow States (10 total)
+
+Neo 2.0 extends the workflow beyond coordination to track the complete dev cycle:
+
+| State | Purpose | When | Next States |
+|-------|---------|------|-------------|
+| AVAILABLE | Resource ready for edit | No one working | EDITING |
+| EDITING | Dev holding lock, generating | Dev started work | BOTH_DONE, CONFLICT_WAITING |
+| CONFLICT_WAITING | Dev paused, awaiting lock release | Another dev wants same file | PENDING_REVIEW |
+| PENDING_REVIEW | Dev B reviewing A's work or continuing | A finished, B reviewing | BOTH_DONE |
+| BOTH_DONE | Both devs finished edits | Work complete on file | IN_PR, HANDOFF_PENDING, EDITING |
+| HANDOFF_PENDING | **Phase 2**: Work ready for handoff (NEW) | Created for temporal handoff | IN_PR, EDITING |
+| IN_PR | Pull request created | PR opened on GitHub | APPROVED, BOTH_DONE |
+| APPROVED | All reviewers approved | Review complete | MERGED |
+| MERGED | Merged to main branch | Merge commit created | ROLLED_BACK |
+| ROLLED_BACK | Reverted, tracking why | Critical issue post-merge | EDITING, AVAILABLE |
+
+### Event Categories (32 total)
+
+Organized by lifecycle phase:
+
+**Phase 1: Intent (6 events)**
+- DEVELOPER_REGISTERED, INTENT_DECLARED, INTENT_UPDATED, INTENT_AUTHORIZED, INTENT_BLOCKED, INTENT_CANCELLED (plus INTENT_EXPIRED)
+
+**Phase 2: Handoff (3 events)**
+- HANDOFF_CREATED, HANDOFF_ACKNOWLEDGED, HANDOFF_CONSUMED
+
+**Phase 3: Context (5 events)**
+- CONTEXT_SNAPSHOT_CREATED, CONTEXT_INVALIDATED, CONTEXT_SYNC_REQUIRED, CONTEXT_REVALIDATING, CONTEXT_REVALIDATED
+
+**Phase 4: Work & Review (7 events)**
+- WORK_STARTED, WORK_PAUSED, WORK_RESUMED, WORK_COMPLETED, REVIEW_REQUESTED, REVIEW_STARTED, REVIEW_COMPLETED
+
+**Phase 4-5: Resource & Git (6 + 4 events)**
+- RESOURCE_CLAIMED, RESOURCE_RELEASED, RESOURCE_CONFLICT_DETECTED
+- BRANCH_CREATED, COMMIT_CREATED, PR_CREATED, PR_MERGED
+
+**Phase 5: System (5 events)**
+- STATE_TRANSITION, ERROR_OCCURRED, NOTIFICATION_SENT
+
+### Neo 2.0 Key Components
+
+**event_model.py**: EventType enum with 32 event types, Event dataclass, EventFactory for typed event creation.
+
+**development_memory.py**: Append-only log of all events, queryable by:
+- Actor (developer/agent ID)
+- Resource (file:function)
+- Event type
+- Time range
+- Task ID (Jira, GitHub issue)
+
+**temporal_handoff_engine.py**: Phase 2 - manages completed work transfer. HandoffRecords can be:
+- PENDING (awaiting acknowledgment)
+- ACKNOWLEDGED (next dev understands prior work)
+- CONSUMED (handoff used by next dev)
+- EXPIRED (24hr timeout)
+
+**context_invalidation_engine.py**: Phase 3 - detects when paused agent's saved context becomes stale. If another dev changed a symbol the paused agent depends on, fires CONTEXT_INVALIDATED event.
+
+**reviewer_provenance_engine.py**: Phase 4 - tracks who reviewed what and when. Every COMMIT_CREATED carries developer metadata and co-authors.
+
+**agent_autonomy_engine.py**: Phase 5 - learns from events. Analyzes conflict patterns to improve risk scoring and decision gates over time.
+
+**workflow_state_machine.py**: Manages the 10 workflow states and validates transitions.
+
+### Neo 2.0 Workflow Example
+
+```
+DEV1                          NEO 2.0                        DEV2
+ │
+ ├─ INTENT_DECLARED("dev1", "auth.py::login")
+ │
+ ├─ WORK_STARTED
+ │  state: EDITING
+ │
+ ├─ RESOURCE_CLAIMED("auth.py::login")
+ │
+ │                         
+ │                    ├─ INTENT_DECLARED("dev2", "auth.py::login")
+ │                    │  ↓
+ │                    ├─ RESOURCE_CONFLICT_DETECTED
+ │                    │  (risk: 85, HIGH)
+ │                    │  ↓
+ │                    ├─ INTENT_BLOCKED("dev2")
+ │
+ ├─ WORK_COMPLETED
+ │  state: BOTH_DONE
+ │
+ ├─ HANDOFF_CREATED              
+ │  state: HANDOFF_PENDING     ├─ HANDOFF_ACKNOWLEDGED("dev2")
+ │                             │
+ │  (30 events total           ├─ CONTEXT_SNAPSHOT_CREATED
+ │   in real scenario)         │
+ │                             ├─ WORK_RESUMED("dev2")
+ │                             │
+ │                             ├─ WORK_COMPLETED("dev2")
+ │                             │
+ │                             ├─ BRANCH_CREATED
+ │                             │
+ │                             ├─ COMMIT_CREATED
+ │                             │  (co-authors: dev1, dev2)
+ │                             │
+ │                             ├─ PR_CREATED
+ │                             │
+ │                             ├─ REVIEW_REQUESTED
+ │                             │
+ │                             ├─ REVIEW_COMPLETED
+ │                             │
+ │                             ├─ STATE_TRANSITION
+ │                             │  (IN_PR → APPROVED)
+ │                             │
+ │                             ├─ PR_MERGED
+```
+
+### Neo 2.0 vs Neo 1.0 Comparison
+
+| Aspect | Neo 1.0 | Neo 2.0 |
+|--------|---------|---------|
+| **States** | 8 (ACTIVE, LOCKED, WAITING, COLLABORATE, COMPLETED, LOCK_REMOVED, RESUMED, COORDINATED) | 10 (adds HANDOFF_PENDING, distinguishes CONFLICT_WAITING) |
+| **Events** | 1 (lock_removed) | ~32 (across 5 phases) |
+| **Phases** | Single-phase (coordination only) | 5 phases (Intent → Handoff → Context → Review → Autonomy) |
+| **Handoff** | Simple event notification | Phase 2: Independent handoff records, temporal tracking |
+| **Context** | Checkpoint saved in memory | Phase 3: CONTEXT_INVALIDATED when deps change |
+| **Provenance** | None | Phase 4: Full audit trail of commits, reviews, actors |
+| **Learning** | None | Phase 5: Autonomy engine learns from event patterns |
+| **Development Memory** | Activity log only | Complete event history, queryable |
+| **Scope** | Conflict prevention | Multi-team, distributed, enterprise |
+
+### Neo 2.0 Test Files
+
+- `test_phase1_events.py`: Event creation and serialization
+- `test_phase2_handoff.py`: Handoff records and consumption
+- `test_phase3_context.py`: Context invalidation on dependency changes
+- `test_phase4_provenance.py`: Commit provenance and review tracking
+- `test_phase5_autonomy.py`: Agent learning from patterns
+
+Run full suite:
+```bash
+cd .claude
+python test_integration_all_phases.py
+```
+
+---
+
+**Neo 1.0 (Production)**: See `core/coordination_machine.py`  
+**Neo 2.0 (Enterprise)**: See `.claude/` directory and `.claude/workflow_state_machine.py`  
+**Visual Reference**: See `examples/state-diagram.html` (Neo 1.0) and `examples/neo2-state-diagram.html` (Neo 2.0)
