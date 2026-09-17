@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo State Machine</title>
+    <style>
+        :root {
+            --fg: #222;
+            --bg: #fff;
+            --border: #ddd;
+            --accent: #0066cc;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --fg: #eee;
+                --bg: #1a1a1a;
+                --border: #444;
+                --accent: #66b3ff;
+            }
+        }
+        :root[data-theme="dark"] {
+            --fg: #eee;
+            --bg: #1a1a1a;
+            --border: #444;
+            --accent: #66b3ff;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            margin: 0 0 24px 0;
+            font-size: 14px;
+            color: currentColor;
+            opacity: 0.7;
+        }
+        figure {
+            margin: 0 0 32px 0;
+            padding: 20px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        figcaption {
+            margin-top: 12px;
+            font-size: 13px;
+            color: currentColor;
+            opacity: 0.85;
+        }
+        svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .legend {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            font-size: 13px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-box {
+            width: 40px;
+            height: 24px;
+            border: 1px solid currentColor;
+            opacity: 0.6;
+            flex-shrink: 0;
+        }
+        .legend-box.active {
+            background: var(--accent);
+            opacity: 0.2;
+            border-color: var(--accent);
+        }
+        .legend-box.locked {
+            background: #ff4444;
+            opacity: 0.15;
+            border-color: #ff4444;
+        }
+        .legend-box.waiting {
+            background: #ffaa00;
+            opacity: 0.15;
+            border-color: #ffaa00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Neo Coordination State Machine</h1>
+        <p class="subtitle">How agents detect conflicts, pause, and resume work safely</p>
+
+        <figure>
+            <svg viewBox="0 0 1000 700" role="img" aria-label="State diagram showing Agent A and Agent B workflows, conflict detection, decision gates, and recovery flow">
+                <defs>
+                    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="currentColor"/>
+                    </marker>
+                    <marker id="arrow-accent" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="#0066cc"/>
+                    </marker>
+                    <marker id="arrow-accent-dark" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="#66b3ff"/>
+                    </marker>
+                </defs>
+
+                <!-- Title labels -->
+                <text x="150" y="25" font-size="13" font-weight="600" text-anchor="middle" fill="currentColor">Agent A Workflow</text>
+                <text x="500" y="25" font-size="13" font-weight="600" text-anchor="middle" fill="currentColor">Conflict Detection</text>
+                <text x="850" y="25" font-size="13" font-weight="600" text-anchor="middle" fill="currentColor">Agent B Workflow</text>
+
+                <!-- Agent A: ACTIVE -->
+                <rect x="80" y="50" width="140" height="50" fill="#66b3ff" fill-opacity="0.15" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="150" y="70" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">Agent A</text>
+                <text x="150" y="88" font-size="11" text-anchor="middle" fill="currentColor">ACTIVE</text>
+
+                <!-- Agent B: Decision point -->
+                <rect x="780" y="50" width="140" height="50" fill="#66b3ff" fill-opacity="0.15" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="850" y="70" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">Agent B</text>
+                <text x="850" y="88" font-size="11" text-anchor="middle" fill="currentColor">Check Intent</text>
+
+                <!-- LOCKED state (center) -->
+                <rect x="420" y="50" width="160" height="50" fill="#ff4444" fill-opacity="0.15" stroke="#ff4444" stroke-width="2" rx="4"/>
+                <text x="500" y="70" font-size="12" font-weight="600" text-anchor="middle" fill="#ff4444">CONFLICT</text>
+                <text x="500" y="88" font-size="11" text-anchor="middle" fill="currentColor">Risk Score ≥70</text>
+
+                <!-- Arrow: A -> Conflict -->
+                <line x1="220" y1="75" x2="420" y2="75" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="320" y="68" font-size="11" fill="currentColor" text-anchor="middle">overlap detected</text>
+
+                <!-- Arrow: B -> Conflict -->
+                <line x1="780" y1="75" x2="580" y2="75" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="680" y="68" font-size="11" fill="currentColor" text-anchor="middle">same file/region</text>
+
+                <!-- Decision options from LOCKED state -->
+                <text x="500" y="130" font-size="11" fill="currentColor" text-anchor="middle" font-style="italic">Agent B must choose:</text>
+
+                <!-- Option 1: WAIT -->
+                <rect x="320" y="160" width="100" height="40" fill="#ffaa00" fill-opacity="0.15" stroke="#ffaa00" stroke-width="1.5" rx="3"/>
+                <text x="370" y="188" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">WAIT</text>
+
+                <!-- Option 2: COLLABORATE -->
+                <rect x="450" y="160" width="100" height="40" fill="#66b3ff" fill-opacity="0.15" stroke="currentColor" stroke-width="1.5" rx="3"/>
+                <text x="500" y="188" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">COLLABORATE</text>
+
+                <!-- Option 3: WRAP_UP_REQUEST -->
+                <rect x="580" y="160" width="100" height="40" fill="#66b3ff" fill-opacity="0.15" stroke="currentColor" stroke-width="1.5" rx="3"/>
+                <text x="630" y="188" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">WRAP_UP</text>
+
+                <!-- Arrows from LOCKED to options -->
+                <line x1="470" y1="100" x2="370" y2="160" stroke="#ffaa00" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3,3"/>
+                <line x1="500" y1="100" x2="500" y2="160" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <line x1="530" y1="100" x2="630" y2="160" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3,3"/>
+
+                <!-- WAIT path: WAITING state -->
+                <rect x="300" y="240" width="140" height="50" fill="#ffaa00" fill-opacity="0.15" stroke="#ffaa00" stroke-width="1.5" rx="4"/>
+                <text x="370" y="260" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">Agent B</text>
+                <text x="370" y="278" font-size="11" text-anchor="middle" fill="currentColor">WAITING</text>
+
+                <!-- Arrow: WAIT -> WAITING -->
+                <line x1="370" y1="200" x2="370" y2="240" stroke="#ffaa00" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="378" y="220" font-size="10" fill="#ffaa00" font-weight="600">saves checkpoint</text>
+
+                <!-- COLLABORATE path -->
+                <rect x="450" y="240" width="140" height="50" fill="#66b3ff" fill-opacity="0.15" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="520" y="260" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">COLLABORATE</text>
+                <text x="520" y="278" font-size="11" text-anchor="middle" fill="currentColor">Coordination</text>
+
+                <!-- Arrow: COLLABORATE -> COLLABORATE state -->
+                <line x1="500" y1="200" x2="520" y2="240" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+                <!-- Agent A continues and completes -->
+                <rect x="80" y="360" width="140" height="50" fill="#66b3ff" fill-opacity="0.15" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="150" y="380" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">Agent A</text>
+                <text x="150" y="398" font-size="11" text-anchor="middle" fill="currentColor">COMPLETED</text>
+
+                <!-- Arrow: A continues during B waits -->
+                <line x1="150" y1="100" x2="150" y2="360" stroke="currentColor" stroke-width="1" marker-end="url(#arrow)" stroke-dasharray="5,3"/>
+                <text x="165" y="230" font-size="10" fill="currentColor" text-anchor="start">continues work</text>
+
+                <!-- Event firing -->
+                <rect x="380" y="360" width="120" height="50" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5,3" rx="4"/>
+                <text x="440" y="378" font-size="11" font-weight="600" text-anchor="middle" fill="currentColor">lock_removed</text>
+                <text x="440" y="395" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">event</text>
+
+                <!-- Arrow: A completes -> event -->
+                <line x1="220" y1="385" x2="380" y2="385" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+                <!-- RESUMED state -->
+                <rect x="300" y="470" width="140" height="50" fill="#66b3ff" fill-opacity="0.15" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="370" y="490" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">Agent B</text>
+                <text x="370" y="508" font-size="11" text-anchor="middle" fill="currentColor">RESUMED</text>
+
+                <!-- Arrow: WAITING -> RESUMED (via event) -->
+                <line x1="370" y1="290" x2="370" y2="330" stroke="#ffaa00" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3,3"/>
+                <text x="378" y="310" font-size="10" fill="#ffaa00" font-weight="600">awaits event</text>
+
+                <!-- Arrow: event -> RESUMED -->
+                <line x1="440" y1="410" x2="390" y2="470" stroke="currentColor" stroke-width="2" marker-end="url(#arrow)"/>
+                <text x="435" y="445" font-size="10" fill="currentColor" font-weight="600">wakes up</text>
+
+                <!-- Back to ACTIVE -->
+                <rect x="780" y="470" width="140" height="50" fill="#66b3ff" fill-opacity="0.15" stroke="currentColor" stroke-width="1.5" rx="4"/>
+                <text x="850" y="490" font-size="12" font-weight="600" text-anchor="middle" fill="currentColor">Agent B</text>
+                <text x="850" y="508" font-size="11" text-anchor="middle" fill="currentColor">ACTIVE</text>
+
+                <!-- Arrow: RESUMED -> ACTIVE -->
+                <line x1="440" y1="495" x2="780" y2="495" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                <text x="610" y="488" font-size="10" fill="currentColor" text-anchor="middle">resume from checkpoint</text>
+
+                <!-- Tier labels on left -->
+                <text x="15" y="75" font-size="10" font-weight="600" fill="currentColor" text-anchor="end">Tier 1:</text>
+                <text x="15" y="88" font-size="9" fill="currentColor" opacity="0.7" text-anchor="end">Generation</text>
+                <text x="15" y="100" font-size="9" fill="currentColor" opacity="0.7" text-anchor="end">Gate</text>
+
+                <text x="15" y="185" font-size="10" font-weight="600" fill="currentColor" text-anchor="end">Tier 2:</text>
+                <text x="15" y="198" font-size="9" fill="currentColor" opacity="0.7" text-anchor="end">Mutual</text>
+                <text x="15" y="210" font-size="9" fill="currentColor" opacity="0.7" text-anchor="end">Acknowledge</text>
+
+                <text x="15" y="395" font-size="10" font-weight="600" fill="currentColor" text-anchor="end">Tier 3:</text>
+                <text x="15" y="408" font-size="9" fill="currentColor" opacity="0.7" text-anchor="end">Auto-</text>
+                <text x="15" y="420" font-size="9" fill="currentColor" opacity="0.7" text-anchor="end">Escalation</text>
+
+                <!-- Timeline marker -->
+                <line x1="50" y1="600" x2="950" y2="600" stroke="currentColor" stroke-width="1" opacity="0.2"/>
+                <text x="50" y="625" font-size="11" font-weight="600" fill="currentColor">Time →</text>
+
+                <!-- Key metrics -->
+                <text x="50" y="660" font-size="11" fill="currentColor">
+                    <tspan font-weight="600">Risk Score:</tspan> 0-30 (LOW) | 30-70 (MEDIUM) | 70-100 (HIGH)
+                </text>
+            </svg>
+
+            <figcaption>
+                <strong>State Diagram:</strong> When Agent B detects a conflict with Agent A (risk ≥70), Neo transitions to LOCKED state and presents three decision options. If Agent B chooses WAIT, it enters WAITING state with a saved checkpoint. When Agent A completes work, a lock_removed event fires, waking Agent B into RESUMED state where it resumes from the checkpoint and transitions back to ACTIVE. The three enforcement tiers (Generation Gate, Mutual Acknowledgment, Auto-Escalation) provide gates at key transition points.
+            </figcaption>
+        </figure>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box active"></div>
+                <span>ACTIVE / RESUMED: Generating code</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box locked"></div>
+                <span>LOCKED / CONFLICT: High-risk, requires decision</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box waiting"></div>
+                <span>WAITING: Paused with checkpoint saved</span>
+            </div>
+            <div class="legend-item">
+                <svg width="40" height="24" style="flex-shrink: 0; border: 1px solid currentColor; opacity: 0.6; border-radius: 2px;">
+                    <line x1="5" y1="12" x2="35" y2="12" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+                </svg>
+                <span>Event-driven flow or awaiting trigger</span>
+            </div>
+            <div class="legend-item">
+                <svg width="40" height="24" style="flex-shrink: 0; border: 1px solid currentColor; opacity: 0.6; border-radius: 2px;">
+                    <line x1="5" y1="12" x2="35" y2="12" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+                </svg>
+                <span>Direct state transition</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
