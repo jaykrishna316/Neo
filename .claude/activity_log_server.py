@@ -18,10 +18,14 @@ try:
     from event_model import Event, EventType, EventFactory
     from development_memory import DevelopmentMemory
     from temporal_handoff_engine import TemporalHandoffEngine
+    from dependency_graph import DependencyGraph
+    from reviewer_provenance_engine import ReviewerProvenanceEngine
 except ImportError:
     from .event_model import Event, EventType, EventFactory
     from .development_memory import DevelopmentMemory
     from .temporal_handoff_engine import TemporalHandoffEngine
+    from .dependency_graph import DependencyGraph
+    from .reviewer_provenance_engine import ReviewerProvenanceEngine
 
 app = Flask(__name__)
 STORAGE_DIR = Path("./activity_log_storage")
@@ -32,6 +36,8 @@ state_machines = {}  # file::function -> WorkflowStateMachine
 notification_manager = NotificationManager()
 development_memory = DevelopmentMemory()  # Neo 2.0: Development Memory
 temporal_handoff_engine = TemporalHandoffEngine(development_memory)  # Neo 2.0: Temporal Handoff
+dependency_graph = DependencyGraph()  # Neo 2.0: Dependency Graph
+reviewer_provenance_engine = ReviewerProvenanceEngine(development_memory, dependency_graph)  # Neo 2.0: Phase 4
 developer_registry = {}  # developer -> {"type": "agent" or "human", "subscribed_at": timestamp}
 
 # Ensure storage directory exists
@@ -1505,6 +1511,71 @@ def get_all_events():
         limit = int(request.args.get("limit", 1000))
         events = development_memory.get_all_events(limit)
         return jsonify({"total_events": len(development_memory.events), "events": events}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# Neo 2.0 Phase 4: Reviewer Provenance Engine
+# ============================================================================
+
+@app.route("/api/get_reviewer_provenance", methods=["GET"])
+def get_reviewer_provenance():
+    """
+    Get reviewer candidates for a resource based on development provenance.
+
+    Query parameters:
+    - resource: file or file::function to get reviewers for
+    - exclude_author: (optional) developer to exclude from candidates
+    - min_relevance: (optional, 0-1) minimum relevance score threshold
+    """
+    try:
+        resource = request.args.get("resource")
+        if not resource:
+            return jsonify({"error": "resource parameter required"}), 400
+
+        exclude_author = request.args.get("exclude_author")
+        min_relevance = float(request.args.get("min_relevance", 0.2))
+
+        candidates = reviewer_provenance_engine.get_reviewer_provenance(
+            resource=resource,
+            exclude_author=exclude_author,
+            min_relevance=min_relevance
+        )
+
+        return jsonify({
+            "resource": resource,
+            "candidates": [c.to_dict() for c in candidates],
+            "count": len(candidates)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/explain_reviewer_relevance", methods=["GET"])
+def explain_reviewer_relevance():
+    """
+    Get detailed explanation of why someone is relevant to review a resource.
+
+    Query parameters:
+    - resource: file or file::function
+    - actor: developer to explain relevance for
+    """
+    try:
+        resource = request.args.get("resource")
+        actor = request.args.get("actor")
+
+        if not resource or not actor:
+            return jsonify({"error": "resource and actor parameters required"}), 400
+
+        explanation = reviewer_provenance_engine.explain_reviewer_relevance(resource, actor)
+
+        if not explanation:
+            return jsonify({
+                "error": f"No provenance found for {actor} on {resource}"
+            }), 404
+
+        return jsonify(explanation), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
