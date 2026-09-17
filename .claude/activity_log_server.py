@@ -17,9 +17,11 @@ from notification_manager import NotificationManager, NotificationType, Notifica
 try:
     from event_model import Event, EventType, EventFactory
     from development_memory import DevelopmentMemory
+    from temporal_handoff_engine import TemporalHandoffEngine
 except ImportError:
     from .event_model import Event, EventType, EventFactory
     from .development_memory import DevelopmentMemory
+    from .temporal_handoff_engine import TemporalHandoffEngine
 
 app = Flask(__name__)
 STORAGE_DIR = Path("./activity_log_storage")
@@ -29,6 +31,7 @@ LOCK = threading.Lock()  # Prevent concurrent writes
 state_machines = {}  # file::function -> WorkflowStateMachine
 notification_manager = NotificationManager()
 development_memory = DevelopmentMemory()  # Neo 2.0: Development Memory
+temporal_handoff_engine = TemporalHandoffEngine(development_memory)  # Neo 2.0: Temporal Handoff
 developer_registry = {}  # developer -> {"type": "agent" or "human", "subscribed_at": timestamp}
 
 # Ensure storage directory exists
@@ -1260,6 +1263,164 @@ def _create_escalation(change_record: Dict, related_developers: List[str]):
             / f"{change_record['file'].replace('/', '_')}_{change_record['function']}_escalation.json"
         )
         escalation_file.write_text(json.dumps(escalation, indent=2))
+
+
+# ========== NEO 2.0 PHASE 2: Temporal Handoff Endpoints ==========
+
+
+@app.route("/api/complete_work_session", methods=["POST"])
+def complete_work_session():
+    """
+    Record work completion and create handoff record.
+    Called when developer finishes editing and creates handoff.
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+        summary = data.get("summary")
+        task_id = data.get("task_id")
+        branch = data.get("branch")
+        base_commit = data.get("base_commit")
+        final_commit = data.get("final_commit")
+        known_risks = data.get("known_risks", [])
+        follow_up_required = data.get("follow_up_required", False)
+        follow_up_description = data.get("follow_up_description")
+
+        if not all([developer, file_path, function_name]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        resource = f"{file_path}::{function_name}"
+        actor_type = developer_registry.get(developer, {}).get("type", "human")
+
+        # Create handoff record
+        handoff = temporal_handoff_engine.create_handoff(
+            actor=developer,
+            actor_type=actor_type,
+            resource=resource,
+            task_id=task_id,
+            summary=summary,
+            base_commit=base_commit,
+            final_commit=final_commit,
+            branch=branch,
+            known_risks=known_risks,
+            follow_up_required=follow_up_required,
+            follow_up_description=follow_up_description,
+        )
+
+        return jsonify({
+            "success": True,
+            "handoff_id": handoff.handoff_id,
+            "resource": resource,
+            "message": f"Work session completed and handoff created",
+            "status": "HANDOFF_PENDING"
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_pending_handoffs", methods=["GET"])
+def get_pending_handoffs():
+    """Get list of pending handoffs waiting to be consumed."""
+    try:
+        handoffs = temporal_handoff_engine.get_pending_handoffs()
+        return jsonify({
+            "count": len(handoffs),
+            "handoffs": handoffs
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/intercept_intent", methods=["POST"])
+def intercept_intent():
+    """
+    Next Intent Interceptor: Check if new developer's intent
+    overlaps with recent handoff.
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+
+        if not all([developer, file_path, function_name]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        resource = f"{file_path}::{function_name}"
+
+        # Check for overlapping handoff
+        has_prior, primary_handoff, recommendations = temporal_handoff_engine.intercept_new_intent(
+            developer, resource
+        )
+
+        if has_prior and primary_handoff:
+            # Get human-friendly summary
+            summary = temporal_handoff_engine.get_handoff_summary_for_developer(
+                developer, resource
+            )
+
+            return jsonify({
+                "has_prior_work": True,
+                "message": f"Prior work detected: {primary_handoff.actor} completed changes",
+                "handoff_summary": summary,
+                "recommendations": recommendations
+            }), 200
+        else:
+            return jsonify({
+                "has_prior_work": False,
+                "message": "No recent prior work detected",
+                "handoff_summary": None
+            }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/acknowledge_handoff", methods=["POST"])
+def acknowledge_handoff():
+    """Record that developer acknowledged a handoff."""
+    try:
+        data = request.json
+        developer = data.get("developer")
+        handoff_id = data.get("handoff_id")
+
+        if not all([developer, handoff_id]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        success, message = temporal_handoff_engine.acknowledge_handoff(developer, handoff_id)
+
+        if success:
+            return jsonify({"success": True, "message": message}), 200
+        else:
+            return jsonify({"success": False, "message": message}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/consume_handoff", methods=["POST"])
+def consume_handoff_endpoint():
+    """Record that developer consumed a handoff and proceeded."""
+    try:
+        data = request.json
+        developer = data.get("developer")
+        handoff_id = data.get("handoff_id")
+
+        if not all([developer, handoff_id]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        success, message = temporal_handoff_engine.consume_handoff(developer, handoff_id)
+
+        if success:
+            return jsonify({"success": True, "message": message}), 200
+        else:
+            return jsonify({"success": False, "message": message}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ========== NEO 2.0: Development Memory Endpoints ==========

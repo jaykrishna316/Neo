@@ -17,6 +17,7 @@ class WorkflowState(Enum):
     CONFLICT_WAITING = "conflict_waiting"  # Another dev waiting
     PENDING_REVIEW = "pending_review"  # First dev done, second reviewing
     BOTH_DONE = "both_done"  # Both finished edits
+    HANDOFF_PENDING = "handoff_pending"  # Work completed, awaiting MR/consumption (Neo 2.0)
     IN_PR = "in_pr"  # Pull request created
     APPROVED = "approved"  # All developers approved
     MERGED = "merged"  # Merged to main
@@ -214,7 +215,8 @@ class WorkflowStateMachine:
             ],
             WorkflowState.CONFLICT_WAITING: [WorkflowState.PENDING_REVIEW],
             WorkflowState.PENDING_REVIEW: [WorkflowState.BOTH_DONE],
-            WorkflowState.BOTH_DONE: [WorkflowState.IN_PR, WorkflowState.EDITING],
+            WorkflowState.BOTH_DONE: [WorkflowState.IN_PR, WorkflowState.EDITING, WorkflowState.HANDOFF_PENDING],
+            WorkflowState.HANDOFF_PENDING: [WorkflowState.IN_PR, WorkflowState.EDITING],
             WorkflowState.IN_PR: [WorkflowState.APPROVED, WorkflowState.BOTH_DONE],
             WorkflowState.APPROVED: [WorkflowState.MERGED],
             WorkflowState.MERGED: [WorkflowState.ROLLED_BACK],
