@@ -182,6 +182,15 @@ def main():
         print(f"  ✓ All 4 devs properly handled")
 
         # Save comparison data
+        from datetime import datetime
+
+        # Custom JSON encoder for datetime objects
+        class DateTimeEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                return super().default(obj)
+
         comparison = {
             '4_developers': {
                 'v1': result_v1,
@@ -190,7 +199,7 @@ def main():
         }
 
         with open('/tmp/claude-0/-home-user-Neo/5f8f1250-4774-59c0-9acf-6b5ca5217fc7/scratchpad/test_4dev_comparison.json', 'w') as f:
-            json.dump(comparison, f, indent=2)
+            json.dump(comparison, f, indent=2, cls=DateTimeEncoder)
 
         print("\n✓ Test data saved to: test_4dev_comparison.json")
         return 0
