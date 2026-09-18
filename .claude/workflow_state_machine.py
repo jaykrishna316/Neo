@@ -5,9 +5,15 @@ Tracks state from intent to merge, prevents invalid transitions
 """
 
 from enum import Enum
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, NamedTuple
 from datetime import datetime
 import json
+
+
+class QueuedDeveloper(NamedTuple):
+    """Represents a developer in the queue with their join timestamp"""
+    name: str
+    queued_at: datetime
 
 
 class WorkflowState(Enum):
@@ -48,23 +54,26 @@ class WorkflowStateMachine:
             self._transition_to(WorkflowState.EDITING, developer, "Started editing")
             return True, f"{developer} started editing", WorkflowState.EDITING
 
-        elif self.state == WorkflowState.EDITING:
+        elif self.state == WorkflowState.EDITING or self.state == WorkflowState.CONFLICT_WAITING:
             if self.current_editor == developer:
                 # Same dev, already editing
                 return True, f"{developer} already editing", WorkflowState.EDITING
             else:
                 # Different dev, add to waiting queue
-                if developer not in self.waiting_developers:
-                    self.waiting_developers.append(developer)
+                dev_names = [d.name if isinstance(d, QueuedDeveloper) else d for d in self.waiting_developers]
+                if developer not in dev_names:
+                    self.waiting_developers.append(QueuedDeveloper(developer, datetime.now()))
                     self.all_developers.add(developer)
-                    self._transition_to(
-                        WorkflowState.CONFLICT_WAITING,
-                        developer,
-                        f"Waiting for {self.current_editor}",
-                    )
+                    # Only transition to CONFLICT_WAITING if not already there
+                    if self.state != WorkflowState.CONFLICT_WAITING:
+                        self._transition_to(
+                            WorkflowState.CONFLICT_WAITING,
+                            developer,
+                            f"Waiting for {self.current_editor}",
+                        )
                 return (
                     False,
-                    f"BLOCKED: {self.current_editor} is editing. Waiting list: {self.waiting_developers}",
+                    f"BLOCKED: {self.current_editor} is editing. Waiting list: {dev_names}",
                     WorkflowState.CONFLICT_WAITING,
                 )
 
@@ -83,9 +92,12 @@ class WorkflowStateMachine:
         ]:
             self._transition_to(WorkflowState.BOTH_DONE, developer, "Finished editing")
 
-            # If others waiting, notify them
+            # If others waiting, notify them (pop earliest timestamp)
             if self.waiting_developers:
-                next_dev = self.waiting_developers.pop(0)
+                # Find developer with earliest timestamp
+                earliest_queued = min(self.waiting_developers, key=lambda d: d.queued_at)
+                self.waiting_developers.remove(earliest_queued)
+                next_dev = earliest_queued.name
                 self._transition_to(
                     WorkflowState.PENDING_REVIEW, next_dev, f"{next_dev} should review"
                 )
@@ -183,12 +195,23 @@ class WorkflowStateMachine:
 
     def get_state(self) -> Dict:
         """Get current workflow state"""
+        waiting_dev_info = []
+        for d in self.waiting_developers:
+            if isinstance(d, QueuedDeveloper):
+                waiting_dev_info.append({
+                    "name": d.name,
+                    "queued_at": d.queued_at.isoformat()
+                })
+            else:
+                # Backward compatibility
+                waiting_dev_info.append({"name": d})
+
         return {
             "file": self.file_path,
             "function": self.function_name,
             "current_state": self.state.value,
             "current_editor": self.current_editor,
-            "waiting_developers": self.waiting_developers,
+            "waiting_developers": waiting_dev_info,
             "all_developers": list(self.all_developers),
             "state_history": self.state_history[-10:],  # Last 10 transitions
         }
@@ -227,12 +250,23 @@ class WorkflowStateMachine:
 
     def to_dict(self) -> Dict:
         """Serialize state machine"""
+        waiting_dev_serialized = []
+        for d in self.waiting_developers:
+            if isinstance(d, QueuedDeveloper):
+                waiting_dev_serialized.append({
+                    "name": d.name,
+                    "queued_at": d.queued_at.isoformat()
+                })
+            else:
+                # Backward compatibility
+                waiting_dev_serialized.append({"name": d})
+
         return {
             "file_path": self.file_path,
             "function_name": self.function_name,
             "state": self.state.value,
             "current_editor": self.current_editor,
-            "waiting_developers": self.waiting_developers,
+            "waiting_developers": waiting_dev_serialized,
             "all_developers": list(self.all_developers),
             "state_history": self.state_history,
         }
@@ -243,7 +277,19 @@ class WorkflowStateMachine:
         machine = cls(data["file_path"], data["function_name"])
         machine.state = WorkflowState(data["state"])
         machine.current_editor = data.get("current_editor")
-        machine.waiting_developers = data.get("waiting_developers", [])
+
+        # Deserialize waiting_developers with timestamp support
+        waiting_devs = []
+        for d in data.get("waiting_developers", []):
+            if isinstance(d, dict) and "queued_at" in d:
+                waiting_devs.append(QueuedDeveloper(d["name"], datetime.fromisoformat(d["queued_at"])))
+            elif isinstance(d, dict):
+                waiting_devs.append(QueuedDeveloper(d["name"], datetime.now()))
+            else:
+                # Backward compatibility with plain strings
+                waiting_devs.append(QueuedDeveloper(d, datetime.now()))
+        machine.waiting_developers = waiting_devs
+
         machine.all_developers = set(data.get("all_developers", []))
         machine.state_history = data.get("state_history", [])
         return machine
