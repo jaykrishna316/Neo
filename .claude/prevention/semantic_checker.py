@@ -90,14 +90,29 @@ class SemanticChecker:
     def _violates_invariant(self, invariant: SemanticInvariant, change_desc: str) -> bool:
         """Check if a change violates the invariant"""
         # Simple keyword-based check - in production, would use AST analysis
-        violation_keywords = ['remove', 'delete', 'disable', 'skip', 'bypass']
-        preservation_keywords = ['add', 'assert', 'check', 'validate', 'ensure']
+        violation_keywords = ['remove', 'delete', 'disable', 'skip', 'bypass', 'eliminate', 'strip']
+        preservation_keywords = ['add', 'assert', 'check', 'validate', 'ensure', 'strengthen', 'improve']
 
         lower_desc = change_desc.lower()
+        lower_invariant = invariant.invariant_description.lower()
 
         # If removing/disabling something required by invariant, likely violation
-        if any(kw in lower_desc for kw in violation_keywords):
-            if not any(kw in lower_desc for kw in preservation_keywords):
+        has_violation_action = any(kw in lower_desc for kw in violation_keywords)
+
+        # Check if the change mentions the same concepts as the invariant
+        # e.g., "null check" in both description and invariant
+        invariant_concepts = set(lower_invariant.split())
+        change_concepts = set(lower_desc.split())
+        concept_overlap = len(invariant_concepts & change_concepts) > 0
+
+        # It's a violation if:
+        # 1. Action is removal/disable AND concepts overlap, OR
+        # 2. Action is removal/disable AND invariant is about preservation (never/must/always/required)
+        if has_violation_action:
+            preservation_concepts = ['never', 'must', 'always', 'required', 'necessary', 'critical']
+            has_preservation_emphasis = any(kw in lower_invariant for kw in preservation_concepts)
+
+            if concept_overlap or has_preservation_emphasis:
                 return True
 
         return False

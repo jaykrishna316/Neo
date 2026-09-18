@@ -14,7 +14,7 @@ class TemporalRisk:
     resource: str
     developer_1: str
     developer_2: str
-    risk_score: float  # 0-1
+    probability: float  # 0-1 conflict probability
     time_until_conflict: timedelta
     factors: List[str]  # contributing factors
 
@@ -85,7 +85,7 @@ class TemporalPredictor:
                 resource=resource,
                 developer_1=dev1,
                 developer_2=dev2,
-                risk_score=min(1.0, risk_score),
+                probability=min(1.0, risk_score),
                 time_until_conflict=time_until,
                 factors=factors
             )
@@ -97,7 +97,7 @@ class TemporalPredictor:
 
     def get_high_risk_conflicts(self, threshold: float = 0.7) -> List[TemporalRisk]:
         """Get all high-risk conflict predictions"""
-        return [p for p in self.predictions if p.risk_score >= threshold]
+        return [p for p in self.predictions if p.probability >= threshold]
 
     def get_predictions_for_resource(self, resource: str) -> List[TemporalRisk]:
         """Get all predictions for a specific resource"""
@@ -139,7 +139,7 @@ class TemporalPredictor:
         print("=" * 60)
 
         high_risk = self.get_high_risk_conflicts(threshold=0.7)
-        medium_risk = [p for p in self.predictions if 0.5 <= p.risk_score < 0.7]
+        medium_risk = [p for p in self.predictions if 0.5 <= p.probability < 0.7]
 
         print(f"Active Predictions: {len(self.predictions)}")
         print(f"  🔴 High Risk (>0.7): {len(high_risk)}")
@@ -149,7 +149,7 @@ class TemporalPredictor:
             print(f"\nHigh-Risk Conflicts:")
             for pred in high_risk[:5]:  # Top 5
                 print(f"  {pred.developer_1} ↔ {pred.developer_2} on {pred.resource}")
-                print(f"    Risk: {pred.risk_score:.0%}")
+                print(f"    Risk: {pred.probability:.0%}")
                 print(f"    Factors: {', '.join(pred.factors[:2])}")
 
         print("=" * 60)
