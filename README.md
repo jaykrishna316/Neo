@@ -102,6 +102,94 @@ print(f'Risk: {risk}')  # Output: Risk Level.MEDIUM
 
 ---
 
+## 🚀 Branch: `neomax/scalability`
+
+**State Machine v2 - Multi-Developer Scalability Enhancements**
+
+This branch (`neomax/scalability`) contains the next-generation State Machine v2 with improvements for 3-5+ developer teams:
+
+### What's New in v2
+
+- ✅ **Per-Resource Locking** - Independent locks for each file/function, no global state collisions
+- ✅ **Unlimited Queue Capacity** - Queue up to N developers per resource (v1 limited to ~2)
+- ✅ **Timeout-Based Deadlock Recovery** - Auto-release locks after 1 hour to prevent permanent blocking
+- ✅ **Concurrent Resource Editing** - Dev1 edits file1 while Dev2 edits file2 simultaneously
+- ✅ **Priority Queue Support** - Queue developers by priority (critical/urgent/normal)
+- ✅ **100% Backward Compatible** - v1 API signatures unchanged; existing code works as-is
+- ✅ **Production-Ready** - 100% test pass rate (6 test suites, 3-5 developer validation)
+
+### Test Results
+
+**Multi-Developer Validation** ✅
+| Developers | State Machine | Queue Tracking | Status |
+|-----------|--------------|-----------------|--------|
+| 3 | v2 | ✓ All tracked | ✅ PASS |
+| 4 | v2 | ✓ All tracked | ✅ PASS |
+| 5 | v2 | ✓ All tracked | ✅ PASS |
+
+**Neo 2.0 Integration** ✅
+- Phase 1: Event Model & Development Memory ✅
+- Phase 2: Temporal Handoff Engine ✅
+- Phase 3: Context Invalidation Engine ✅
+- Phase 4: Reviewer Provenance Engine ✅
+- Phase 5: Agent Autonomy Engine ✅
+
+**Realistic Git Workflow** ✅
+- 3 independent clones with concurrent edits
+- Real git operations (clone, branch, commit, rebase)
+- Actual conflict detection and state machine orchestration
+
+### Test Artifacts
+
+```
+.claude/
+├── workflow_state_machine_v2.py          # v2 implementation (full redesign)
+├── test_state_machine_v2.py              # v2 comprehensive tests
+├── test_3_developers.py                  # 3-dev scalability test
+├── test_4_developers.py                  # 4-dev scalability test
+├── test_5_developers.py                  # 5-dev scalability test
+├── test_realistic_git_conflicts.py       # Multi-clone real git workflow test
+├── SCALABILITY_VALIDATION_SUMMARY.md     # Complete validation report
+├── REALISTIC_CONFLICT_TEST_REPORT.md     # Git conflict test analysis
+└── STATE_MACHINE_VALIDATION_REPORT.html  # Visual validation dashboard
+```
+
+### Quick Test
+
+```bash
+# View validation summary
+cat .claude/SCALABILITY_VALIDATION_SUMMARY.md
+
+# Run 5-developer test
+python3 .claude/test_5_developers.py
+
+# Run realistic git workflow test
+python3 .claude/test_realistic_git_conflicts.py
+
+# Run full test suite
+python3 .claude/test_state_machine_v2.py
+```
+
+### Status
+
+**Branch Status**: Stable, tested, ready for review  
+**Next Step**: Merge to `neo-2.0` after stakeholder approval
+
+### Key Files Modified
+
+1. **workflow_state_machine_v2.py** - Complete v2 redesign with:
+   - `ResourceLock` class for per-resource state management
+   - `QueueManager` class for unlimited queue capacity
+   - `WorkflowStateMachine` orchestrator (backward compatible API)
+
+2. **Test Suite** - 6 comprehensive test modules:
+   - Unit tests for state transitions
+   - Scalability tests (3-5 developers)
+   - Integration with Neo 2.0 phases
+   - Realistic multi-clone git workflow
+
+---
+
 ## Enterprise Deployment (Optional)
 
 **Neo supports optional multitenancy for enterprises managing multiple teams/organizations:**
