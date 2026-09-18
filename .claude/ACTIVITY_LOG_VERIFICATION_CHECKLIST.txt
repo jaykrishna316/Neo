@@ -1,0 +1,283 @@
+================================================================================
+ACTIVITY LOG DATA VERIFICATION CHECKLIST
+================================================================================
+
+✅ PHASE 1: INTENT ESTABLISHMENT
+┌─ When: Developer declares intent to work on resource
+├─ Required Data Points:
+│  ├─ developer (string)
+│  ├─ developer_type ("agent" or "human")
+│  ├─ file_path (string)
+│  ├─ function_name (string)
+│  ├─ resource (file_path::function_name format)
+│  └─ timestamp (ISO 8601)
+├─ State Machine Impact: No state change yet (still AVAILABLE)
+├─ Notifications: None yet
+└─ Storage: Development Memory (recorded as DEVELOPER_REGISTERED or INTENT_DECLARED)
+
+✅ PHASE 2: LOCK ACQUISITION (First Developer)
+┌─ When: First developer starts editing
+├─ Required Data Points:
+│  ├─ lock_type: "exclusive" 
+│  ├─ locked_at (timestamp)
+│  ├─ current_editor (developer name)
+│  └─ lock_acquired: true
+├─ State Machine: AVAILABLE → EDITING
+│  ├─ current_state: "EDITING"
+│  ├─ current_editor: "dev1"
+│  ├─ waiting_developers: []
+│  └─ all_developers: ["dev1"]
+├─ Notifications: LOCK_ACQUIRED sent to all
+└─ Storage: State history + Development Memory (RESOURCE_CLAIMED event)
+
+✅ PHASE 3: QUEUE MANAGEMENT (Subsequent Developers)
+┌─ When: 2nd+ developer wants to edit (CONFLICT)
+├─ Required Data Points (PER DEVELOPER):
+│  ├─ developer (string)
+│  ├─ queued_at (TIMESTAMP - THIS IS KEY!)
+│  ├─ queue_position (auto-calculated from timestamp)
+│  ├─ blocking_developer (dev1)
+│  └─ time_queued (current_time - queued_at)
+├─ State Machine Updates:
+│  ├─ current_state: "CONFLICT_WAITING" (stays same for 2nd+ devs)
+│  ├─ waiting_developers: [
+│  │    {"name": "dev2", "queued_at": "T1"},
+│  │    {"name": "dev3", "queued_at": "T2"},
+│  │    {"name": "dev4", "queued_at": "T3"},
+│  │    {"name": "dev5", "queued_at": "T4"}
+│  │  ]
+│  └─ Note: Queue ordered by timestamp (earliest = position 1)
+├─ Notifications: LOCK_BLOCKED sent to each queued developer
+└─ Storage: State machine waiting_developers list with timestamps
+
+✅ PHASE 4: CODE CHANGES
+┌─ When: Developer makes changes to code
+├─ Required Data Points:
+│  ├─ id (change_id = timestamp)
+│  ├─ developer (string)
+│  ├─ file (string)
+│  ├─ function (string)
+│  ├─ branch (feature_branch)
+│  ├─ timestamp (when change logged)
+│  ├─ description (verbal description)
+│  ├─ old_code (original code)
+│  ├─ new_code (modified code)
+│  ├─ old_lines (number)
+│  ├─ new_lines (number)
+│  ├─ line_changes (count of changed lines)
+│  ├─ conflict_severity: "low" | "medium" | "high"
+│  └─ related_changes (list of developers who touched same area)
+├─ Conflict Analysis:
+│  ├─ overlap_ratio (0.0 to 1.0)
+│  ├─ overlapping_lines (array of line numbers)
+│  └─ previous_developers (who touched this before)
+├─ Storage: activity_log_storage/changes/{file}_{function}_{timestamp}.json
+└─ Note: Conflict severity auto-calculated from overlap_ratio
+
+✅ PHASE 5: LOCK RELEASE & HANDOFF
+┌─ When: Current developer finishes editing
+├─ Required Data Points:
+│  ├─ developer (who's releasing)
+│  ├─ completion_timestamp
+│  ├─ summary (work summary)
+│  ├─ task_id (if applicable)
+│  ├─ next_developer (WHO IS SELECTED?)
+│  ├─ next_developer_queued_at (CRITICAL: for timestamp ordering)
+│  └─ message (handoff message)
+├─ State Machine Update:
+│  ├─ current_state: "PENDING_REVIEW"
+│  ├─ current_editor: null (becomes available)
+│  ├─ waiting_developers: [pop earliest by timestamp]
+│  └─ Next dev determined by MIN(waiting_developers[].queued_at)
+├─ Notifications:
+│  ├─ LOCK_RELEASED (to all)
+│  └─ REVIEW_REQUESTED (to next_developer)
+└─ Storage: State history + Development Memory (WORK_COMPLETED event)
+
+✅ PHASE 6: NEXT DEVELOPER ACQUIRES LOCK
+┌─ When: Next in queue (by timestamp) acquires lock
+├─ Required Data Points:
+│  ├─ developer (next_developer)
+│  ├─ prior_work (data about previous developer's work)
+│  ├─ prior_developer (who worked before)
+│  ├─ prior_summary (summary of their work)
+│  ├─ timestamp (when this dev acquires lock)
+│  └─ lock_acquired: true
+├─ State Machine:
+│  ├─ current_state: "EDITING"
+│  ├─ current_editor: "dev2" (or next in queue)
+│  └─ waiting_developers: [remaining devs with timestamps]
+├─ Notifications: LOCK_ACQUIRED sent
+└─ Key Validation: Queue position determined by queued_at timestamps
+
+✅ PHASE 7: PR CREATION
+┌─ When: Developer creates pull request
+├─ Required Data Points:
+│  ├─ timestamp (when PR created)
+│  ├─ developer (PR creator)
+│  ├─ file_path & function_name
+│  ├─ pr_number (from GitHub)
+│  ├─ pr_link (GitHub URL)
+│  ├─ branch (feature branch name)
+│  └─ status: "OPEN"
+├─ Storage: pr_{file}_{function}_{pr_number}.json
+└─ Notifications: APPROVAL_NEEDED sent to relevant reviewers
+
+✅ PHASE 8: APPROVALS
+┌─ When: Developers review and approve/reject
+├─ Required Data Points (PER APPROVAL):
+│  ├─ timestamp (approval time)
+│  ├─ developer (who approved)
+│  ├─ approval_status: "approved" | "rejected"
+│  └─ approval_type: "code_review"
+├─ Approval Tracking:
+│  ├─ approved_by (list of developers)
+│  └─ rejected_by (list of developers)
+├─ Storage: approvals/{file}_{function}_approvals.json
+│  {
+│    "approved_by": ["dev1", "dev3"],
+│    "rejected_by": [],
+│    "last_update": "timestamp"
+│  }
+└─ Validation: Check if ALL developers involved have approved
+
+✅ PHASE 9: MERGE TO MAIN
+┌─ When: PR merged after all approvals
+├─ Required Data Points:
+│  ├─ timestamp (merge time)
+│  ├─ developer (who merged)
+│  ├─ pr_number
+│  ├─ merged_to: "main"
+│  ├─ merge_commit_sha (git commit hash)
+│  ├─ all_approvers (list of all who approved)
+│  └─ status: "MERGED"
+├─ Storage: merge_{file}_{function}_{pr_number}.json
+└─ Notifications: MERGED sent to all developers
+
+✅ PHASE 10: CONFLICT DETECTION & ESCALATION
+┌─ When: HIGH conflict detected on code change
+├─ Conflict Detection Triggered On: CODE_CHANGE_LOGGED event
+├─ Escalation Created If: conflict_severity == "HIGH"
+├─ Required Data Points:
+│  ├─ created_at (timestamp)
+│  ├─ timeout_minutes (default: 30)
+│  ├─ timeout_at (created_at + timeout_minutes)
+│  ├─ developers_involved (list)
+│  ├─ file, function, conflict reason
+│  └─ status: "PENDING"
+├─ Storage: escalations/{file}_{function}_escalation.json
+└─ Note: HIGH conflicts block merge until escalation resolved
+
+✅ PHASE 11: ROLLBACK
+┌─ When: Production issue detected after merge
+├─ Required Data Points:
+│  ├─ timestamp (rollback time)
+│  ├─ merge_commit_sha (which commit to rollback)
+│  ├─ file, function
+│  ├─ reason (why rollback needed)
+│  ├─ rolled_back_by (developer)
+│  └─ status: "ROLLED_BACK"
+├─ Storage: rollbacks/{file}_{function}_{timestamp}.json
+└─ Notifications: ROLLBACK_INITIATED sent to all
+
+================================================================================
+CRITICAL DATA VALIDATIONS
+================================================================================
+
+🔴 TIMESTAMP ORDERING IS CRITICAL
+   Rule: queue_position = MIN(waiting_developers[].queued_at)
+   Why: Determines who gets lock next when current dev finishes
+   Example:
+     Dev2 joins at 10:35:01Z → queued_at = 10:35:01Z
+     Dev3 joins at 10:36:00Z → queued_at = 10:36:00Z
+     Dev4 joins at 10:37:15Z → queued_at = 10:37:15Z
+     
+     When Dev1 finishes:
+     - Next developer = Dev2 (earliest timestamp)
+     - Remaining queue = [Dev3, Dev4]
+     - NOT FIFO! Timestamp-based ordering
+
+🔴 STATE MACHINE STATE PROGRESSION
+   Must follow valid transitions:
+   AVAILABLE → EDITING → CONFLICT_WAITING → PENDING_REVIEW → BOTH_DONE 
+      → IN_PR → APPROVED → MERGED
+   
+   Invalid: Cannot skip states or go backwards
+
+🔴 LOCK EXCLUSIVITY
+   Rule: Only ONE current_editor at a time
+   If current_editor != null AND state == EDITING → lock held
+   All others queued and waiting_developers array tracks them
+
+🔴 QUEUE INTEGRITY
+   Rule: Multiple developers can be in waiting_developers
+   - Size grows as more developers join
+   - Size shrinks as lock is released and passed
+   - Order MUST be maintained by timestamp, not join order
+
+🔴 CONFLICT SEVERITY CALCULATION
+   Rule: overlap_ratio = min_changes / max_changes
+   - overlap_ratio == 0 → severity = "low"
+   - overlap_ratio < 0.5 → severity = "medium"
+   - overlap_ratio >= 0.5 → severity = "high"
+
+🔴 NOTIFICATIONS TRIGGERED
+   - LOCK_BLOCKED: When dev tries to edit and lock held
+   - REVIEW_REQUESTED: When dev finishes, next is notified
+   - APPROVAL_NEEDED: When PR created
+   - MERGED: When PR merged to main
+   - ROLLED_BACK: When merge is rolled back
+
+================================================================================
+DATA POINTS VERIFICATION CHECKLIST
+================================================================================
+
+□ Intent Phase
+  □ developer captured
+  □ developer_type captured (agent/human)
+  □ resource format correct (file::function)
+  □ timestamp recorded (ISO 8601)
+
+□ Lock Acquisition Phase
+  □ current_editor set
+  □ state changed to EDITING
+  □ lock_type = "exclusive"
+  □ notification sent
+
+□ Queue Management Phase
+  □ waiting_developers list updated
+  □ Each developer has queued_at timestamp
+  □ Timestamps are precise (microseconds)
+  □ State = CONFLICT_WAITING (for 2nd+ devs)
+
+□ Code Changes Phase
+  □ change_id recorded
+  □ old_code & new_code captured
+  □ line_changes calculated correctly
+  □ conflict_severity auto-computed
+  □ overlap_ratio calculated
+  □ related_changes tracked
+
+□ Lock Release Phase
+  □ next_developer determined by MIN(queued_at)
+  □ current_editor cleared
+  □ remaining queue properly ordered
+  □ notifications sent
+
+□ Approval Phase
+  □ approved_by list maintained
+  □ rejected_by list maintained
+  □ last_update timestamp recorded
+  □ All developers tracked
+
+□ Merge Phase
+  □ merge_commit_sha recorded
+  □ all_approvers list includes everyone
+  □ merged_to = "main"
+  □ status = "MERGED"
+
+□ Conflict/Escalation Phase
+  □ HIGH conflicts create escalation
+  □ timeout_at calculated correctly
+  □ developers_involved listed
+
