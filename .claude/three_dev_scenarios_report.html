@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three-Developer Scenarios: Change Logs & Metadata</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 { color: #3b82f6; font-size: 2rem; margin-bottom: 0.5rem; }
+        .subtitle { color: #6b7280; }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 1rem 1.5rem;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6b7280;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .scenario-section {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .change-entry {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .change-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .dev-badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .dev-alice { background: #dbeafe; color: #1e40af; }
+        .dev-bob { background: #fee2e2; color: #991b1b; }
+        .dev-charlie { background: #e9d5ff; color: #6b21a8; }
+        .dev-system { background: #f3e8ff; color: #581c87; }
+
+        .change-detail {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .detail-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+        }
+
+        .detail-value {
+            color: #1f2937;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .context-box {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .context-title {
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 0.75rem;
+        }
+
+        .context-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #3b82f6;
+            font-size: 0.9rem;
+        }
+
+        .metadata-box {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 1px solid #16a34a;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metadata-title {
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 0.75rem;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .metadata-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            border-left: 3px solid #16a34a;
+            font-size: 0.85rem;
+        }
+
+        .metadata-key {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        .metadata-value {
+            color: #1f2937;
+            margin-top: 0.25rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .state-transition {
+            background: #fef3c7;
+            border-left: 3px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .conflict-check {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .conflict-no {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .conflict-mismatch {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .conflict-refresh {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .summary-box {
+            background: linear-gradient(135deg, #ede9fe 0%, #f3e8ff 100%);
+            border: 2px solid #a855f7;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-title {
+            font-weight: 700;
+            color: #6d28d9;
+            margin-bottom: 1rem;
+        }
+
+        .summary-text {
+            color: #5b21b6;
+            line-height: 1.6;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        table th {
+            background: #f3f4f6;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+            font-size: 0.9rem;
+        }
+
+        table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.9rem;
+        }
+
+        table tr:hover {
+            background: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Three-Developer Scenarios: Complete Change Log Analysis</h1>
+            <p class="subtitle">Linear, Non-Linear, and Context Update Workflows with Full Metadata</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('linear')">Linear (alice → bob → charlie)</button>
+            <button class="tab-btn" onclick="showTab('non_linear')">Non-Linear (Parallel)</button>
+            <button class="tab-btn" onclick="showTab('context_update')">Context Update & Refresh</button>
+            <button class="tab-btn" onclick="showTab('metadata_analysis')">Metadata Analysis</button>
+        </div>
+
+        <!-- LINEAR SCENARIO -->
+        <div id="linear" class="tab-content active">
+            <div class="scenario-section">
+                <div class="section-title">Scenario 1: LINEAR (alice → bob → charlie)</div>
+
+                <div class="summary-box">
+                    <div class="summary-title">📊 Scenario Overview</div>
+                    <div class="summary-text">
+                        Sequential workflow: alice finishes, shares context. bob gets lock, finishes, shares context. charlie gets lock and edits.
+                        <br><strong>Key:</strong> Context flows through shared log at each phase. Staleness checks occur between transitions.
+                    </div>
+                </div>
+
+                <h3 style="color: #1f2937; margin-top: 2rem; margin-bottom: 1rem;">Step-by-Step Change Log</h3>
+
+                <!-- PHASE 1: Alice -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 1/3:</strong> <span class="dev-badge dev-alice">alice</span></div>
+                        <div><strong>File:</strong> auth.py</div>
+                        <div><strong>Function:</strong> validate_token</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Add JWT expiration check for security</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Action</div>
+                            <div class="detail-value">modify</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Lines Added/Removed</div>
+                            <div class="detail-value">+8 / -2</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Content Hash</div>
+                            <div class="detail-value">abc123def456</div>
+                        </div>
+                    </div>
+
+                    <div class="state-transition">
+                        <strong>State Transition:</strong> alice: AVAILABLE → EDITING
+                    </div>
+
+                    <div class="context-box">
+                        <div class="context-title">📋 Context v1 (ctx-1-v1)</div>
+                        <div class="context-item">
+                            <strong>Developer State:</strong> alice=EDITING, bob=AVAILABLE, charlie=AVAILABLE
+                        </div>
+                        <div class="context-item">
+                            <strong>Key Assumptions:</strong>
+                            <br>• No expiration check exists
+                            <br>• Token validation is basic
+                        </div>
+                        <div class="context-item">
+                            <strong>Dependencies:</strong> jwt.decode(), datetime.now()
+                        </div>
+                        <div class="context-item">
+                            <strong>Staleness Score:</strong> 0.0 (fresh)
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Metadata Captured</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Lock Acquired</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Lock Resource</div>
+                                <div class="metadata-value">auth.py::validate_token</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Execution Time</div>
+                                <div class="metadata-value">145ms</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Test Coverage</div>
+                                <div class="metadata-value">78% → 92%</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Complexity Delta</div>
+                                <div class="metadata-value">+1</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Auto-Merge Confidence</div>
+                                <div class="metadata-value">100%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <span class="conflict-check conflict-no">✓ NO_CONFLICT</span>
+                </div>
+
+                <!-- PHASE 2: Bob -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 2/3:</strong> <span class="dev-badge dev-bob">bob</span></div>
+                        <div><strong>File:</strong> auth.py</div>
+                        <div><strong>Function:</strong> validate_token</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Add comprehensive unit tests for expiration check</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Action</div>
+                            <div class="detail-value">modify</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Lines Added/Removed</div>
+                            <div class="detail-value">+12 / -0</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Content Hash</div>
+                            <div class="detail-value">def789ghi012</div>
+                        </div>
+                    </div>
+
+                    <div class="state-transition">
+                        <strong>State Transitions:</strong>
+                        <br>bob: CONFLICT_WAITING → EDITING (promoted from queue, wait=3.2s)
+                        <br>charlie: AVAILABLE → CONFLICT_WAITING (queued)
+                    </div>
+
+                    <div class="context-box">
+                        <div class="context-title">📋 Context v2 (ctx-1-v2) - UPDATED</div>
+                        <div class="context-item">
+                            <strong>Developer State:</strong> alice=AVAILABLE, bob=EDITING, charlie=CONFLICT_WAITING
+                        </div>
+                        <div class="context-item">
+                            <strong>Key Assumptions:</strong>
+                            <br>• Expiration check implemented (from alice)
+                            <br>• Tests needed for validation
+                        </div>
+                        <div class="context-item">
+                            <strong>Dependencies:</strong> pytest, validate_token, alice_changes
+                        </div>
+                        <div class="context-item">
+                            <strong>Staleness Score:</strong> 0.1
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Metadata Captured</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Lock Acquired</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Queue Position</div>
+                                <div class="metadata-value">1 (promoted)</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Wait Time</div>
+                                <div class="metadata-value">3200ms</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Execution Time</div>
+                                <div class="metadata-value">287ms</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Tests Added</div>
+                                <div class="metadata-value">5</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Test Coverage</div>
+                                <div class="metadata-value">92% → 98%</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Intent Alignment</div>
+                                <div class="metadata-value">HIGH</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Auto-Merge Confidence</div>
+                                <div class="metadata-value">86%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <span class="conflict-check conflict-no">✓ NO_CONFLICT</span>
+                </div>
+
+                <!-- PHASE 3: Charlie -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 3/3:</strong> <span class="dev-badge dev-charlie">charlie</span></div>
+                        <div><strong>File:</strong> auth.py</div>
+                        <div><strong>Function:</strong> validate_token</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Add documentation and error handling for token validation</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Action</div>
+                            <div class="detail-value">modify</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Lines Added/Removed</div>
+                            <div class="detail-value">+6 / -0</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Content Hash</div>
+                            <div class="detail-value">jkl345mno678</div>
+                        </div>
+                    </div>
+
+                    <div class="state-transition">
+                        <strong>State Transitions:</strong>
+                        <br>charlie: CONFLICT_WAITING → EDITING (promoted from queue, wait=6.9s)
+                    </div>
+
+                    <div class="context-box">
+                        <div class="context-title">📋 Context v3 (ctx-1-v3) - FINAL</div>
+                        <div class="context-item">
+                            <strong>Developer State:</strong> alice=AVAILABLE, bob=AVAILABLE, charlie=EDITING
+                        </div>
+                        <div class="context-item">
+                            <strong>Key Assumptions:</strong>
+                            <br>• Expiration check implemented
+                            <br>• Tests comprehensive
+                            <br>• Ready for docs
+                        </div>
+                        <div class="context-item">
+                            <strong>Dependencies:</strong> alice_changes, bob_tests, docstring_format
+                        </div>
+                        <div class="context-item">
+                            <strong>Staleness Score:</strong> 0.0 (fresh)
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Metadata Captured</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Lock Acquired</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Queue Position</div>
+                                <div class="metadata-value">2 (promoted)</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Wait Time</div>
+                                <div class="metadata-value">6890ms</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Execution Time</div>
+                                <div class="metadata-value">156ms</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Documentation</div>
+                                <div class="metadata-value">Added</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Error Handling</div>
+                                <div class="metadata-value">Added</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Intent Alignment</div>
+                                <div class="metadata-value">PERFECT</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Auto-Merge Confidence</div>
+                                <div class="metadata-value">88%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <span class="conflict-check conflict-no">✓ NO_CONFLICT</span>
+                </div>
+
+                <div class="summary-box" style="margin-top: 2rem;">
+                    <div class="summary-title">✅ Linear Scenario Summary</div>
+                    <div class="summary-text">
+                        <strong>Timeline:</strong> alice (145ms) → bob waits 3.2s, edits (287ms) → charlie waits 6.9s, edits (156ms)
+                        <br><strong>Total PR Time:</strong> ~10.5s from start to finish
+                        <br><strong>Context Evolution:</strong> v1 (alice) → v2 (bob) → v3 (charlie)
+                        <br><strong>Approvals:</strong> All three developers (alice=author, bob=testing expert, charlie=docs expert)
+                        <br><strong>Final Auto-Merge Confidence:</strong> 88%
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NON-LINEAR SCENARIO -->
+        <div id="non_linear" class="tab-content">
+            <div class="scenario-section">
+                <div class="section-title">Scenario 2: NON-LINEAR (alice + bob Parallel)</div>
+
+                <div class="summary-box">
+                    <div class="summary-title">⚡ Scenario Overview</div>
+                    <div class="summary-text">
+                        Parallel workflow: alice edits auth.py while bob simultaneously edits user.py (different resources, separate locks).
+                        Then charlie integrates both changes.
+                        <br><strong>Key:</strong> Both developers in BOTH_EDITING state (no lock conflict). Parallel time savings vs sequential.
+                    </div>
+                </div>
+
+                <h3 style="color: #1f2937; margin-top: 2rem; margin-bottom: 1rem;">Change Log with Parallel Execution</h3>
+
+                <!-- PHASE 1A: Alice -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 1a:</strong> <span class="dev-badge dev-alice">alice</span></div>
+                        <div><strong>File:</strong> auth.py</div>
+                        <div><strong>State:</strong> BOTH_EDITING (auth.py)</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Add JWT expiration check</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Lock Resource</div>
+                            <div class="detail-value">auth.py::validate_token</div>
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Parallel Metadata</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Parallel Mode</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Resource Specific</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Other Resources Locked</div>
+                                <div class="metadata-value">[]</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Execution Time</div>
+                                <div class="metadata-value">145ms</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PHASE 1B: Bob (PARALLEL) -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 1b (PARALLEL):</strong> <span class="dev-badge dev-bob">bob</span></div>
+                        <div><strong>File:</strong> user.py</div>
+                        <div><strong>State:</strong> BOTH_EDITING (user.py)</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Add user profile caching for performance</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Lock Resource</div>
+                            <div class="detail-value">user.py::get_user_profile</div>
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Parallel Metadata</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Parallel Mode</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Resource Specific</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Other Resources Locked</div>
+                                <div class="metadata-value">[auth.py (alice)]</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">No Interference</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Execution Time</div>
+                                <div class="metadata-value">167ms</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #dbeafe; border-left: 3px solid #3b82f6; padding: 1rem; border-radius: 0.25rem; margin-top: 1rem; font-size: 0.9rem;">
+                        <strong>✓ Parallel Execution:</strong> alice(145ms) + bob(167ms) running simultaneously = total 167ms (vs 145+167=312ms if sequential)
+                        <br><strong>Time Savings:</strong> 145ms saved (46% faster than sequential)
+                    </div>
+                </div>
+
+                <!-- PHASE 2: Charlie (Integration) -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 3:</strong> <span class="dev-badge dev-charlie">charlie</span></div>
+                        <div><strong>File:</strong> integration.py</div>
+                        <div><strong>Role:</strong> Integrator</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Integrate auth validation with user profile retrieval</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Parallel Predecessors</div>
+                            <div class="detail-value">2 (alice + bob)</div>
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Integration Metadata</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Parallel Predecessors</div>
+                                <div class="metadata-value">2</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Dependencies Ready</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Execution Time</div>
+                                <div class="metadata-value">198ms</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Auto-Merge Confidence</div>
+                                <div class="metadata-value">92%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="summary-box" style="margin-top: 2rem;">
+                    <div class="summary-title">⚡ Non-Linear Scenario Summary</div>
+                    <div class="summary-text">
+                        <strong>Parallel Execution:</strong> alice (auth.py: 145ms) + bob (user.py: 167ms) = 167ms total (vs 312ms sequential)
+                        <br><strong>Time Savings:</strong> 145ms / 47% faster than sequential approach
+                        <br><strong>Key Innovation:</strong> Per-resource locking enables true parallel work without conflicts
+                        <br><strong>Integration:</strong> charlie combines both changes seamlessly
+                        <br><strong>Final Auto-Merge Confidence:</strong> 92%
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTEXT UPDATE SCENARIO -->
+        <div id="context_update" class="tab-content">
+            <div class="scenario-section">
+                <div class="section-title">Scenario 3: CONTEXT UPDATE & STALENESS DETECTION</div>
+
+                <div class="summary-box">
+                    <div class="summary-title">🔄 Scenario Overview</div>
+                    <div class="summary-text">
+                        Shows context being refreshed when staleness is detected. alice → bob (makes unexpected changes) → system detects staleness → charlie gets refreshed context.
+                        <br><strong>Key:</strong> Intent mismatch, automatic staleness detection, context invalidation, and refresh.
+                    </div>
+                </div>
+
+                <h3 style="color: #1f2937; margin-top: 2rem; margin-bottom: 1rem;">Change Log with Context Refresh Events</h3>
+
+                <!-- PHASE 1: Alice -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 1:</strong> <span class="dev-badge dev-alice">alice</span></div>
+                        <div><strong>File:</strong> auth.py</div>
+                        <div><strong>Action:</strong> Create context</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Add JWT expiration check</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Context Version</div>
+                            <div class="detail-value">ctx-upd-v1</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Shared To</div>
+                            <div class="detail-value">bob, charlie</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Execution Time</div>
+                            <div class="detail-value">145ms</div>
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Context Metadata</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Context Version</div>
+                                <div class="metadata-value">ctx-upd-v1</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Shared To</div>
+                                <div class="metadata-value">bob, charlie</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Staleness Score</div>
+                                <div class="metadata-value">0.0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <span class="conflict-check conflict-no">✓ NO_CONFLICT</span>
+                </div>
+
+                <!-- PHASE 2: Bob UNEXPECTED CHANGE -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 2:</strong> <span class="dev-badge dev-bob">bob</span></div>
+                        <div><strong>File:</strong> auth.py</div>
+                        <div><strong>Action:</strong> MAJOR REFACTOR</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Major refactor for maintainability (DIFFERENT from alice's!)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Previous Context</div>
+                            <div class="detail-value">ctx-upd-v1 (alice)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Current Context</div>
+                            <div class="detail-value">ctx-upd-v2 (bob)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Lines Added/Removed</div>
+                            <div class="detail-value">+25 / -15</div>
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Staleness Detection Triggered</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Intent Mismatch</div>
+                                <div class="metadata-value">MAJOR_REFACTOR</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Staleness Detected</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">charlie Context Invalidated</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Confidence Reduction</div>
+                                <div class="metadata-value">35%</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Auto-Merge Confidence</div>
+                                <div class="metadata-value">65% (down from 100%)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <span class="conflict-check conflict-mismatch">⚠️ INTENT_MISMATCH_DETECTED</span>
+                </div>
+
+                <!-- PHASE 2.5: SYSTEM REFRESH -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 2.5 (SYSTEM):</strong> <span class="dev-badge dev-system">system</span></div>
+                        <div><strong>Action:</strong> CONTEXT REFRESH</div>
+                        <div><strong>Reason:</strong> Staleness Detected</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Staleness Age</div>
+                            <div class="detail-value">500ms (threshold: 300ms)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Old Version</div>
+                            <div class="detail-value">ctx-upd-v1 (alice)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">New Version</div>
+                            <div class="detail-value">ctx-upd-v2-refreshed (bob)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">charlie Notification</div>
+                            <div class="detail-value">Context stale - refresh applied</div>
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Refresh Mechanisms</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">AST Diff Validation</div>
+                                <div class="metadata-value">✓</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Intent Mismatch Detection</div>
+                                <div class="metadata-value">✓</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Time-Based Refresh</div>
+                                <div class="metadata-value">✓</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Assumptions Violated</div>
+                                <div class="metadata-value">2</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Conflict Probability</div>
+                                <div class="metadata-value">MEDIUM</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <span class="conflict-check conflict-refresh">⚡ CONTEXT_STALE_REFRESHED</span>
+                </div>
+
+                <!-- PHASE 3: Charlie with REFRESHED context -->
+                <div class="change-entry">
+                    <div class="change-header">
+                        <div><strong>Phase 3:</strong> <span class="dev-badge dev-charlie">charlie</span></div>
+                        <div><strong>File:</strong> auth.py</div>
+                        <div><strong>Context:</strong> REFRESHED</div>
+                    </div>
+
+                    <div class="change-detail">
+                        <div class="detail-item">
+                            <div class="detail-label">Intent</div>
+                            <div class="detail-value">Add error handling (aware of refactor)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Context Version Used</div>
+                            <div class="detail-value">ctx-upd-v2-refreshed (FRESH)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Context Refreshed</div>
+                            <div class="detail-value">true</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Acknowledged Refresh</div>
+                            <div class="detail-value">true</div>
+                        </div>
+                    </div>
+
+                    <div class="metadata-box">
+                        <div class="metadata-title">Refresh & Conflict Metadata</div>
+                        <div class="metadata-grid">
+                            <div class="metadata-item">
+                                <div class="metadata-key">Context Refreshed</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Acknowledged</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Wait Time</div>
+                                <div class="metadata-value">1000ms</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Conflict Check</div>
+                                <div class="metadata-value">NO_CONFLICT</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Assumptions Verified</div>
+                                <div class="metadata-value">true</div>
+                            </div>
+                            <div class="metadata-item">
+                                <div class="metadata-key">Auto-Merge Confidence</div>
+                                <div class="metadata-value">82%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <span class="conflict-check conflict-no">✓ NO_CONFLICT (refreshed context)</span>
+                </div>
+
+                <div class="summary-box" style="margin-top: 2rem;">
+                    <div class="summary-title">🔄 Context Update Summary</div>
+                    <div class="summary-text">
+                        <strong>Staleness Progression:</strong> alice (ctx v1) → bob MAJOR REFACTOR (intent mismatch detected) → system triggers refresh → charlie gets ctx v2-refreshed
+                        <br><strong>Key Events:</strong>
+                        <br>• alice creates context, shares with bob & charlie
+                        <br>• bob makes UNEXPECTED changes (refactor vs expiration check)
+                        <br>• System detects intent mismatch + time-based staleness (500ms > 300ms threshold)
+                        <br>• charlie's context automatically invalidated
+                        <br>• charlie notified, given refreshed context
+                        <br>• charlie edits with awareness of bob's refactor
+                        <br><strong>Result:</strong> Context refresh prevented potential conflicts. All three devs synchronized despite unexpected changes.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- METADATA ANALYSIS -->
+        <div id="metadata_analysis" class="tab-content">
+            <div class="scenario-section">
+                <div class="section-title">Metadata Analysis: What's Being Tracked</div>
+
+                <div class="summary-box">
+                    <div class="summary-title">📊 Complete Metadata Schema</div>
+                    <div class="summary-text">
+                        Neo 3.0 captures comprehensive metadata at each step to support lock management, conflict detection, context tracking, and quality assurance.
+                        Below are all metadata fields organized by category with their purposes.
+                    </div>
+                </div>
+
+                <h3 style="color: #1f2937; margin-top: 2rem; margin-bottom: 1rem;">Metadata Categories & Fields</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Metadata Field</th>
+                            <th>Purpose</th>
+                            <th>Example Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Lock Management</strong></td>
+                            <td>lock_acquired</td>
+                            <td>Whether developer successfully acquired lock</td>
+                            <td>true</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>lock_resource</td>
+                            <td>Resource (file::function) the lock applies to</td>
+                            <td>auth.py::validate_token</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>queue_position</td>
+                            <td>Position in queue if waiting</td>
+                            <td>1 or 2</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>promoted_from_queue</td>
+                            <td>Whether dev was promoted from queue to editing</td>
+                            <td>true</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>wait_time_ms</td>
+                            <td>Time spent waiting in queue</td>
+                            <td>3200</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Execution</strong></td>
+                            <td>execution_time_ms</td>
+                            <td>Time to complete the edit/refresh</td>
+                            <td>145</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>lines_changed</td>
+                            <td>Total lines modified (added + removed)</td>
+                            <td>10</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>lines_added</td>
+                            <td>Number of lines added</td>
+                            <td>8</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>lines_removed</td>
+                            <td>Number of lines removed</td>
+                            <td>2</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Quality</strong></td>
+                            <td>test_coverage_before</td>
+                            <td>% test coverage before change</td>
+                            <td>78%</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>test_coverage_after</td>
+                            <td>% test coverage after change</td>
+                            <td>92%</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>tests_added</td>
+                            <td>Number of tests written</td>
+                            <td>5</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>cyclomatic_complexity_delta</td>
+                            <td>Change in code complexity</td>
+                            <td>+1</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Context & Intent</strong></td>
+                            <td>context_version_used</td>
+                            <td>Which context version dev relied on</td>
+                            <td>ctx-1-v1</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>context_staleness_ms</td>
+                            <td>How old the context is</td>
+                            <td>3200</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>intent_alignment</td>
+                            <td>How well work aligns with stated intent</td>
+                            <td>HIGH or PERFECT</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>intent_deviation</td>
+                            <td>Type of deviation from expected intent</td>
+                            <td>MAJOR_REFACTOR</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Parallel Execution</strong></td>
+                            <td>parallel_mode</td>
+                            <td>Whether in parallel execution mode</td>
+                            <td>true</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>resource_specific</td>
+                            <td>Lock is per-resource (not global)</td>
+                            <td>true</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>other_resources_locked</td>
+                            <td>Other devs' locks (parallel check)</td>
+                            <td>[]  or ['auth.py']</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>concurrent_activities</td>
+                            <td>Number of concurrent developers</td>
+                            <td>0 or 2</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>parallel_execution_time_total_ms</td>
+                            <td>Total time for parallel work</td>
+                            <td>312</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Conflict Detection</strong></td>
+                            <td>conflict_check_result</td>
+                            <td>Result of conflict analysis</td>
+                            <td>NO_CONFLICT or INTENT_MISMATCH</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>assumptions_violated</td>
+                            <td>Number of context assumptions broken</td>
+                            <td>0 or 2</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>conflict_probability</td>
+                            <td>Estimated conflict risk</td>
+                            <td>LOW or MEDIUM</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Staleness & Refresh</strong></td>
+                            <td>staleness_detection_triggered</td>
+                            <td>Whether staleness was detected</td>
+                            <td>true or false</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>staleness_age_ms</td>
+                            <td>Age of context when staleness detected</td>
+                            <td>500</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>staleness_threshold_ms</td>
+                            <td>Threshold for staleness (300ms default)</td>
+                            <td>300</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>refresh_mechanisms</td>
+                            <td>Which detection methods triggered refresh</td>
+                            <td>['AST_DIFF', 'INTENT_MISMATCH']</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>context_refreshed_before_edit</td>
+                            <td>Whether context was refreshed before editing</td>
+                            <td>true</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Approval & Confidence</strong></td>
+                            <td>auto_merge_confidence</td>
+                            <td>System confidence in auto-merge</td>
+                            <td>86%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="summary-box" style="margin-top: 2rem;">
+                    <div class="summary-title">💡 Key Insights from Metadata</div>
+                    <div class="summary-text">
+                        <strong>1. Sequential overhead visible:</strong> Linear scenario shows alice (145ms) + bob waits 3.2s + bob (287ms) + charlie waits 6.9s + charlie (156ms). Metadata clearly shows wait times.
+                        <br><br>
+                        <strong>2. Parallel speedup measurable:</strong> Non-linear metadata shows alice (145ms) and bob (167ms) running simultaneously in 167ms total (vs 312ms sequential). Time savings = 145ms (46% improvement).
+                        <br><br>
+                        <strong>3. Context freshness tracked:</strong> Context staleness scores (0.0-0.75) and age metrics (ms) let system know when to refresh. Refresh mechanisms logged.
+                        <br><br>
+                        <strong>4. Intent alignment ensures quality:</strong> Intent Alignment field (HIGH/PERFECT) and intent_deviation field catch unexpected changes before they cause conflicts.
+                        <br><br>
+                        <strong>5. Auto-merge confidence dynamic:</strong> Changes from 100% (alice) → 86% (bob) → 88% (charlie) in linear scenario based on all factors. Drops to 65% when intent mismatch detected.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Neo 3.0 Three-Developer Scenarios</strong> - Complete Change Log & Metadata Analysis</p>
+            <p style="margin-top: 1rem;">All scenarios tracked with comprehensive metadata for lock management, conflict detection, context synchronization, and quality assurance.</p>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active from all buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Mark button as active
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

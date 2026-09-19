@@ -1,0 +1,795 @@
+{
+  "linear": {
+    "scenario_type": "linear",
+    "total_changes": 3,
+    "total_context_snapshots": 3,
+    "shared_change_log": [
+      {
+        "sequence": 1,
+        "timestamp": "2026-09-19T17:53:02.494788",
+        "developer": "alice",
+        "change": {
+          "developer": "alice",
+          "timestamp": "2026-09-19T17:53:02.494788",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 8,
+          "lines_removed": 2,
+          "intent": "Add JWT expiration check for security",
+          "content_hash": "abc123def456"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.494810",
+          "version": "ctx-1-v1",
+          "created_by": "alice",
+          "developer_state": {
+            "alice": "EDITING",
+            "bob": "AVAILABLE",
+            "charlie": "AVAILABLE"
+          },
+          "key_assumptions": [
+            "No expiration check exists",
+            "Token validation is basic"
+          ],
+          "dependencies": [
+            "jwt.decode()",
+            "datetime.now()"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "alice": "AVAILABLE\u2192EDITING"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 100.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "auth.py::validate_token",
+          "queue_position": 0,
+          "execution_time_ms": 145,
+          "lines_changed": 10,
+          "cyclomatic_complexity_delta": 1,
+          "test_coverage_before": 78,
+          "test_coverage_after": 92
+        }
+      },
+      {
+        "sequence": 2,
+        "timestamp": "2026-09-19T17:53:02.595040",
+        "developer": "bob",
+        "change": {
+          "developer": "bob",
+          "timestamp": "2026-09-19T17:53:02.595040",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 12,
+          "lines_removed": 0,
+          "intent": "Add comprehensive unit tests for expiration check",
+          "content_hash": "def789ghi012"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.595075",
+          "version": "ctx-1-v2",
+          "created_by": "bob",
+          "developer_state": {
+            "alice": "AVAILABLE",
+            "bob": "EDITING",
+            "charlie": "CONFLICT_WAITING"
+          },
+          "key_assumptions": [
+            "Expiration check implemented",
+            "Tests needed for validation"
+          ],
+          "dependencies": [
+            "pytest",
+            "validate_token",
+            "alice_changes"
+          ],
+          "staleness_score": 0.1
+        },
+        "state_transition": {
+          "bob": "CONFLICT_WAITING\u2192EDITING",
+          "charlie": "AVAILABLE\u2192CONFLICT_WAITING"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 86.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "auth.py::validate_token",
+          "queue_position": 1,
+          "promoted_from_queue": true,
+          "wait_time_ms": 3200,
+          "execution_time_ms": 287,
+          "lines_changed": 12,
+          "test_coverage_before": 92,
+          "test_coverage_after": 98,
+          "tests_added": 5,
+          "context_version_used": "ctx-1-v1",
+          "context_staleness_ms": 3200,
+          "intent_alignment": "HIGH"
+        }
+      },
+      {
+        "sequence": 3,
+        "timestamp": "2026-09-19T17:53:02.695443",
+        "developer": "charlie",
+        "change": {
+          "developer": "charlie",
+          "timestamp": "2026-09-19T17:53:02.695443",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 6,
+          "lines_removed": 0,
+          "intent": "Add documentation and error handling for token validation",
+          "content_hash": "jkl345mno678"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.695482",
+          "version": "ctx-1-v3",
+          "created_by": "charlie",
+          "developer_state": {
+            "alice": "AVAILABLE",
+            "bob": "AVAILABLE",
+            "charlie": "EDITING"
+          },
+          "key_assumptions": [
+            "Expiration check implemented",
+            "Tests comprehensive",
+            "Ready for docs"
+          ],
+          "dependencies": [
+            "alice_changes",
+            "bob_tests",
+            "docstring_format"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "charlie": "CONFLICT_WAITING\u2192EDITING"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 88.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "auth.py::validate_token",
+          "queue_position": 2,
+          "promoted_from_queue": true,
+          "wait_time_ms": 6890,
+          "execution_time_ms": 156,
+          "lines_changed": 6,
+          "test_coverage_before": 98,
+          "test_coverage_after": 98,
+          "documentation_added": true,
+          "error_handling_added": true,
+          "context_version_used": "ctx-1-v2-refreshed",
+          "context_staleness_ms": 6890,
+          "staleness_detected": false,
+          "intent_alignment": "PERFECT"
+        }
+      }
+    ],
+    "developer_individual_logs": {
+      "alice": [
+        {
+          "developer": "alice",
+          "timestamp": "2026-09-19T17:53:02.494788",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 8,
+          "lines_removed": 2,
+          "intent": "Add JWT expiration check for security",
+          "content_hash": "abc123def456"
+        }
+      ],
+      "bob": [
+        {
+          "developer": "bob",
+          "timestamp": "2026-09-19T17:53:02.595040",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 12,
+          "lines_removed": 0,
+          "intent": "Add comprehensive unit tests for expiration check",
+          "content_hash": "def789ghi012"
+        }
+      ],
+      "charlie": [
+        {
+          "developer": "charlie",
+          "timestamp": "2026-09-19T17:53:02.695443",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 6,
+          "lines_removed": 0,
+          "intent": "Add documentation and error handling for token validation",
+          "content_hash": "jkl345mno678"
+        }
+      ],
+      "system": []
+    }
+  },
+  "non_linear": {
+    "scenario_type": "non_linear",
+    "total_changes": 5,
+    "total_context_snapshots": 5,
+    "shared_change_log": [
+      {
+        "sequence": 1,
+        "timestamp": "2026-09-19T17:53:02.695747",
+        "developer": "alice",
+        "change": {
+          "developer": "alice",
+          "timestamp": "2026-09-19T17:53:02.695747",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 8,
+          "lines_removed": 2,
+          "intent": "Add JWT expiration check",
+          "content_hash": "par001abc123"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.695751",
+          "version": "ctx-par-v1",
+          "created_by": "alice",
+          "developer_state": {
+            "alice": "BOTH_EDITING",
+            "bob": "AVAILABLE",
+            "charlie": "AVAILABLE"
+          },
+          "key_assumptions": [
+            "No expiration check"
+          ],
+          "dependencies": [
+            "jwt.decode()"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "alice": "AVAILABLE\u2192BOTH_EDITING (auth.py)"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 100.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "auth.py::validate_token",
+          "parallel_mode": true,
+          "resource_specific": true,
+          "other_resources_locked": [],
+          "execution_time_ms": 145
+        }
+      },
+      {
+        "sequence": 2,
+        "timestamp": "2026-09-19T17:53:02.695760",
+        "developer": "bob",
+        "change": {
+          "developer": "bob",
+          "timestamp": "2026-09-19T17:53:02.695760",
+          "file": "user.py",
+          "function": "get_user_profile",
+          "action": "modify",
+          "lines_added": 10,
+          "lines_removed": 1,
+          "intent": "Add user profile caching for performance",
+          "content_hash": "par001def789"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.695762",
+          "version": "ctx-par-v1b",
+          "created_by": "bob",
+          "developer_state": {
+            "alice": "BOTH_EDITING (auth.py)",
+            "bob": "BOTH_EDITING (user.py)",
+            "charlie": "AVAILABLE"
+          },
+          "key_assumptions": [
+            "User profiles need caching"
+          ],
+          "dependencies": [
+            "cache.set()",
+            "get_user_profile"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "bob": "AVAILABLE\u2192BOTH_EDITING (user.py)"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 100.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "user.py::get_user_profile",
+          "parallel_mode": true,
+          "resource_specific": true,
+          "other_resources_locked": [
+            "auth.py (alice)"
+          ],
+          "no_interference": true,
+          "execution_time_ms": 167
+        }
+      },
+      {
+        "sequence": 3,
+        "timestamp": "2026-09-19T17:53:02.796017",
+        "developer": "alice",
+        "change": {
+          "developer": "alice",
+          "timestamp": "2026-09-19T17:53:02.796017",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 0,
+          "lines_removed": 0,
+          "intent": "Finish editing",
+          "content_hash": "par001finish1"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.795974",
+          "version": "ctx-par-v2",
+          "created_by": "system",
+          "developer_state": {
+            "alice": "AVAILABLE",
+            "bob": "BOTH_EDITING (user.py)",
+            "charlie": "AVAILABLE"
+          },
+          "key_assumptions": [
+            "alice done",
+            "bob still editing user.py"
+          ],
+          "dependencies": [
+            "alice_changes",
+            "bob_still_editing"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "alice": "BOTH_EDITING\u2192AVAILABLE"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 100.0,
+        "metadata": {
+          "event_type": "lock_release",
+          "released_resource": "auth.py::validate_token",
+          "execution_time_ms": 0,
+          "bob_still_working": true,
+          "concurrent_activities": 1
+        }
+      },
+      {
+        "sequence": 4,
+        "timestamp": "2026-09-19T17:53:02.896344",
+        "developer": "bob",
+        "change": {
+          "developer": "bob",
+          "timestamp": "2026-09-19T17:53:02.896344",
+          "file": "user.py",
+          "function": "get_user_profile",
+          "action": "modify",
+          "lines_added": 0,
+          "lines_removed": 0,
+          "intent": "Finish editing",
+          "content_hash": "par001finish2"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.896305",
+          "version": "ctx-par-v3",
+          "created_by": "system",
+          "developer_state": {
+            "alice": "AVAILABLE",
+            "bob": "AVAILABLE",
+            "charlie": "AVAILABLE"
+          },
+          "key_assumptions": [
+            "alice done",
+            "bob done",
+            "charlie ready"
+          ],
+          "dependencies": [
+            "alice_changes",
+            "bob_changes"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "bob": "BOTH_EDITING\u2192AVAILABLE"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 100.0,
+        "metadata": {
+          "event_type": "lock_release",
+          "released_resource": "user.py::get_user_profile",
+          "execution_time_ms": 0,
+          "parallel_execution_time_total_ms": 334,
+          "concurrent_activities": 0
+        }
+      },
+      {
+        "sequence": 5,
+        "timestamp": "2026-09-19T17:53:02.996739",
+        "developer": "charlie",
+        "change": {
+          "developer": "charlie",
+          "timestamp": "2026-09-19T17:53:02.996739",
+          "file": "integration.py",
+          "function": "authenticate_and_get_profile",
+          "action": "modify",
+          "lines_added": 15,
+          "lines_removed": 3,
+          "intent": "Integrate auth validation with user profile retrieval",
+          "content_hash": "par001charlie1"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.996779",
+          "version": "ctx-par-v4",
+          "created_by": "charlie",
+          "developer_state": {
+            "alice": "AVAILABLE",
+            "bob": "AVAILABLE",
+            "charlie": "EDITING"
+          },
+          "key_assumptions": [
+            "alice: expiration check done",
+            "bob: caching done"
+          ],
+          "dependencies": [
+            "alice_changes",
+            "bob_changes",
+            "integration_layer"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "charlie": "AVAILABLE\u2192EDITING"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 92.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "integration.py::authenticate_and_get_profile",
+          "parallel_predecessor_count": 2,
+          "execution_time_ms": 198,
+          "dependencies_ready": true,
+          "context_integration_time": 1.2
+        }
+      }
+    ],
+    "developer_individual_logs": {
+      "alice": [
+        {
+          "developer": "alice",
+          "timestamp": "2026-09-19T17:53:02.695747",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 8,
+          "lines_removed": 2,
+          "intent": "Add JWT expiration check",
+          "content_hash": "par001abc123"
+        },
+        {
+          "developer": "alice",
+          "timestamp": "2026-09-19T17:53:02.796017",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 0,
+          "lines_removed": 0,
+          "intent": "Finish editing",
+          "content_hash": "par001finish1"
+        }
+      ],
+      "bob": [
+        {
+          "developer": "bob",
+          "timestamp": "2026-09-19T17:53:02.695760",
+          "file": "user.py",
+          "function": "get_user_profile",
+          "action": "modify",
+          "lines_added": 10,
+          "lines_removed": 1,
+          "intent": "Add user profile caching for performance",
+          "content_hash": "par001def789"
+        },
+        {
+          "developer": "bob",
+          "timestamp": "2026-09-19T17:53:02.896344",
+          "file": "user.py",
+          "function": "get_user_profile",
+          "action": "modify",
+          "lines_added": 0,
+          "lines_removed": 0,
+          "intent": "Finish editing",
+          "content_hash": "par001finish2"
+        }
+      ],
+      "charlie": [
+        {
+          "developer": "charlie",
+          "timestamp": "2026-09-19T17:53:02.996739",
+          "file": "integration.py",
+          "function": "authenticate_and_get_profile",
+          "action": "modify",
+          "lines_added": 15,
+          "lines_removed": 3,
+          "intent": "Integrate auth validation with user profile retrieval",
+          "content_hash": "par001charlie1"
+        }
+      ],
+      "system": []
+    }
+  },
+  "context_update": {
+    "scenario_type": "context_update",
+    "total_changes": 4,
+    "total_context_snapshots": 4,
+    "shared_change_log": [
+      {
+        "sequence": 1,
+        "timestamp": "2026-09-19T17:53:02.997069",
+        "developer": "alice",
+        "change": {
+          "developer": "alice",
+          "timestamp": "2026-09-19T17:53:02.997069",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 8,
+          "lines_removed": 2,
+          "intent": "Add JWT expiration check",
+          "content_hash": "ctx001alice1"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:02.997074",
+          "version": "ctx-upd-v1",
+          "created_by": "alice",
+          "developer_state": {
+            "alice": "EDITING",
+            "bob": "AVAILABLE",
+            "charlie": "AVAILABLE"
+          },
+          "key_assumptions": [
+            "Expiration check needed",
+            "No refactoring"
+          ],
+          "dependencies": [
+            "jwt.decode()"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "alice": "AVAILABLE\u2192EDITING"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 100.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "auth.py::validate_token",
+          "context_version": "ctx-upd-v1",
+          "shared_to": [
+            "bob",
+            "charlie"
+          ]
+        }
+      },
+      {
+        "sequence": 2,
+        "timestamp": "2026-09-19T17:53:03.497258",
+        "developer": "bob",
+        "change": {
+          "developer": "bob",
+          "timestamp": "2026-09-19T17:53:03.497258",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 25,
+          "lines_removed": 15,
+          "intent": "Major refactor for maintainability (different from alice's intent)",
+          "content_hash": "ctx001bob_refactor"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:03.497313",
+          "version": "ctx-upd-v2",
+          "created_by": "bob",
+          "developer_state": {
+            "alice": "AVAILABLE",
+            "bob": "EDITING",
+            "charlie": "CONFLICT_WAITING"
+          },
+          "key_assumptions": [
+            "Refactoring for clarity",
+            "Expiration check integrated"
+          ],
+          "dependencies": [
+            "refactored_function",
+            "expiration_logic"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "bob": "CONFLICT_WAITING\u2192EDITING"
+        },
+        "conflict_check": "INTENT_MISMATCH_DETECTED",
+        "auto_merge_confidence": 65.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "auth.py::validate_token",
+          "staleness_detection_triggered": true,
+          "previous_context_version": "ctx-upd-v1",
+          "current_context_version": "ctx-upd-v2",
+          "intent_deviation": "MAJOR_REFACTOR (not just tests)",
+          "charlie_context_invalidated": true,
+          "confidence_reduction": 35
+        }
+      },
+      {
+        "sequence": 3,
+        "timestamp": "2026-09-19T17:53:03.997604",
+        "developer": "system",
+        "change": {
+          "developer": "system",
+          "timestamp": "2026-09-19T17:53:03.997604",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "refresh",
+          "lines_added": 0,
+          "lines_removed": 0,
+          "intent": "Context refresh due to staleness detection",
+          "content_hash": "refresh_marker"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:03.997569",
+          "version": "ctx-upd-v2-refreshed",
+          "created_by": "system",
+          "developer_state": {
+            "alice": "AVAILABLE",
+            "bob": "EDITING",
+            "charlie": "CONFLICT_WAITING_REFRESHED"
+          },
+          "key_assumptions": [
+            "alice: expiration added",
+            "bob: major refactor (intent mismatch)"
+          ],
+          "dependencies": [
+            "refactored_code",
+            "expiration_logic"
+          ],
+          "staleness_score": 0.75
+        },
+        "state_transition": {
+          "charlie": "CONFLICT_WAITING\u2192CONFLICT_WAITING_REFRESHED"
+        },
+        "conflict_check": "CONTEXT_STALE_REFRESHED",
+        "auto_merge_confidence": 65.0,
+        "metadata": {
+          "event_type": "context_refresh",
+          "reason": "STALENESS_DETECTED",
+          "staleness_age_ms": 500,
+          "staleness_threshold_ms": 300,
+          "refresh_mechanisms": [
+            "AST_DIFF_VALIDATION",
+            "INTENT_MISMATCH_DETECTION",
+            "TIME_BASED_REFRESH"
+          ],
+          "charlie_notification": "Your context is stale (500ms old). alice: expiration check added. bob: MAJOR REFACTOR detected. Review before editing.",
+          "old_version": "ctx-upd-v1",
+          "new_version": "ctx-upd-v2-refreshed",
+          "assumptions_violated": 2,
+          "conflict_probability": "MEDIUM"
+        }
+      },
+      {
+        "sequence": 4,
+        "timestamp": "2026-09-19T17:53:04.497825",
+        "developer": "charlie",
+        "change": {
+          "developer": "charlie",
+          "timestamp": "2026-09-19T17:53:04.497825",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 4,
+          "lines_removed": 0,
+          "intent": "Add error handling (aware of refactor)",
+          "content_hash": "ctx001charlie1"
+        },
+        "context": {
+          "timestamp": "2026-09-19T17:53:04.497862",
+          "version": "ctx-upd-v3",
+          "created_by": "charlie",
+          "developer_state": {
+            "alice": "AVAILABLE",
+            "bob": "AVAILABLE",
+            "charlie": "EDITING"
+          },
+          "key_assumptions": [
+            "alice: expiration",
+            "bob: refactored",
+            "charlie: error handling"
+          ],
+          "dependencies": [
+            "refactored_function",
+            "error_handling"
+          ],
+          "staleness_score": 0.0
+        },
+        "state_transition": {
+          "charlie": "CONFLICT_WAITING_REFRESHED\u2192EDITING"
+        },
+        "conflict_check": "NO_CONFLICT",
+        "auto_merge_confidence": 82.0,
+        "metadata": {
+          "lock_acquired": true,
+          "lock_resource": "auth.py::validate_token",
+          "context_version_used": "ctx-upd-v2-refreshed",
+          "context_refreshed_before_edit": true,
+          "acknowledged_context_refresh": true,
+          "conflict_check_result": "NO_CONFLICT",
+          "assumptions_verified": true,
+          "wait_time_with_refresh_ms": 1000,
+          "execution_time_ms": 134
+        }
+      }
+    ],
+    "developer_individual_logs": {
+      "alice": [
+        {
+          "developer": "alice",
+          "timestamp": "2026-09-19T17:53:02.997069",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 8,
+          "lines_removed": 2,
+          "intent": "Add JWT expiration check",
+          "content_hash": "ctx001alice1"
+        }
+      ],
+      "bob": [
+        {
+          "developer": "bob",
+          "timestamp": "2026-09-19T17:53:03.497258",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 25,
+          "lines_removed": 15,
+          "intent": "Major refactor for maintainability (different from alice's intent)",
+          "content_hash": "ctx001bob_refactor"
+        }
+      ],
+      "charlie": [
+        {
+          "developer": "charlie",
+          "timestamp": "2026-09-19T17:53:04.497825",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "modify",
+          "lines_added": 4,
+          "lines_removed": 0,
+          "intent": "Add error handling (aware of refactor)",
+          "content_hash": "ctx001charlie1"
+        }
+      ],
+      "system": [
+        {
+          "developer": "system",
+          "timestamp": "2026-09-19T17:53:03.997604",
+          "file": "auth.py",
+          "function": "validate_token",
+          "action": "refresh",
+          "lines_added": 0,
+          "lines_removed": 0,
+          "intent": "Context refresh due to staleness detection",
+          "content_hash": "refresh_marker"
+        }
+      ]
+    }
+  }
+}
