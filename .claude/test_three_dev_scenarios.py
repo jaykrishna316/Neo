@@ -41,6 +41,33 @@ class ContextSnapshot:
     staleness_score: float
 
 @dataclass
+class ChangeSummary:
+    """Summary of changes sent to waiting developers"""
+    timestamp: str
+    from_developer: str
+    to_developers: List[str]
+    file: str
+    function: str
+    intent: str
+    lines_changed: int
+    test_coverage_delta: int
+    conflict_risk: str
+
+@dataclass
+class PrePRSummary:
+    """Pre-PR review summary of all changes on common files"""
+    timestamp: str
+    file: str
+    all_developers: List[str]
+    total_changes: int
+    total_lines_added: int
+    total_lines_removed: int
+    intents_per_dev: Dict[str, str]
+    context_refresh_events: List[str]
+    conflict_probability: str
+    auto_merge_confidence_final: float
+
+@dataclass
 class SharedChangeLogEntry:
     """Entry in the shared change log"""
     sequence: int
@@ -52,6 +79,8 @@ class SharedChangeLogEntry:
     conflict_check_result: str
     auto_merge_confidence: float
     metadata: Dict[str, Any]
+    change_summary: ChangeSummary = None
+    pre_pr_summary: PrePRSummary = None
 
 class ThreeDevScenarioTester:
     def __init__(self, scenario_type: WorkflowType):
@@ -66,16 +95,18 @@ class ThreeDevScenarioTester:
         self.context_history: List[ContextSnapshot] = []
         self.sequence_counter = 0
 
-    def record_change(self, developer: str, change: Change, context: ContextSnapshot, 
-                     state_transition: Dict[str, str], conflict_result: str, 
-                     auto_merge_conf: float, metadata: Dict[str, Any]):
+    def record_change(self, developer: str, change: Change, context: ContextSnapshot,
+                     state_transition: Dict[str, str], conflict_result: str,
+                     auto_merge_conf: float, metadata: Dict[str, Any],
+                     change_summary: ChangeSummary = None,
+                     pre_pr_summary: PrePRSummary = None):
         """Record a change to both individual and shared logs"""
-        
+
         self.sequence_counter += 1
-        
+
         # Add to developer's personal log
         self.developer_logs[developer].append(change)
-        
+
         # Add to shared change log with full context
         log_entry = SharedChangeLogEntry(
             sequence=self.sequence_counter,
@@ -86,9 +117,11 @@ class ThreeDevScenarioTester:
             state_transition=state_transition,
             conflict_check_result=conflict_result,
             auto_merge_confidence=auto_merge_conf,
-            metadata=metadata
+            metadata=metadata,
+            change_summary=change_summary,
+            pre_pr_summary=pre_pr_summary
         )
-        
+
         self.shared_change_log.append(log_entry)
         self.context_history.append(context)
 
@@ -138,7 +171,11 @@ class ThreeDevScenarioTester:
                 'lines_changed': 10,
                 'cyclomatic_complexity_delta': 1,
                 'test_coverage_before': 78,
-                'test_coverage_after': 92
+                'test_coverage_after': 92,
+                'context_refresh_applied': False,
+                'context_refresh_decision': 'N/A (first developer)',
+                'change_summary_sent': True,
+                'change_summary_recipients': ['bob', 'charlie']
             }
         )
         print("  ✓ alice's change recorded")
@@ -151,9 +188,28 @@ class ThreeDevScenarioTester:
         print(f"  - Key assumptions shared:")
         for assumption in alice_context.key_assumptions:
             print(f"    • {assumption}")
-        
+
+        # CHANGE SUMMARY: Alice's changes summarized for waiting developers
+        print("\n[CHANGE SUMMARY] alice's changes summarized for bob & charlie")
+        alice_summary = ChangeSummary(
+            timestamp=datetime.now().isoformat(),
+            from_developer='alice',
+            to_developers=['bob', 'charlie'],
+            file='auth.py',
+            function='validate_token',
+            intent='Add JWT expiration check for security',
+            lines_changed=10,
+            test_coverage_delta=14,
+            conflict_risk='LOW'
+        )
+        print(f"  - Summary sent to: bob, charlie")
+        print(f"  - File: auth.py::validate_token")
+        print(f"  - Lines changed: +8 -2 = 10 total")
+        print(f"  - Test coverage: 78% → 92% (+14%)")
+        print(f"  - Conflict risk: LOW")
+
         time.sleep(0.1)  # Simulate time passing
-        
+
         # PHASE 2: Bob edits
         print("\n[PHASE 2] bob gets lock and edits")
         
@@ -199,7 +255,13 @@ class ThreeDevScenarioTester:
                 'tests_added': 5,
                 'context_version_used': 'ctx-1-v1',
                 'context_staleness_ms': 3200,
-                'intent_alignment': 'HIGH'
+                'intent_alignment': 'HIGH',
+                'context_refresh_applied': False,
+                'context_refresh_decision': 'ACCEPTED (alice\'s context valid)',
+                'change_summary_received_from': ['alice'],
+                'change_summary_sent': True,
+                'change_summary_recipients': ['charlie'],
+                'pre_pr_summary_pending': True
             }
         )
         print("  ✓ bob's change recorded")
@@ -214,7 +276,26 @@ class ThreeDevScenarioTester:
         print(f"    • Tests validate alice's expiration check ✓")
         print(f"    • No conflicts detected")
         print(f"    • charlie's context refreshed (staleness check)")
-        
+
+        # CHANGE SUMMARY: Bob's changes summarized for charlie
+        print("\n[CHANGE SUMMARY] bob's changes summarized for charlie")
+        bob_summary = ChangeSummary(
+            timestamp=datetime.now().isoformat(),
+            from_developer='bob',
+            to_developers=['charlie'],
+            file='auth.py',
+            function='validate_token',
+            intent='Add comprehensive unit tests for expiration check',
+            lines_changed=12,
+            test_coverage_delta=6,
+            conflict_risk='LOW'
+        )
+        print(f"  - Summary sent to: charlie")
+        print(f"  - File: auth.py::validate_token")
+        print(f"  - Lines changed: +12 -0 = 12 total")
+        print(f"  - Test coverage: 92% → 98% (+6%)")
+        print(f"  - Conflict risk: LOW")
+
         time.sleep(0.1)
         
         # PHASE 3: Charlie edits
@@ -264,14 +345,53 @@ class ThreeDevScenarioTester:
                 'context_version_used': 'ctx-1-v2-refreshed',
                 'context_staleness_ms': 6890,
                 'staleness_detected': False,
-                'intent_alignment': 'PERFECT'
+                'intent_alignment': 'PERFECT',
+                'context_refresh_applied': False,
+                'context_refresh_decision': 'ACCEPTED (both alice & bob context valid)',
+                'change_summary_received_from': ['alice', 'bob'],
+                'change_summary_sent': False,
+                'pre_pr_summary_generated': True,
+                'pre_pr_summary_all_developers': ['alice', 'bob', 'charlie'],
+                'pre_pr_summary_file': 'auth.py',
+                'pre_pr_summary_total_changes': 3,
+                'pre_pr_summary_total_lines_added': 26,
+                'pre_pr_summary_total_lines_removed': 2,
+                'pre_pr_summary_conflict_probability': 'LOW'
             }
         )
         print("  ✓ charlie's change recorded")
         print(f"  - Intent: {charlie_change.intent}")
         print(f"  - Wait time: 6.9s (promoted from CONFLICT_WAITING)")
         print(f"  - Auto-merge confidence: 88%")
-        
+
+        # PRE-PR SUMMARY: Consolidated view of all changes before PR
+        print("\n[PRE-PR REVIEW SUMMARY]")
+        pre_pr_summary = PrePRSummary(
+            timestamp=datetime.now().isoformat(),
+            file='auth.py',
+            all_developers=['alice', 'bob', 'charlie'],
+            total_changes=3,
+            total_lines_added=26,
+            total_lines_removed=2,
+            intents_per_dev={
+                'alice': 'Add JWT expiration check for security',
+                'bob': 'Add comprehensive unit tests for expiration check',
+                'charlie': 'Add documentation and error handling for token validation'
+            },
+            context_refresh_events=['ctx-1-v1→v2', 'ctx-1-v2→v3 (staleness check)'],
+            conflict_probability='LOW',
+            auto_merge_confidence_final=88.0
+        )
+        print(f"  - File: auth.py (common to all 3 developers)")
+        print(f"  - Total changes: 3 (alice, bob, charlie)")
+        print(f"  - Total lines: +26 -2 = 24 net addition")
+        print(f"  - Context refresh events: 2 (ctx-1-v1→v2, ctx-1-v2→v3)")
+        print(f"  - Conflict probability: LOW")
+        print(f"  - Final auto-merge confidence: 88%")
+        print(f"\n  Developer intents:")
+        for dev, intent in pre_pr_summary.intents_per_dev.items():
+            print(f"    • {dev}: {intent}")
+
         print("\n[APPROVAL GATHERING]")
         print("  - alice: Author (approved) ✓")
         print("  - bob: Testing expert (approved) ✓")

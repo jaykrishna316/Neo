@@ -6,11 +6,11 @@
     "shared_change_log": [
       {
         "sequence": 1,
-        "timestamp": "2026-09-19T17:53:02.494788",
+        "timestamp": "2026-09-19T19:06:21.919846",
         "developer": "alice",
         "change": {
           "developer": "alice",
-          "timestamp": "2026-09-19T17:53:02.494788",
+          "timestamp": "2026-09-19T19:06:21.919846",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -20,7 +20,7 @@
           "content_hash": "abc123def456"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.494810",
+          "timestamp": "2026-09-19T19:06:21.919870",
           "version": "ctx-1-v1",
           "created_by": "alice",
           "developer_state": {
@@ -51,16 +51,23 @@
           "lines_changed": 10,
           "cyclomatic_complexity_delta": 1,
           "test_coverage_before": 78,
-          "test_coverage_after": 92
+          "test_coverage_after": 92,
+          "context_refresh_applied": false,
+          "context_refresh_decision": "N/A (first developer)",
+          "change_summary_sent": true,
+          "change_summary_recipients": [
+            "bob",
+            "charlie"
+          ]
         }
       },
       {
         "sequence": 2,
-        "timestamp": "2026-09-19T17:53:02.595040",
+        "timestamp": "2026-09-19T19:06:22.020092",
         "developer": "bob",
         "change": {
           "developer": "bob",
-          "timestamp": "2026-09-19T17:53:02.595040",
+          "timestamp": "2026-09-19T19:06:22.020092",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -70,7 +77,7 @@
           "content_hash": "def789ghi012"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.595075",
+          "timestamp": "2026-09-19T19:06:22.020127",
           "version": "ctx-1-v2",
           "created_by": "bob",
           "developer_state": {
@@ -108,16 +115,26 @@
           "tests_added": 5,
           "context_version_used": "ctx-1-v1",
           "context_staleness_ms": 3200,
-          "intent_alignment": "HIGH"
+          "intent_alignment": "HIGH",
+          "context_refresh_applied": false,
+          "context_refresh_decision": "ACCEPTED (alice's context valid)",
+          "change_summary_received_from": [
+            "alice"
+          ],
+          "change_summary_sent": true,
+          "change_summary_recipients": [
+            "charlie"
+          ],
+          "pre_pr_summary_pending": true
         }
       },
       {
         "sequence": 3,
-        "timestamp": "2026-09-19T17:53:02.695443",
+        "timestamp": "2026-09-19T19:06:22.120510",
         "developer": "charlie",
         "change": {
           "developer": "charlie",
-          "timestamp": "2026-09-19T17:53:02.695443",
+          "timestamp": "2026-09-19T19:06:22.120510",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -127,7 +144,7 @@
           "content_hash": "jkl345mno678"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.695482",
+          "timestamp": "2026-09-19T19:06:22.120543",
           "version": "ctx-1-v3",
           "created_by": "charlie",
           "developer_state": {
@@ -167,7 +184,25 @@
           "context_version_used": "ctx-1-v2-refreshed",
           "context_staleness_ms": 6890,
           "staleness_detected": false,
-          "intent_alignment": "PERFECT"
+          "intent_alignment": "PERFECT",
+          "context_refresh_applied": false,
+          "context_refresh_decision": "ACCEPTED (both alice & bob context valid)",
+          "change_summary_received_from": [
+            "alice",
+            "bob"
+          ],
+          "change_summary_sent": false,
+          "pre_pr_summary_generated": true,
+          "pre_pr_summary_all_developers": [
+            "alice",
+            "bob",
+            "charlie"
+          ],
+          "pre_pr_summary_file": "auth.py",
+          "pre_pr_summary_total_changes": 3,
+          "pre_pr_summary_total_lines_added": 26,
+          "pre_pr_summary_total_lines_removed": 2,
+          "pre_pr_summary_conflict_probability": "LOW"
         }
       }
     ],
@@ -175,7 +210,7 @@
       "alice": [
         {
           "developer": "alice",
-          "timestamp": "2026-09-19T17:53:02.494788",
+          "timestamp": "2026-09-19T19:06:21.919846",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -188,7 +223,7 @@
       "bob": [
         {
           "developer": "bob",
-          "timestamp": "2026-09-19T17:53:02.595040",
+          "timestamp": "2026-09-19T19:06:22.020092",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -201,7 +236,7 @@
       "charlie": [
         {
           "developer": "charlie",
-          "timestamp": "2026-09-19T17:53:02.695443",
+          "timestamp": "2026-09-19T19:06:22.120510",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -221,11 +256,11 @@
     "shared_change_log": [
       {
         "sequence": 1,
-        "timestamp": "2026-09-19T17:53:02.695747",
+        "timestamp": "2026-09-19T19:06:22.120821",
         "developer": "alice",
         "change": {
           "developer": "alice",
-          "timestamp": "2026-09-19T17:53:02.695747",
+          "timestamp": "2026-09-19T19:06:22.120821",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -235,7 +270,7 @@
           "content_hash": "par001abc123"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.695751",
+          "timestamp": "2026-09-19T19:06:22.120824",
           "version": "ctx-par-v1",
           "created_by": "alice",
           "developer_state": {
@@ -267,11 +302,11 @@
       },
       {
         "sequence": 2,
-        "timestamp": "2026-09-19T17:53:02.695760",
+        "timestamp": "2026-09-19T19:06:22.120832",
         "developer": "bob",
         "change": {
           "developer": "bob",
-          "timestamp": "2026-09-19T17:53:02.695760",
+          "timestamp": "2026-09-19T19:06:22.120832",
           "file": "user.py",
           "function": "get_user_profile",
           "action": "modify",
@@ -281,7 +316,7 @@
           "content_hash": "par001def789"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.695762",
+          "timestamp": "2026-09-19T19:06:22.120834",
           "version": "ctx-par-v1b",
           "created_by": "bob",
           "developer_state": {
@@ -317,11 +352,11 @@
       },
       {
         "sequence": 3,
-        "timestamp": "2026-09-19T17:53:02.796017",
+        "timestamp": "2026-09-19T19:06:22.221236",
         "developer": "alice",
         "change": {
           "developer": "alice",
-          "timestamp": "2026-09-19T17:53:02.796017",
+          "timestamp": "2026-09-19T19:06:22.221236",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -331,7 +366,7 @@
           "content_hash": "par001finish1"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.795974",
+          "timestamp": "2026-09-19T19:06:22.221184",
           "version": "ctx-par-v2",
           "created_by": "system",
           "developer_state": {
@@ -364,11 +399,11 @@
       },
       {
         "sequence": 4,
-        "timestamp": "2026-09-19T17:53:02.896344",
+        "timestamp": "2026-09-19T19:06:22.321531",
         "developer": "bob",
         "change": {
           "developer": "bob",
-          "timestamp": "2026-09-19T17:53:02.896344",
+          "timestamp": "2026-09-19T19:06:22.321531",
           "file": "user.py",
           "function": "get_user_profile",
           "action": "modify",
@@ -378,7 +413,7 @@
           "content_hash": "par001finish2"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.896305",
+          "timestamp": "2026-09-19T19:06:22.321489",
           "version": "ctx-par-v3",
           "created_by": "system",
           "developer_state": {
@@ -412,11 +447,11 @@
       },
       {
         "sequence": 5,
-        "timestamp": "2026-09-19T17:53:02.996739",
+        "timestamp": "2026-09-19T19:06:22.421773",
         "developer": "charlie",
         "change": {
           "developer": "charlie",
-          "timestamp": "2026-09-19T17:53:02.996739",
+          "timestamp": "2026-09-19T19:06:22.421773",
           "file": "integration.py",
           "function": "authenticate_and_get_profile",
           "action": "modify",
@@ -426,7 +461,7 @@
           "content_hash": "par001charlie1"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.996779",
+          "timestamp": "2026-09-19T19:06:22.421810",
           "version": "ctx-par-v4",
           "created_by": "charlie",
           "developer_state": {
@@ -464,7 +499,7 @@
       "alice": [
         {
           "developer": "alice",
-          "timestamp": "2026-09-19T17:53:02.695747",
+          "timestamp": "2026-09-19T19:06:22.120821",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -475,7 +510,7 @@
         },
         {
           "developer": "alice",
-          "timestamp": "2026-09-19T17:53:02.796017",
+          "timestamp": "2026-09-19T19:06:22.221236",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -488,7 +523,7 @@
       "bob": [
         {
           "developer": "bob",
-          "timestamp": "2026-09-19T17:53:02.695760",
+          "timestamp": "2026-09-19T19:06:22.120832",
           "file": "user.py",
           "function": "get_user_profile",
           "action": "modify",
@@ -499,7 +534,7 @@
         },
         {
           "developer": "bob",
-          "timestamp": "2026-09-19T17:53:02.896344",
+          "timestamp": "2026-09-19T19:06:22.321531",
           "file": "user.py",
           "function": "get_user_profile",
           "action": "modify",
@@ -512,7 +547,7 @@
       "charlie": [
         {
           "developer": "charlie",
-          "timestamp": "2026-09-19T17:53:02.996739",
+          "timestamp": "2026-09-19T19:06:22.421773",
           "file": "integration.py",
           "function": "authenticate_and_get_profile",
           "action": "modify",
@@ -532,11 +567,11 @@
     "shared_change_log": [
       {
         "sequence": 1,
-        "timestamp": "2026-09-19T17:53:02.997069",
+        "timestamp": "2026-09-19T19:06:22.422081",
         "developer": "alice",
         "change": {
           "developer": "alice",
-          "timestamp": "2026-09-19T17:53:02.997069",
+          "timestamp": "2026-09-19T19:06:22.422081",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -546,7 +581,7 @@
           "content_hash": "ctx001alice1"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:02.997074",
+          "timestamp": "2026-09-19T19:06:22.422084",
           "version": "ctx-upd-v1",
           "created_by": "alice",
           "developer_state": {
@@ -580,11 +615,11 @@
       },
       {
         "sequence": 2,
-        "timestamp": "2026-09-19T17:53:03.497258",
+        "timestamp": "2026-09-19T19:06:22.922322",
         "developer": "bob",
         "change": {
           "developer": "bob",
-          "timestamp": "2026-09-19T17:53:03.497258",
+          "timestamp": "2026-09-19T19:06:22.922322",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -594,7 +629,7 @@
           "content_hash": "ctx001bob_refactor"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:03.497313",
+          "timestamp": "2026-09-19T19:06:22.922354",
           "version": "ctx-upd-v2",
           "created_by": "bob",
           "developer_state": {
@@ -630,11 +665,11 @@
       },
       {
         "sequence": 3,
-        "timestamp": "2026-09-19T17:53:03.997604",
+        "timestamp": "2026-09-19T19:06:23.422639",
         "developer": "system",
         "change": {
           "developer": "system",
-          "timestamp": "2026-09-19T17:53:03.997604",
+          "timestamp": "2026-09-19T19:06:23.422639",
           "file": "auth.py",
           "function": "validate_token",
           "action": "refresh",
@@ -644,7 +679,7 @@
           "content_hash": "refresh_marker"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:03.997569",
+          "timestamp": "2026-09-19T19:06:23.422603",
           "version": "ctx-upd-v2-refreshed",
           "created_by": "system",
           "developer_state": {
@@ -686,11 +721,11 @@
       },
       {
         "sequence": 4,
-        "timestamp": "2026-09-19T17:53:04.497825",
+        "timestamp": "2026-09-19T19:06:23.922891",
         "developer": "charlie",
         "change": {
           "developer": "charlie",
-          "timestamp": "2026-09-19T17:53:04.497825",
+          "timestamp": "2026-09-19T19:06:23.922891",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -700,7 +735,7 @@
           "content_hash": "ctx001charlie1"
         },
         "context": {
-          "timestamp": "2026-09-19T17:53:04.497862",
+          "timestamp": "2026-09-19T19:06:23.922931",
           "version": "ctx-upd-v3",
           "created_by": "charlie",
           "developer_state": {
@@ -741,7 +776,7 @@
       "alice": [
         {
           "developer": "alice",
-          "timestamp": "2026-09-19T17:53:02.997069",
+          "timestamp": "2026-09-19T19:06:22.422081",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -754,7 +789,7 @@
       "bob": [
         {
           "developer": "bob",
-          "timestamp": "2026-09-19T17:53:03.497258",
+          "timestamp": "2026-09-19T19:06:22.922322",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -767,7 +802,7 @@
       "charlie": [
         {
           "developer": "charlie",
-          "timestamp": "2026-09-19T17:53:04.497825",
+          "timestamp": "2026-09-19T19:06:23.922891",
           "file": "auth.py",
           "function": "validate_token",
           "action": "modify",
@@ -780,7 +815,7 @@
       "system": [
         {
           "developer": "system",
-          "timestamp": "2026-09-19T17:53:03.997604",
+          "timestamp": "2026-09-19T19:06:23.422639",
           "file": "auth.py",
           "function": "validate_token",
           "action": "refresh",
