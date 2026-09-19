@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo 3.0 Developer Coordination Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .files-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .file-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .file-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .file-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+        }
+
+        .file-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-heat-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .heat-hot {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .heat-medium {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .heat-cold {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .file-content {
+            padding: 20px;
+        }
+
+        .developers-section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .developers-list {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .developer-badge {
+            background: #f5f5f5;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .mini-stat {
+            font-size: 12px;
+        }
+
+        .mini-stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .mini-stat-label {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .timeline {
+            border-left: 2px solid #ddd;
+            padding-left: 15px;
+            margin-top: 15px;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -19px;
+            top: 2px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 2px solid white;
+        }
+
+        .timeline-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .timeline-developer {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .timeline-intent {
+            color: #999;
+            font-style: italic;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Neo 3.0 Multi-Developer Coordination Dashboard</h1>
+            <p class="subtitle">Real-time visibility into collaborative development workflow</p>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalFiles">0</div>
+                    <div class="stat-label">Files</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalDevelopers">0</div>
+                    <div class="stat-label">Developers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalChanges">0</div>
+                    <div class="stat-label">Changes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="hotFiles">0</div>
+                    <div class="stat-label">Hot Files</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label>Filter by Activity</label>
+                <select id="activityFilter">
+                    <option value="all">All Files</option>
+                    <option value="hot">Hot Files (3+ changes)</option>
+                    <option value="cold">Cold Files (1-2 changes)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Sort By</label>
+                <select id="sortBy">
+                    <option value="changes">Most Changes</option>
+                    <option value="developers">Most Developers</option>
+                    <option value="recent">Most Recent</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="files-grid" id="filesContainer">
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <p>No files with collaborative changes yet</p>
+                <p style="font-size: 12px; margin-top: 10px;">Files will appear here as developers collaborate</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data structure for demonstration
+        const sampleData = {
+            files: [
+                {
+                    name: "auth.py",
+                    developers: ["alice", "bob", "charlie"],
+                    changes: 3,
+                    linesAdded: 26,
+                    linesRemoved: 2,
+                    testCoverage: 99,
+                    conflictRisk: "LOW",
+                    intents: [
+                        "Add JWT expiration check for security",
+                        "Add comprehensive unit tests for expiration check",
+                        "Add documentation and error handling for token validation"
+                    ],
+                    lastModified: new Date().toISOString()
+                },
+                {
+                    name: "user.py",
+                    developers: ["bob"],
+                    changes: 1,
+                    linesAdded: 12,
+                    linesRemoved: 3,
+                    testCoverage: 85,
+                    conflictRisk: "LOW",
+                    intents: ["Refactor user profile retrieval"],
+                    lastModified: new Date(Date.now() - 3600000).toISOString()
+                },
+                {
+                    name: "config.py",
+                    developers: ["alice", "charlie"],
+                    changes: 2,
+                    linesAdded: 8,
+                    linesRemoved: 5,
+                    testCoverage: 92,
+                    conflictRisk: "MEDIUM",
+                    intents: ["Update configuration schema", "Add environment variable support"],
+                    lastModified: new Date(Date.now() - 7200000).toISOString()
+                }
+            ]
+        };
+
+        function getFileHeat(changes) {
+            if (changes >= 3) return { heat: 'hot', label: 'Hot' };
+            if (changes >= 2) return { heat: 'medium', label: 'Medium' };
+            return { heat: 'cold', label: 'Cold' };
+        }
+
+        function renderDashboard() {
+            const data = sampleData;
+
+            // Update stats
+            const uniqueDevelopers = new Set(data.files.flatMap(f => f.developers));
+            document.getElementById('totalFiles').textContent = data.files.length;
+            document.getElementById('totalDevelopers').textContent = uniqueDevelopers.size;
+            document.getElementById('totalChanges').textContent = data.files.reduce((sum, f) => sum + f.changes, 0);
+            document.getElementById('hotFiles').textContent = data.files.filter(f => f.changes >= 3).length;
+
+            // Render files
+            const container = document.getElementById('filesContainer');
+
+            if (data.files.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No files with collaborative changes yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = data.files.map(file => {
+                const heat = getFileHeat(file.changes);
+                const timeAgo = getTimeAgo(new Date(file.lastModified));
+
+                return `
+                    <div class="file-card">
+                        <div class="file-header">
+                            <div>
+                                <div class="file-name">📄 ${file.name}</div>
+                                <div style="font-size: 12px; color: #999; margin-top: 4px;">Updated ${timeAgo}</div>
+                            </div>
+                            <div class="file-heat-badge heat-${heat.heat}">${heat.label}</div>
+                        </div>
+                        <div class="file-content">
+                            <div class="developers-section">
+                                <div class="section-title">👥 Developers</div>
+                                <div class="developers-list">
+                                    ${file.developers.map(dev => `<span class="developer-badge">${dev}</span>`).join('')}
+                                </div>
+                            </div>
+
+                            <div class="stats-row">
+                                <div class="mini-stat">
+                                    <div class="mini-stat-value">${file.changes}</div>
+                                    <div class="mini-stat-label">Changes</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="mini-stat-value">+${file.linesAdded}</div>
+                                    <div class="mini-stat-label">Added</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="mini-stat-value">-${file.linesRemoved}</div>
+                                    <div class="mini-stat-label">Removed</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="mini-stat-value">${file.testCoverage}%</div>
+                                    <div class="mini-stat-label">Coverage</div>
+                                </div>
+                            </div>
+
+                            <div class="developers-section">
+                                <div class="section-title">📝 Development Timeline</div>
+                                <div class="timeline">
+                                    ${file.intents.map((intent, idx) => `
+                                        <div class="timeline-item">
+                                            <div class="timeline-text">
+                                                <span class="timeline-developer">${file.developers[idx] || 'Developer'}</span>
+                                                <span class="timeline-intent"> — ${intent}</span>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days}d ago`;
+            if (hours > 0) return `${hours}h ago`;
+            if (minutes > 0) return `${minutes}m ago`;
+            return 'just now';
+        }
+
+        // Event listeners for filters
+        document.getElementById('activityFilter').addEventListener('change', renderDashboard);
+        document.getElementById('sortBy').addEventListener('change', renderDashboard);
+
+        // Initial render
+        renderDashboard();
+    </script>
+</body>
+</html>
