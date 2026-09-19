@@ -41,18 +41,60 @@ class WorkflowStateMachine:
         self.current_editor = None
         self.waiting_developers = []
         self.all_developers = set()
+        self.developers_declared = set()  # Track developers who have declared intent
 
     def start_editing(self, developer: str) -> Tuple[bool, str, WorkflowState]:
         """
-        Developer starts editing
+        Developer starts editing (declares intent)
+        Lock-only-when-needed: Lock applies only when 2+ developers declare intent on same file
         Returns: (allowed, message, current_state)
         """
         if self.state == WorkflowState.AVAILABLE:
-            # No one editing, allow
-            self.current_editor = developer
-            self.all_developers.add(developer)
-            self._transition_to(WorkflowState.EDITING, developer, "Started editing")
-            return True, f"{developer} started editing", WorkflowState.EDITING
+            # First developer to declare intent
+            if developer not in self.developers_declared:
+                self.developers_declared.add(developer)
+                self.all_developers.add(developer)
+
+                # First developer - no lock yet
+                if len(self.developers_declared) == 1:
+                    self.current_editor = developer
+                    return True, f"{developer} declared intent, no lock applied yet (awaiting other developers)", WorkflowState.AVAILABLE
+
+                # Second developer - lock applies NOW!
+                elif len(self.developers_declared) == 2:
+                    # Transition first dev to EDITING (they get lock)
+                    self._transition_to(WorkflowState.EDITING, self.current_editor, "Lock acquired - second developer declared intent")
+
+                    # Add new dev to waiting queue
+                    dev_names = [d.name if isinstance(d, QueuedDeveloper) else d for d in self.waiting_developers]
+                    self.waiting_developers.append(QueuedDeveloper(developer, datetime.now()))
+                    self._transition_to(
+                        WorkflowState.CONFLICT_WAITING,
+                        developer,
+                        f"Waiting for {self.current_editor}",
+                    )
+                    return (
+                        False,
+                        f"BLOCKED: {self.current_editor} is editing. Waiting list: {dev_names + [developer]}",
+                        WorkflowState.CONFLICT_WAITING,
+                    )
+
+                # Third+ developers - add to waiting queue
+                else:
+                    dev_names = [d.name if isinstance(d, QueuedDeveloper) else d for d in self.waiting_developers]
+                    if developer not in dev_names:
+                        self.waiting_developers.append(QueuedDeveloper(developer, datetime.now()))
+                    return (
+                        False,
+                        f"BLOCKED: {self.current_editor} is editing. Waiting list: {dev_names}",
+                        WorkflowState.CONFLICT_WAITING,
+                    )
+            else:
+                # Developer already declared intent
+                if len(self.developers_declared) == 1:
+                    return True, f"{developer} already declared intent", WorkflowState.AVAILABLE
+                else:
+                    return True, f"{developer} already declared intent", WorkflowState.EDITING
 
         elif self.state == WorkflowState.EDITING or self.state == WorkflowState.CONFLICT_WAITING:
             if self.current_editor == developer:
@@ -60,10 +102,13 @@ class WorkflowStateMachine:
                 return True, f"{developer} already editing", WorkflowState.EDITING
             else:
                 # Different dev, add to waiting queue
+                if developer not in self.developers_declared:
+                    self.developers_declared.add(developer)
+                    self.all_developers.add(developer)
+
                 dev_names = [d.name if isinstance(d, QueuedDeveloper) else d for d in self.waiting_developers]
                 if developer not in dev_names:
                     self.waiting_developers.append(QueuedDeveloper(developer, datetime.now()))
-                    self.all_developers.add(developer)
                     # Only transition to CONFLICT_WAITING if not already there
                     if self.state != WorkflowState.CONFLICT_WAITING:
                         self._transition_to(
@@ -211,6 +256,8 @@ class WorkflowStateMachine:
             "function": self.function_name,
             "current_state": self.state.value,
             "current_editor": self.current_editor,
+            "developers_declared": list(self.developers_declared),
+            "lock_required": len(self.developers_declared) >= 2,
             "waiting_developers": waiting_dev_info,
             "all_developers": list(self.all_developers),
             "state_history": self.state_history[-10:],  # Last 10 transitions
@@ -268,6 +315,7 @@ class WorkflowStateMachine:
             "current_editor": self.current_editor,
             "waiting_developers": waiting_dev_serialized,
             "all_developers": list(self.all_developers),
+            "developers_declared": list(self.developers_declared),
             "state_history": self.state_history,
         }
 
@@ -291,5 +339,6 @@ class WorkflowStateMachine:
         machine.waiting_developers = waiting_devs
 
         machine.all_developers = set(data.get("all_developers", []))
+        machine.developers_declared = set(data.get("developers_declared", []))
         machine.state_history = data.get("state_history", [])
         return machine
