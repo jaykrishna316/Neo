@@ -1047,12 +1047,9 @@ This starts REST API endpoints for Phase 1-5 coordination:
 
 ## Frequently Asked Questions
 
-<<<<<<< HEAD
-=======
 **Q: Does Neo work for teams of 10+ developers, or only 2-3?**  
 A: Neo scales to unlimited developers. The 2-developer test is just a proof-of-concept. 3-dev, 5-dev, and 100-dev teams all work with sequential queuing (each dev gets fresh context before editing). Efficiency actually improves with team size: 80% savings at 2 devs → 91% at 5 devs → 96% at 100 devs. See [Scalability](#scalability-how-neo-handles-unlimited-developers) section.
 
->>>>>>> main
 **Q: Does Neo actually prevent Git merge conflicts?**  
 A: Yes. By detecting conflicts at the semantic layer (when developers declare intent), Neo prevents conflicts from ever reaching Git. Developers edit sequentially based on fresh context, ensuring zero merge conflicts.
 
