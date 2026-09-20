@@ -181,12 +181,20 @@ def start_editing_endpoint():
     """
     Developer starts editing - REQUIRED before any coding
     Acquires lock and notifies other developers
+
+    PHASE 2-3 INTEGRATION:
+    - Creates context snapshot to capture developer's assumptions
+    - Checks for stale context from prior work
+    - Forces context refresh if needed
     """
     try:
         data = request.json
         developer = data.get("developer")
         file_path = data.get("file_path")
         function_name = data.get("function_name")
+        base_commit = data.get("base_commit", "unknown")
+        symbols = data.get("symbols", [])
+        assumptions = data.get("assumptions", {})
 
         if not all([developer, file_path, function_name]):
             return jsonify({"error": "Missing required fields"}), 400
@@ -222,6 +230,35 @@ def start_editing_endpoint():
             )
             development_memory.record_event(event_claim)
 
+            # PHASE 3 INTEGRATION: Create context snapshot
+            # Captures developer's current assumptions about code/APIs
+            context_snapshot = context_invalidation_engine.create_context_snapshot(
+                actor=developer,
+                actor_type=actor_type,
+                resource=resource_key,
+                base_commit=base_commit,
+                files=[file_path],
+                symbols=symbols if symbols else [function_name],
+                assumptions=assumptions if assumptions else {
+                    "function_behavior": f"{function_name} behaves as documented",
+                    "return_type": "as per previous calls",
+                    "side_effects": "none beyond documented behavior"
+                }
+            )
+
+            # PHASE 3 INTEGRATION: Check for stale context
+            stale_contexts = context_invalidation_engine.get_stale_contexts()
+            context_status = "FRESH"
+            stale_warning = None
+
+            if stale_contexts:
+                for stale in stale_contexts:
+                    if stale["resource"] == resource_key:
+                        context_status = "STALE"
+                        stale_warning = f"WARNING: Previous context is stale. {stale['invalidation_reasons']}"
+                        # Force developer to acknowledge stale context
+                        break
+
             # Notify others if this is first developer
             if new_state == WorkflowState.EDITING:
                 notification_manager.notify(
@@ -232,26 +269,44 @@ def start_editing_endpoint():
                         "file": file_path,
                         "function": function_name,
                         "message": message,
+                        "context_status": context_status,
                     },
                     file_path,
                     function_name,
                 )
 
-            return (
-                jsonify(
-                    {
-                        "success": True,
-                        "message": message,
-                        "lock_acquired": True,
-                        "state": new_state.value,
-                        "developer": developer,
-                    }
-                ),
-                200,
-            )
+            response = {
+                "success": True,
+                "message": message,
+                "lock_acquired": True,
+                "state": new_state.value,
+                "developer": developer,
+                "context_snapshot_id": context_snapshot.task_id,
+                "context_status": context_status,
+            }
+
+            if stale_warning:
+                response["stale_warning"] = stale_warning
+
+            return jsonify(response), 200
         else:
             # Notify waiting developer
             blocked_devs = machine.waiting_developers
+
+            # PHASE 2 INTEGRATION: Create handoff for waiting developer
+            # This ensures they'll be notified when lock releases
+            next_dev_name = None
+            if blocked_devs:
+                next_dev_name = blocked_devs[0].name if hasattr(blocked_devs[0], 'name') else str(blocked_devs[0])
+
+                handoff = temporal_handoff_engine.create_handoff(
+                    source_developer=machine.current_editor,
+                    target_developer=next_dev_name,
+                    resource=f"{file_path}::{function_name}",
+                    work_summary=f"Awaiting lock release from {machine.current_editor}",
+                    context_snapshot=None  # Will be provided when current dev finishes
+                )
+
             notification_manager.notify(
                 developer,
                 NotificationType.LOCK_BLOCKED,
@@ -261,7 +316,7 @@ def start_editing_endpoint():
                     "function": function_name,
                     "message": message,
                     "queue_position": blocked_devs.index(developer) + 1
-                    if developer in blocked_devs
+                    if developer in [d.name if hasattr(d, 'name') else str(d) for d in blocked_devs]
                     else 0,
                 },
                 file_path,
@@ -277,8 +332,9 @@ def start_editing_endpoint():
                         "state": new_state.value,
                         "blocking_developer": machine.current_editor,
                         "waiting_in_queue": blocked_devs.index(developer) + 1
-                        if developer in blocked_devs
+                        if developer in [d.name if hasattr(d, 'name') else str(d) for d in blocked_devs]
                         else 0,
+                        "context_status": "BLOCKED_AWAITING_HANDOFF",
                     }
                 ),
                 200,
@@ -293,12 +349,22 @@ def finish_editing_endpoint():
     """
     Developer finishes editing and releases lock
     Notifies next waiting developer
+
+    PHASE 2-3 INTEGRATION:
+    - Creates temporal handoff for next developer (auto-queuing)
+    - Marks changed symbols in dependency graph
+    - Triggers automatic context refresh/invalidation for next dev
+    - Forces next developer to acknowledge stale context before proceeding
     """
     try:
         data = request.json
         developer = data.get("developer")
         file_path = data.get("file_path")
         function_name = data.get("function_name")
+        changed_symbols = data.get("changed_symbols", [function_name])
+        work_summary = data.get("summary", f"Completed editing {function_name}")
+        lines_added = data.get("lines_added", 0)
+        lines_removed = data.get("lines_removed", 0)
 
         if not all([developer, file_path, function_name]):
             return jsonify({"error": "Missing required fields"}), 400
@@ -320,10 +386,38 @@ def finish_editing_endpoint():
                 actor=developer,
                 actor_type=actor_type,
                 resource=resource_key,
-                summary=data.get("summary", f"Completed editing {function_name}"),
+                summary=work_summary,
                 task_id=data.get("task_id")
             )
             development_memory.record_event(event_complete)
+
+            # PHASE 3 INTEGRATION: Mark changed symbols in dependency graph
+            # This tracks which symbols/functions were modified
+            for symbol in changed_symbols:
+                dependency_graph.mark_changed(symbol)
+
+                # Record symbol change event
+                event_symbol = Event(
+                    event_type=EventType.SYMBOL_CHANGED,
+                    actor=developer,
+                    actor_type=actor_type,
+                    resource=resource_key,
+                    details={
+                        "symbol": symbol,
+                        "lines_added": lines_added,
+                        "lines_removed": lines_removed,
+                        "summary": work_summary
+                    }
+                )
+                development_memory.record_event(event_symbol)
+
+                # PHASE 3 INTEGRATION: Trigger context invalidation for dependent contexts
+                # Any developer whose context depends on this symbol gets marked as STALE
+                context_invalidation_engine.mark_symbol_changed(
+                    symbol=symbol,
+                    changed_by=developer,
+                    reason=f"Modified in {work_summary}"
+                )
 
             # Notify that lock is released
             notification_manager.notify(
@@ -334,14 +428,38 @@ def finish_editing_endpoint():
                     "file": file_path,
                     "function": function_name,
                     "message": message,
+                    "changed_symbols": changed_symbols,
                 },
                 file_path,
                 function_name,
             )
 
-            # If someone was waiting, notify them specifically
+            # PHASE 2 INTEGRATION: Create temporal handoff for next developer
+            # This automatically queues them and requires mandatory refresh
+            next_dev = None
+            handoff_id = None
+            refresh_required = False
+
             if machine.waiting_developers:
-                next_dev = machine.waiting_developers[0]
+                next_dev_obj = machine.waiting_developers[0]
+                next_dev = next_dev_obj.name if hasattr(next_dev_obj, 'name') else str(next_dev_obj)
+
+                # Create handoff that includes context snapshot and stale context warning
+                handoff = temporal_handoff_engine.create_handoff(
+                    source_developer=developer,
+                    target_developer=next_dev,
+                    resource=resource_key,
+                    work_summary=work_summary,
+                    context_snapshot=context_invalidation_engine.active_contexts.get(resource_key)
+                )
+                handoff_id = handoff.id if hasattr(handoff, 'id') else str(handoff)
+
+                # Mark that next developer MUST refresh context (not optional)
+                refresh_required = True
+
+                # Get stale context info for notification
+                stale_info = context_invalidation_engine.get_context_revalidation_workflow(resource_key)
+
                 notification_manager.notify(
                     next_dev,
                     NotificationType.REVIEW_REQUESTED,
@@ -349,9 +467,14 @@ def finish_editing_endpoint():
                         "from_developer": developer,
                         "file": file_path,
                         "function": function_name,
-                        "action": "Review my changes, then you can edit",
+                        "action": "MANDATORY: Refresh context, then review changes, then you can edit",
                         "branch": data.get("branch", "unknown"),
                         "pr_link": data.get("pr_link"),
+                        "changed_symbols": changed_symbols,
+                        "lines_changed": f"+{lines_added},-{lines_removed}",
+                        "handoff_id": handoff_id,
+                        "refresh_required": True,
+                        "stale_context_info": stale_info if stale_info else None,
                     },
                     file_path,
                     function_name,
@@ -363,15 +486,106 @@ def finish_editing_endpoint():
                         "success": True,
                         "message": message,
                         "state": new_state.value,
-                        "next_developer": machine.waiting_developers[0]
-                        if machine.waiting_developers
-                        else None,
+                        "next_developer": next_dev,
+                        "handoff_id": handoff_id,
+                        "refresh_required": refresh_required,
+                        "changed_symbols": changed_symbols,
+                        "lines_changed": {
+                            "added": lines_added,
+                            "removed": lines_removed
+                        }
                     }
                 ),
                 200,
             )
         else:
             return jsonify({"success": False, "message": message}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/mandatory_context_refresh", methods=["POST"])
+def mandatory_context_refresh():
+    """
+    PHASE 2-3: Mandatory context refresh before proceeding
+
+    Developer MUST call this before continuing after receiving handoff.
+    Blocks any further editing until context is refreshed and stale context cleared.
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+        handoff_id = data.get("handoff_id")
+        task_id = data.get("task_id")
+
+        if not all([developer, file_path, function_name]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        resource_key = f"{file_path}::{function_name}"
+
+        # Step 1: Sync context (pull latest changes)
+        sync_success, sync_message = context_invalidation_engine.sync_context(resource_key)
+
+        # Step 2: Revalidate assumptions against changed symbols
+        revalidate_success, revalidate_message, issues = context_invalidation_engine.revalidate_context(resource_key)
+
+        if not revalidate_success:
+            # Context has issues - developer must acknowledge and fix
+            return jsonify({
+                "success": False,
+                "message": f"Context revalidation failed: {revalidate_message}",
+                "validation_issues": issues,
+                "action_required": "Fix assumptions and try again",
+                "refresh_status": "REQUIRES_DEVELOPER_ACTION"
+            }), 400
+
+        # Step 3: Mark handoff as consumed
+        if handoff_id:
+            handoff_success, handoff_message = temporal_handoff_engine.consume_handoff(developer, handoff_id)
+        else:
+            handoff_success = True
+            handoff_message = "No handoff to consume"
+
+        # Record refresh event
+        actor_type = developer_registry.get(developer, {}).get("type", "human")
+        event_refresh = Event(
+            event_type=EventType.CONTEXT_REFRESHED,
+            actor=developer,
+            actor_type=actor_type,
+            resource=resource_key,
+            details={
+                "sync_message": sync_message,
+                "revalidate_message": revalidate_message,
+                "handoff_consumed": handoff_success
+            }
+        )
+        development_memory.record_event(event_refresh)
+
+        # Notify others that developer refreshed context and is ready
+        notification_manager.notify(
+            "all",
+            NotificationType.REVIEW_ACKNOWLEDGED,
+            {
+                "developer": developer,
+                "file": file_path,
+                "function": function_name,
+                "status": "Context refreshed and validated. Ready to proceed."
+            },
+            file_path,
+            function_name,
+        )
+
+        return jsonify({
+            "success": True,
+            "message": "Context successfully refreshed and revalidated",
+            "refresh_status": "COMPLETE",
+            "can_proceed": True,
+            "developer": developer,
+            "resource": resource_key
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
