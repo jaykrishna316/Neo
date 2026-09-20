@@ -1,0 +1,101 @@
+[
+  {
+    "developer_id": "alice",
+    "file_path": "database_schema.py",
+    "intent": "Add user table",
+    "region": "tables (lines 1-50)",
+    "timestamp": 1789922997.6391306,
+    "tenant_id": "default",
+    "agent_metadata": null,
+    "intent_category": "feature",
+    "intent_scope": null,
+    "blocking_others": false,
+    "estimated_completion": null
+  },
+  {
+    "developer_id": "alice",
+    "file_path": "database_schema.py",
+    "intent": "COMPLETED: Add user table",
+    "region": "tables (lines 1-50)",
+    "timestamp": 1789922997.7397766,
+    "tenant_id": "default",
+    "agent_metadata": {
+      "status": "completed",
+      "lines_added": 30,
+      "lines_removed": 5,
+      "change_summary": "Implemented add user table",
+      "built_on": null,
+      "conflicts_detected": 0
+    },
+    "intent_category": "feature",
+    "intent_scope": null,
+    "blocking_others": false,
+    "estimated_completion": null
+  },
+  {
+    "developer_id": "bob",
+    "file_path": "database_schema.py",
+    "intent": "Add order table",
+    "region": "tables (lines 51-100)",
+    "timestamp": 1789922997.8403792,
+    "tenant_id": "default",
+    "agent_metadata": null,
+    "intent_category": "feature",
+    "intent_scope": null,
+    "blocking_others": false,
+    "estimated_completion": null
+  },
+  {
+    "developer_id": "bob",
+    "file_path": "database_schema.py",
+    "intent": "COMPLETED: Add order table",
+    "region": "tables (lines 51-100)",
+    "timestamp": 1789922997.9412227,
+    "tenant_id": "default",
+    "agent_metadata": {
+      "status": "completed",
+      "lines_added": 25,
+      "lines_removed": 3,
+      "change_summary": "Implemented add order table",
+      "built_on": "alice",
+      "conflicts_detected": 0
+    },
+    "intent_category": "feature",
+    "intent_scope": null,
+    "blocking_others": false,
+    "estimated_completion": null
+  },
+  {
+    "developer_id": "charlie",
+    "file_path": "database_schema.py",
+    "intent": "Add payment table",
+    "region": "tables (lines 101-150)",
+    "timestamp": 1789922998.0418606,
+    "tenant_id": "default",
+    "agent_metadata": null,
+    "intent_category": "feature",
+    "intent_scope": null,
+    "blocking_others": false,
+    "estimated_completion": null
+  },
+  {
+    "developer_id": "charlie",
+    "file_path": "database_schema.py",
+    "intent": "COMPLETED: Add payment table",
+    "region": "tables (lines 101-150)",
+    "timestamp": 1789922998.142484,
+    "tenant_id": "default",
+    "agent_metadata": {
+      "status": "completed",
+      "lines_added": 20,
+      "lines_removed": 2,
+      "change_summary": "Implemented add payment table",
+      "built_on": "bob",
+      "conflicts_detected": 0
+    },
+    "intent_category": "feature",
+    "intent_scope": null,
+    "blocking_others": false,
+    "estimated_completion": null
+  }
+]
