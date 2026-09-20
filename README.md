@@ -11,54 +11,272 @@ Neo is a semantic coordination engine that solves the fundamental problem in AI-
 
 ---
 
-## The Core Problem
+## The Core Problem: Working with Stale Code
 
-### Context Explosion in Multi-Developer Workflows
+### The Traditional Workflow (Without Neo)
 
-When multiple developers work on the same files:
-
+**Initial Setup:**
 ```
-Traditional Git Flow:
-─────────────────────
-Dev A writes 500 lines → commits → pushes
-Dev B has stale context, re-reads entire file (500 lines)
-Dev B writes 400 lines → commits → pushes  
-Dev C has stale context, re-reads both A & B's work (900 lines)
-Dev C writes 300 lines → commits → pushes
+Repository (main branch): auth.py (500 lines)
+├─ Dev A: git pull origin main → auth.py (500 lines) at commit abc123
+├─ Dev B: git pull origin main → auth.py (500 lines) at commit abc123
+└─ Dev C: git pull origin main → auth.py (500 lines) at commit abc123
 
-Total tokens spent on re-reading: 500 + 900 = 1,400 tokens
-Context thrashing: Developers reading the same code multiple times
-Real file size: 500 lines | Tokens spent: 2,800+ (2x+ overhead)
+All three developers start with THE SAME CODE, at THE SAME COMMIT (abc123)
+```
+
+**Then They Work Independently (In Parallel):**
+```
+T+0:00 | Dev A starts editing auth.py locally
+       ├─ Reads entire file: 500 lines
+       ├─ Understands: password validation module
+       ├─ Makes changes: refactor to bcrypt
+       └─ Local file now different from main
+
+T+0:05 | Dev B starts editing auth.py locally (SAME FILE)
+       ├─ Reads entire file: 500 lines (but doesn't know A is working on it)
+       ├─ Understands: password validation module
+       ├─ Makes changes: add password strength requirements
+       ├─ Local file now different from both main AND A's work
+       └─ B is working on STALE code (doesn't include A's changes)
+
+T+0:10 | Dev C starts editing auth.py locally (SAME FILE)
+       ├─ Reads entire file: 500 lines (doesn't know A or B are working on it)
+       ├─ Understands: password validation module
+       ├─ Makes changes: add password history tracking
+       ├─ Local file now different from main, A's work, AND B's work
+       └─ C is working on STALE code (doesn't include A's or B's changes)
+
+At this point:
+├─ main branch: auth.py (500 lines at commit abc123)
+├─ Dev A local: auth.py (520 lines, +20 for bcrypt refactor)
+├─ Dev B local: auth.py (400 lines, based on STALE code from abc123, doesn't have A's bcrypt changes)
+└─ Dev C local: auth.py (300 lines, based on STALE code from abc123, doesn't have A's or B's changes)
+```
+
+**Then Conflicts Happen:**
+```
+T+0:15 | Dev A finishes editing
+       ├─ git commit -am "Refactor to bcrypt"
+       ├─ git push origin main
+       ├─ ✅ SUCCESS: auth.py now on main has bcrypt refactor
+       └─ main branch updated: auth.py v2.0 (520 lines, A's changes)
+
+T+0:20 | Dev B finishes editing
+       ├─ git commit -am "Add password strength checks"
+       ├─ git push origin main
+       ├─ ❌ CONFLICT: main branch has A's bcrypt changes
+       ├─ B's code is based on old version (abc123) without bcrypt
+       ├─ Git says: "CONFLICT - both modified auth.py"
+       ├─ B must manually resolve:
+       │  ├─ Understand what A did (re-read A's bcrypt changes)
+       │  ├─ Understand what B did (re-read own changes)
+       │  ├─ Merge them manually: tokens spent: 500 + 500 + 500 = 1,500 tokens
+       │  └─ Test that merged code works
+       └─ main branch updated: auth.py v3.0 (merged A's + B's changes)
+
+T+0:40 | Dev C finishes editing (took 30 minutes to resolve B's conflict)
+       ├─ git commit -am "Add password history"
+       ├─ git push origin main
+       ├─ ❌ CONFLICT: main branch has BOTH A's bcrypt AND B's strength checks
+       ├─ C's code is based on STALE version (abc123)
+       ├─ C doesn't have A's or B's changes integrated
+       ├─ Git says: "CONFLICT - both modified auth.py"
+       ├─ C must manually resolve:
+       │  ├─ Understand what A did (re-read: 500 tokens)
+       │  ├─ Understand what B did (re-read: 500 tokens)
+       │  ├─ Understand what C did (already knows)
+       │  ├─ Merge all three: tokens spent: 1,500 tokens
+       │  └─ Test merged code works
+       └─ main branch updated: auth.py v4.0 (merged A's + B's + C's changes)
+
+Total time wasted on conflict resolution: 1 hour
+Total tokens wasted: 1,500 (B's manual resolution) + 1,500 (C's manual resolution) = 3,000 tokens
+Total tokens on understanding stale code: 500 + 500 + 500 + 500 + 500 + 500 = 3,000 tokens
+TOTAL TOKENS WASTED: 6,000 tokens
+Real code: 500 lines | Tokens: 12,000 lines equivalent
+Efficiency: 25% useful, 75% wasted
+```
+
+**The Core Issue:**
+```
+✗ Dev B and Dev C work on STALE CODE
+  └─ Their local copies don't include A's changes
+  └─ By the time they finish, their work is based on outdated assumptions
+  └─ Manual conflict resolution required (expensive, error-prone)
+  
+✗ Developers don't know what others are doing
+  └─ B doesn't know A is refactoring password validation
+  └─ C doesn't know A refactored or that B added strength checks
+  └─ Leads to conflicting changes based on old assumptions
+  
+✗ Massive token waste
+  └─ B manually re-reads A's changes: 500 tokens
+  └─ C manually re-reads A's + B's changes: 1,000 tokens
+  └─ Each developer re-reads the file multiple times
 ```
 
 ### With AI Assistants, This Gets Much Worse
 
 ```
-Dev A (AI assistant) writes function → 50 tokens to understand context
-Dev B (AI assistant) is notified → Re-reads entire file → 500 tokens
-Dev C (AI assistant) joins → Re-reads entire file + A's + B's changes → 900 tokens
-Dev A wants to review B's changes → Re-reads entire file → 500 tokens
+Traditional approach with LLMs:
+─────────────────────────────
 
-Total: 1,950 tokens for ONE CODE REVIEW CYCLE
-Real code: 500 lines | Tokens: 2,800 lines equivalent
-Efficiency: 28% (1,400 useful tokens, 1,400 wasted on re-reads)
+Dev A (AI-assisted) writes function:
+  └─ AI reads 500 lines to understand context: 500 tokens
+
+Dev B (AI-assisted) discovers A's changes (from git log):
+  └─ AI re-reads entire file to merge: 500 tokens
+  └─ AI reads both A's changes and own work: 500 tokens
+  └─ Total for B: 1,000 tokens
+
+Dev C (AI-assisted) discovers A's + B's changes:
+  └─ AI re-reads entire file: 500 tokens
+  └─ AI re-reads A's changes to understand: 500 tokens
+  └─ AI re-reads B's changes to understand: 500 tokens
+  └─ AI merges all three: 1,000 tokens
+  └─ Total for C: 2,500 tokens
+
+Dev A wants to review what B did:
+  └─ AI re-reads entire merged file: 500 tokens
+
+TOTAL TOKENS: 500 + 1,000 + 2,500 + 500 = 4,500 tokens
+REAL CODE SIZE: 500 lines
+TOKEN EFFICIENCY: 500 tokens of useful work / 4,500 tokens spent = 11% efficient
+WASTED: 89% of tokens spent re-reading stale or already-understood code
 ```
 
-### Neo's Approach: Complete State History
+### Neo's Approach: Prevent Stale Code Before It Starts
 
+**Initial Setup (Same as Traditional):**
 ```
-State Machine tracks:
-├── Version v1.0 (Dev A): +500 lines (hash: 7a3f9)
-├── Version v2.0 (Dev B): +400 lines on top of v1.0 (hash: 2c1e4)
-└── Version v3.0 (Dev C): +300 lines on top of v2.0 (hash: 8b5d2)
+Repository (main branch): auth.py (500 lines at commit abc123)
+├─ Dev A: git pull origin main → auth.py (500 lines) at commit abc123
+├─ Dev B: git pull origin main → auth.py (500 lines) at commit abc123
+└─ Dev C: git pull origin main → auth.py (500 lines) at commit abc123
 
-When Dev B joins:
-├── Fetch v1.0 state (500 lines) → 50 tokens
-├── Fetch delta: v1.0→v2.0 (+400 lines) → 40 tokens
-└── Total: 90 tokens (vs 900 in traditional approach)
+All three have the same starting point
+```
 
-Efficiency gain: 10x reduction in token waste
-Context relevance: 100% (only what's needed, nothing stale)
+**With Neo: Coordinated Workflow (No Stale Code)**
+```
+T+0:00 | Dev A DECLARES INTENT to Neo
+       ├─ "I'm refactoring password validation to use bcrypt"
+       ├─ File: auth.py | Function: validate_password()
+       ├─ Neo creates context snapshot: v1.0
+       └─ State: AVAILABLE → EDITING (no lock yet, only 1 dev)
+
+T+0:05 | Dev B DECLARES INTENT to Neo (while A is still working)
+       ├─ "I'm adding password strength requirements"
+       ├─ File: auth.py | Function: validate_password()
+       ├─ Neo detects: "A is already editing this file"
+       ├─ Neo shares A's CURRENT CONTEXT with B
+       │  └─ Token cost: 50 tokens (just the snapshot)
+       ├─ Neo applies LOCK (now 2+ devs on same file)
+       └─ State: CONFLICT_WAITING (B waits for A to finish)
+
+KEY DIFFERENCE: B knows A is working on it, and sees A's context
+                B is NOT working on stale code
+
+T+0:10 | Dev C DECLARES INTENT to Neo (while A & B working)
+       ├─ "I'm adding password history tracking"
+       ├─ File: auth.py | Function: validate_password()
+       ├─ Neo detects: "Both A and B are already working on this"
+       ├─ Neo shares their context with C
+       │  └─ Token cost: 50 tokens
+       ├─ Neo applies LOCK (3 devs on same file)
+       └─ State: WAITING_IN_QUEUE (C waits for A then B)
+
+KEY DIFFERENCE: C knows A and B are working on it
+                C is NOT working on stale code
+                C will wait for both to finish before editing
+```
+
+**The Crucial Difference: Sequential Context Flow**
+```
+T+0:15 | Dev A FINISHES editing
+       ├─ git commit -am "Refactor to bcrypt"
+       ├─ git push origin main ✅ SUCCESS
+       ├─ Neo publishes A's changes to [B, C]
+       ├─ Change summary: "Refactored to bcrypt (+20 lines, -5 lines)"
+       ├─ Token cost: 47 tokens
+       └─ main branch updated: auth.py v2.0 (A's changes)
+
+T+0:16 | Dev B GETS NOTIFICATION + FRESH CONTEXT
+       ├─ "A just finished. Here's what they changed:"
+       ├─ Neo automatically refreshes B's context
+       │  └─ Old context: initial auth.py (abc123)
+       │  └─ New context: A's bcrypt refactor (includes A's changes)
+       │  └─ Token cost: 40 tokens (delta, not full re-read)
+       ├─ Neo applies LOCK to B (B now editing)
+       ├─ State: CONTEXT_REFRESH → EDITING
+       └─ B is now working with FRESH CODE that includes A's work
+
+KEY BENEFIT: B's code will build on top of A's changes, not conflict with them
+             B gets fresh context for ONLY 40 tokens (vs 500 for manual re-read)
+```
+
+**Continuing the Sequence:**
+```
+T+0:25 | Dev B FINISHES editing
+       ├─ git commit -am "Add password strength requirements"
+       ├─ git push origin main ✅ SUCCESS (no conflicts!)
+       ├─ Neo publishes B's changes to [A, C]
+       └─ main branch: auth.py v3.0 (A's bcrypt + B's strength checks)
+
+T+0:26 | Dev C GETS NOTIFICATION + FRESH CONTEXT
+       ├─ "A and B both finished. Here's what they changed:"
+       ├─ Neo automatically refreshes C's context
+       │  └─ Old context: initial auth.py (abc123)
+       │  └─ New context: A's bcrypt + B's strength checks (v3.0)
+       │  └─ Token cost: 75 tokens (delta for both A's and B's changes)
+       ├─ Neo removes lock from C (C now editing)
+       ├─ State: CONTEXT_REFRESH → EDITING
+       └─ C is now working with COMPLETE, FRESH CODE
+
+KEY BENEFIT: C's code builds on top of A's AND B's work
+             C gets fresh context for ONLY 75 tokens (vs 1,000 for manual re-reads)
+```
+
+**Final Result:**
+```
+T+0:35 | Dev C FINISHES editing
+       ├─ git commit -am "Add password history tracking"
+       ├─ git push origin main ✅ SUCCESS (no conflicts!)
+       └─ main branch: auth.py v4.0 (A's + B's + C's changes)
+
+TOTAL TIME: 35 minutes
+TOTAL CONFLICTS RESOLVED: 0
+TOTAL TOKENS SPENT:
+├─ A's initial context: 50 tokens
+├─ B's context refresh: 40 tokens
+├─ Change summaries: 47 + 35 + 32 = 114 tokens
+├─ C's context refresh: 75 tokens
+└─ TOTAL: 279 tokens (vs 6,000 in traditional approach)
+
+EFFICIENCY: 21x better than traditional workflow
+STALE CODE: ZERO (developers always have fresh context)
+CONFLICTS: ZERO (prevented by sequential coordination)
+TOKEN WASTE: 96% reduction
+```
+
+**Why This Works:**
+```
+✓ Developers know what others are doing
+  └─ Declarations of intent prevent surprise conflicts
+  
+✓ No developer works on stale code
+  └─ Context refreshes automatically when staleness detected
+  └─ Includes only relevant changes (delta, not full file)
+  
+✓ Sequential coordination without manual merging
+  └─ A finishes → B gets fresh context → B edits → no conflicts
+  └─ B finishes → C gets fresh context → C edits → no conflicts
+  
+✓ Massive token efficiency
+  └─ 40-token deltas instead of 500-token full re-reads
+  └─ 21x reduction in total tokens spent
+  └─ Scales linearly, not exponentially
 ```
 
 ---
