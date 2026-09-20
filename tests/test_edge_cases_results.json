@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "time_seconds": 3.958468437194824
+  },
+  "details": {
+    "test_cases": [
+      {
+        "timestamp": "2026-09-20T16:49:54.285984",
+        "test": "Rapid Declarations",
+        "passed": true,
+        "details": "All 3 developers declared within 0.8ms. Lock should be ACTIVE (2+ devs). Entries recorded: 3/3"
+      },
+      {
+        "timestamp": "2026-09-20T16:49:57.287824",
+        "test": "Long-Running Edit",
+        "passed": true,
+        "details": "Alice worked for 3.0s while Bob waited. No timeout or deadlock. Completed: 1/1. Bob can now proceed."
+      },
+      {
+        "timestamp": "2026-09-20T16:49:57.638728",
+        "test": "Staleness Detection",
+        "passed": true,
+        "details": "At 200ms: staleness=200ms (FRESH). At 350ms: staleness=351ms (STALE). Threshold correctly detects: fresh then stale."
+      },
+      {
+        "timestamp": "2026-09-20T16:49:58.243354",
+        "test": "Merge Summary Aggregation",
+        "passed": true,
+        "details": "Developers: 3/3. Total changes: +75/75, -10/10. Conflicts: 0/0. Merge summary aggregates correctly."
+      }
+    ],
+    "passed": 4,
+    "failed": 0,
+    "total_time": 3.958468437194824
+  }
+}
