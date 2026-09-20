@@ -1,0 +1,606 @@
+{
+  "documentation": "Comprehensive Activity Log Data Model - All Data Points Across Scenarios",
+  "scenarios": {
+    "scenario_1_establish_intent": {
+      "description": "Developer declares intent to edit a resource",
+      "event_type": "INTENT_DECLARED",
+      "data_captured": {
+        "developer": "dev1",
+        "developer_type": "agent or human",
+        "file_path": "src/auth/login.py",
+        "function_name": "validate_user",
+        "resource": "src/auth/login.py::validate_user",
+        "timestamp": "2026-09-18T10:30:00Z",
+        "actor": "dev1",
+        "actor_type": "agent"
+      },
+      "purpose": "Records developer's initial intent to work on resource"
+    },
+
+    "scenario_2_acquire_lock": {
+      "description": "Developer acquires exclusive lock to start editing",
+      "event_sequence": [
+        {
+          "event_type": "LOCK_REQUESTED",
+          "data": {
+            "developer": "dev1",
+            "resource": "src/auth/login.py::validate_user",
+            "timestamp": "2026-09-18T10:30:05Z",
+            "requested_at": "2026-09-18T10:30:05Z"
+          }
+        },
+        {
+          "event_type": "RESOURCE_CLAIMED",
+          "data": {
+            "developer": "dev1",
+            "resource": "src/auth/login.py::validate_user",
+            "timestamp": "2026-09-18T10:30:06Z",
+            "locked_at": "2026-09-18T10:30:06Z",
+            "lock_type": "exclusive"
+          }
+        },
+        {
+          "event_type": "LOCK_ACQUIRED",
+          "data": {
+            "developer": "dev1",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "message": "dev1 started editing",
+            "state": "editing",
+            "lock_acquired": true,
+            "timestamp": "2026-09-18T10:30:06Z"
+          }
+        }
+      ],
+      "state_machine_data": {
+        "current_state": "EDITING",
+        "current_editor": "dev1",
+        "waiting_developers": [],
+        "all_developers": ["dev1"]
+      }
+    },
+
+    "scenario_3_developer_2_joins_queue": {
+      "description": "Second developer wants to edit, gets blocked and queued",
+      "event_sequence": [
+        {
+          "event_type": "INTENT_DECLARED",
+          "data": {
+            "developer": "dev2",
+            "resource": "src/auth/login.py::validate_user",
+            "timestamp": "2026-09-18T10:35:00Z"
+          }
+        },
+        {
+          "event_type": "LOCK_BLOCKED",
+          "data": {
+            "developer": "dev2",
+            "blocking_developer": "dev1",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "message": "BLOCKED: dev1 is editing. Waiting list: ['dev2']",
+            "timestamp": "2026-09-18T10:35:01Z"
+          }
+        },
+        {
+          "event_type": "QUEUED",
+          "data": {
+            "developer": "dev2",
+            "resource": "src/auth/login.py::validate_user",
+            "queue_position": 1,
+            "queued_at": "2026-09-18T10:35:01Z",
+            "queued_timestamp": "2026-09-18T10:35:01Z"
+          }
+        }
+      ],
+      "state_machine_data": {
+        "current_state": "CONFLICT_WAITING",
+        "current_editor": "dev1",
+        "waiting_developers": [
+          {"name": "dev2", "queued_at": "2026-09-18T10:35:01Z"}
+        ],
+        "all_developers": ["dev1", "dev2"]
+      },
+      "notification_sent": {
+        "to": "dev2",
+        "type": "LOCK_BLOCKED",
+        "content": {
+          "blocking_developer": "dev1",
+          "queue_position": 1,
+          "file": "src/auth/login.py",
+          "function": "validate_user"
+        }
+      }
+    },
+
+    "scenario_4_developers_3_4_5_join_queue": {
+      "description": "Multiple developers join queue with timestamp ordering",
+      "event_sequence": [
+        {
+          "event_type": "QUEUED",
+          "data": {
+            "developer": "dev3",
+            "resource": "src/auth/login.py::validate_user",
+            "queue_position": 2,
+            "queued_at": "2026-09-18T10:36:00Z"
+          }
+        },
+        {
+          "event_type": "QUEUED",
+          "data": {
+            "developer": "dev4",
+            "resource": "src/auth/login.py::validate_user",
+            "queue_position": 3,
+            "queued_at": "2026-09-18T10:37:15Z"
+          }
+        },
+        {
+          "event_type": "QUEUED",
+          "data": {
+            "developer": "dev5",
+            "resource": "src/auth/login.py::validate_user",
+            "queue_position": 4,
+            "queued_at": "2026-09-18T10:38:30Z"
+          }
+        }
+      ],
+      "state_machine_data": {
+        "current_state": "CONFLICT_WAITING",
+        "current_editor": "dev1",
+        "waiting_developers": [
+          {"name": "dev2", "queued_at": "2026-09-18T10:35:01Z"},
+          {"name": "dev3", "queued_at": "2026-09-18T10:36:00Z"},
+          {"name": "dev4", "queued_at": "2026-09-18T10:37:15Z"},
+          {"name": "dev5", "queued_at": "2026-09-18T10:38:30Z"}
+        ],
+        "all_developers": ["dev1", "dev2", "dev3", "dev4", "dev5"],
+        "queue_ordering": "timestamp-based (earliest timestamp = first position)"
+      }
+    },
+
+    "scenario_5_dev1_logs_changes": {
+      "description": "Dev1 makes code changes and logs them",
+      "event_sequence": [
+        {
+          "event_type": "CODE_CHANGE_LOGGED",
+          "data": {
+            "id": "2026-09-18T10:45:00.123456Z",
+            "developer": "dev1",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "branch": "feature/auth-refactor-dev1",
+            "timestamp": "2026-09-18T10:45:00Z",
+            "description": "Refactored validation logic for clarity",
+            "old_lines": 12,
+            "new_lines": 10,
+            "line_changes": 4,
+            "conflict_severity": "low",
+            "related_changes": []
+          }
+        }
+      ],
+      "change_stored_in": "activity_log_storage/changes/{file}_{function}_{timestamp}.json"
+    },
+
+    "scenario_6_dev1_finishes_editing": {
+      "description": "Dev1 completes editing, releases lock, notifies next developer",
+      "event_sequence": [
+        {
+          "event_type": "WORK_COMPLETED",
+          "data": {
+            "developer": "dev1",
+            "resource": "src/auth/login.py::validate_user",
+            "timestamp": "2026-09-18T11:00:00Z",
+            "summary": "Completed editing validate_user",
+            "task_id": "task_12345"
+          }
+        },
+        {
+          "event_type": "LOCK_RELEASED",
+          "data": {
+            "developer": "dev1",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "message": "dev1 finished. dev2 notified to review and continue.",
+            "state": "both_done",
+            "timestamp": "2026-09-18T11:00:01Z"
+          }
+        }
+      ],
+      "state_machine_data": {
+        "current_state": "PENDING_REVIEW",
+        "current_editor": null,
+        "next_developer": "dev2",
+        "waiting_developers": [
+          {"name": "dev3", "queued_at": "2026-09-18T10:36:00Z"},
+          {"name": "dev4", "queued_at": "2026-09-18T10:37:15Z"},
+          {"name": "dev5", "queued_at": "2026-09-18T10:38:30Z"}
+        ]
+      },
+      "notification_sent": {
+        "to": "dev2",
+        "type": "REVIEW_REQUESTED",
+        "content": {
+          "from_developer": "dev1",
+          "file": "src/auth/login.py",
+          "function": "validate_user",
+          "action": "Review my changes, then you can edit",
+          "summary": "Completed editing validate_user"
+        }
+      }
+    },
+
+    "scenario_7_dev2_starts_editing": {
+      "description": "Dev2 (earliest in queue) acquires lock",
+      "event_sequence": [
+        {
+          "event_type": "RESOURCE_CLAIMED",
+          "data": {
+            "developer": "dev2",
+            "resource": "src/auth/login.py::validate_user",
+            "timestamp": "2026-09-18T11:05:00Z",
+            "prior_work": {
+              "previous_developer": "dev1",
+              "previous_summary": "Completed editing validate_user",
+              "previous_branch": "feature/auth-refactor-dev1"
+            }
+          }
+        },
+        {
+          "event_type": "LOCK_ACQUIRED",
+          "data": {
+            "developer": "dev2",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "lock_acquired": true,
+            "timestamp": "2026-09-18T11:05:01Z",
+            "prior_developer_changes": "Available for review"
+          }
+        }
+      ],
+      "state_machine_data": {
+        "current_state": "EDITING",
+        "current_editor": "dev2",
+        "waiting_developers": [
+          {"name": "dev3", "queued_at": "2026-09-18T10:36:00Z"},
+          {"name": "dev4", "queued_at": "2026-09-18T10:37:15Z"},
+          {"name": "dev5", "queued_at": "2026-09-18T10:38:30Z"}
+        ]
+      }
+    },
+
+    "scenario_8_dev2_logs_changes": {
+      "description": "Dev2 makes changes based on dev1's work",
+      "event_sequence": [
+        {
+          "event_type": "CODE_CHANGE_LOGGED",
+          "data": {
+            "id": "2026-09-18T11:15:00.234567Z",
+            "developer": "dev2",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "branch": "feature/auth-email-dev2",
+            "timestamp": "2026-09-18T11:15:00Z",
+            "description": "Added optional email validation for security",
+            "old_lines": 10,
+            "new_lines": 15,
+            "line_changes": 7,
+            "conflict_severity": "medium",
+            "related_changes": ["dev1"],
+            "conflict_details": {
+              "overlap_ratio": 0.35,
+              "overlapping_lines": [5, 6, 7],
+              "previous_developer": "dev1"
+            }
+          }
+        }
+      ]
+    },
+
+    "scenario_9_dev2_finishes": {
+      "description": "Dev2 finishes, lock goes to dev3 (next earliest timestamp)",
+      "event_sequence": [
+        {
+          "event_type": "WORK_COMPLETED",
+          "data": {
+            "developer": "dev2",
+            "resource": "src/auth/login.py::validate_user",
+            "timestamp": "2026-09-18T11:30:00Z",
+            "summary": "Added email validation feature"
+          }
+        },
+        {
+          "event_type": "LOCK_RELEASED",
+          "data": {
+            "developer": "dev2",
+            "next_developer": "dev3",
+            "next_developer_queue_position": 1,
+            "message": "dev2 finished. dev3 notified to review and continue.",
+            "timestamp": "2026-09-18T11:30:01Z"
+          }
+        }
+      ],
+      "state_machine_data": {
+        "current_state": "PENDING_REVIEW",
+        "current_editor": null,
+        "next_developer": "dev3",
+        "waiting_developers": [
+          {"name": "dev4", "queued_at": "2026-09-18T10:37:15Z"},
+          {"name": "dev5", "queued_at": "2026-09-18T10:38:30Z"}
+        ],
+        "queue_ordering_note": "dev3 selected because dev3.queued_at (10:36:00Z) is earliest among remaining"
+      }
+    },
+
+    "scenario_10_create_pr": {
+      "description": "After Dev2 finishes, PR is created for review",
+      "event_sequence": [
+        {
+          "event_type": "PR_CREATED",
+          "data": {
+            "timestamp": "2026-09-18T11:35:00Z",
+            "developer": "dev2",
+            "file_path": "src/auth/login.py",
+            "function_name": "validate_user",
+            "pr_number": 42,
+            "pr_link": "https://github.com/repo/pull/42",
+            "branch": "feature/auth-email-dev2",
+            "status": "OPEN"
+          }
+        }
+      ],
+      "notification_sent": {
+        "to": "dev3",
+        "type": "APPROVAL_NEEDED",
+        "content": {
+          "from_developer": "dev2",
+          "pr_number": 42,
+          "pr_link": "https://github.com/repo/pull/42",
+          "action": "review_pull_merge"
+        }
+      }
+    },
+
+    "scenario_11_record_approval": {
+      "description": "Developers approve the changes",
+      "event_sequence": [
+        {
+          "event_type": "APPROVAL_RECORDED",
+          "data": {
+            "timestamp": "2026-09-18T11:45:00Z",
+            "developer": "dev1",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "approval_status": "approved",
+            "approval_type": "code_review"
+          }
+        },
+        {
+          "event_type": "APPROVAL_RECORDED",
+          "data": {
+            "timestamp": "2026-09-18T11:50:00Z",
+            "developer": "dev3",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "approval_status": "approved",
+            "approval_type": "code_review"
+          }
+        }
+      ],
+      "approval_file_stored": "activity_log_storage/approvals/{file}_{function}_approvals.json",
+      "approval_file_content": {
+        "approved_by": ["dev1", "dev3"],
+        "rejected_by": [],
+        "last_update": "2026-09-18T11:50:00Z"
+      }
+    },
+
+    "scenario_12_merge_to_main": {
+      "description": "All approvals received, merge to main",
+      "event_sequence": [
+        {
+          "event_type": "MERGE_TO_MAIN",
+          "data": {
+            "timestamp": "2026-09-18T12:00:00Z",
+            "developer": "dev2",
+            "file_path": "src/auth/login.py",
+            "function_name": "validate_user",
+            "pr_number": 42,
+            "merged_to": "main",
+            "all_approvers": ["dev1", "dev2", "dev3", "dev4", "dev5"],
+            "merge_commit_sha": "abc123def456",
+            "status": "MERGED"
+          }
+        }
+      ],
+      "merge_file_stored": "activity_log_storage/merge_{file}_{function}_{pr_number}.json",
+      "notification_sent": {
+        "to": "all",
+        "type": "MERGED",
+        "content": {
+          "file": "src/auth/login.py",
+          "function": "validate_user",
+          "pr_number": 42,
+          "merged_by": "dev2",
+          "all_approvers": ["dev1", "dev2", "dev3", "dev4", "dev5"]
+        }
+      }
+    },
+
+    "scenario_13_conflict_handling": {
+      "description": "HIGH conflict detected and escalation created",
+      "event_sequence": [
+        {
+          "event_type": "CONFLICT_DETECTED",
+          "data": {
+            "timestamp": "2026-09-18T11:20:00Z",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "conflict_severity": "HIGH",
+            "developer_a": "dev1",
+            "developer_b": "dev2",
+            "overlap_lines": [5, 6, 7],
+            "overlap_ratio": 0.65
+          }
+        },
+        {
+          "event_type": "ESCALATION_CREATED",
+          "data": {
+            "timestamp": "2026-09-18T11:20:01Z",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "created_at": "2026-09-18T11:20:01Z",
+            "timeout_minutes": 30,
+            "timeout_at": "2026-09-18T11:50:01Z",
+            "developers_involved": ["dev1", "dev2"],
+            "status": "PENDING"
+          }
+        }
+      ],
+      "escalation_file_stored": "activity_log_storage/escalations/{file}_{function}_escalation.json"
+    },
+
+    "scenario_14_rollback": {
+      "description": "Production issue detected, rollback recorded",
+      "event_sequence": [
+        {
+          "event_type": "ROLLBACK_INITIATED",
+          "data": {
+            "timestamp": "2026-09-18T13:00:00Z",
+            "merge_commit_sha": "abc123def456",
+            "file": "src/auth/login.py",
+            "function": "validate_user",
+            "reason": "Email validation breaking for external accounts",
+            "status": "ROLLED_BACK",
+            "rolled_back_by": "dev2"
+          }
+        }
+      ],
+      "rollback_file_stored": "activity_log_storage/rollbacks/{file}_{function}_{timestamp}.json"
+    }
+  },
+
+  "summary_of_all_data_points": {
+    "intent_phase": [
+      "developer",
+      "developer_type",
+      "resource",
+      "file_path",
+      "function_name",
+      "timestamp"
+    ],
+    "lock_acquisition_phase": [
+      "developer",
+      "lock_type (exclusive/shared)",
+      "locked_at",
+      "current_editor",
+      "queue_position",
+      "timestamp"
+    ],
+    "queue_management_phase": [
+      "developer",
+      "queue_position",
+      "queued_at",
+      "queue_ordering (timestamp-based)",
+      "waiting_developers (list with timestamps)",
+      "time_until_lock_available"
+    ],
+    "coding_phase": [
+      "developer",
+      "file_path",
+      "function_name",
+      "old_code",
+      "new_code",
+      "old_lines",
+      "new_lines",
+      "line_changes",
+      "branch",
+      "description",
+      "timestamp",
+      "conflict_severity",
+      "related_changes"
+    ],
+    "conflict_detection_phase": [
+      "conflict_severity (low/medium/high)",
+      "overlap_ratio",
+      "overlapping_lines",
+      "related_developers",
+      "previous_changes",
+      "merge_strategy_options"
+    ],
+    "completion_phase": [
+      "developer",
+      "completion_timestamp",
+      "summary",
+      "task_id",
+      "next_developer",
+      "next_developer_timestamp",
+      "notifications_sent_to"
+    ],
+    "pr_and_approval_phase": [
+      "pr_number",
+      "pr_link",
+      "branch",
+      "developer",
+      "approved_by (list)",
+      "rejected_by (list)",
+      "approval_timestamp",
+      "approval_status"
+    ],
+    "merge_phase": [
+      "merge_timestamp",
+      "merged_to",
+      "merged_by",
+      "merge_commit_sha",
+      "all_approvers",
+      "merge_status",
+      "pr_number"
+    ],
+    "escalation_phase": [
+      "escalation_created_at",
+      "timeout_minutes",
+      "timeout_at",
+      "developers_involved",
+      "conflict_reason",
+      "escalation_status"
+    ],
+    "rollback_phase": [
+      "rollback_timestamp",
+      "rolled_back_by",
+      "merge_commit_sha",
+      "rollback_reason",
+      "rollback_status"
+    ]
+  },
+
+  "data_flow_example": {
+    "single_developer": {
+      "step_1": "INTENT_DECLARED → developer + resource + timestamp",
+      "step_2": "RESOURCE_CLAIMED → lock acquired, current_editor set",
+      "step_3": "CODE_CHANGE_LOGGED → old_code, new_code, line_changes, conflict_severity",
+      "step_4": "WORK_COMPLETED → summary, completion_timestamp",
+      "step_5": "LOCK_RELEASED → state = AVAILABLE",
+      "data_persisted": "state_history, change_record, development_memory"
+    },
+    "multiple_developers": {
+      "phase_1": "Dev1: INTENT → LOCK_ACQUIRED (state: EDITING)",
+      "phase_2": "Dev2: INTENT → LOCK_BLOCKED → QUEUED (state: CONFLICT_WAITING, queue: [dev2:T1])",
+      "phase_3": "Dev3: INTENT → LOCK_BLOCKED → QUEUED (state: CONFLICT_WAITING, queue: [dev2:T1, dev3:T2])",
+      "phase_4": "Dev1: CODE_CHANGE_LOGGED → WORK_COMPLETED",
+      "phase_5": "Dev1: LOCK_RELEASED (next: dev2 because dev2.queued_at < dev3.queued_at)",
+      "phase_6": "Dev2: RESOURCE_CLAIMED → LOCK_ACQUIRED (dev2 is current_editor, state: EDITING)",
+      "phase_7": "Dev2: CODE_CHANGE_LOGGED → WORK_COMPLETED",
+      "phase_8": "Dev2: LOCK_RELEASED (next: dev3)",
+      "phase_9": "Continue until all developers complete",
+      "critical_data": "waiting_developers timestamps determine ordering"
+    }
+  },
+
+  "key_insights": {
+    "timestamp_importance": "Each developer's join timestamp (queued_at) determines queue ordering when lock is released",
+    "state_machine_visibility": "All state transitions are logged: AVAILABLE → EDITING → CONFLICT_WAITING → PENDING_REVIEW → BOTH_DONE → IN_PR → APPROVED → MERGED",
+    "data_persistence": "Each event creates a JSON file or updates existing files in activity_log_storage/",
+    "notification_triggers": "LOCK_BLOCKED, REVIEW_REQUESTED, APPROVAL_NEEDED, MERGED, ROLLED_BACK all generate notifications",
+    "conflict_detection": "Automatically triggered on CODE_CHANGE_LOGGED, creates ESCALATION_CREATED if HIGH severity"
+  }
+}

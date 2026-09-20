@@ -1,0 +1,167 @@
+{
+  "test": "complete_state_machine_workflow",
+  "timestamp": "2026-09-20T19:22:37.396111",
+  "status": "PASSED",
+  "states_exercised": 10,
+  "developers": [
+    "alice",
+    "bob",
+    "charlie"
+  ],
+  "file": "payment_processor.py",
+  "total_transitions": 19,
+  "transitions": [
+    {
+      "timestamp": "2026-09-20T19:22:37.395717",
+      "developer": "system",
+      "action": "INITIALIZE",
+      "from_state": "init",
+      "to_state": "available",
+      "details": "Workflow initialized"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395746",
+      "developer": "alice",
+      "action": "START_EDITING",
+      "from_state": "available",
+      "to_state": "available",
+      "details": "Add fraud detection with ML (lines 20-50): +45 lines"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395764",
+      "developer": "bob",
+      "action": "DECLARE_INTENT",
+      "from_state": "editing",
+      "to_state": "conflict_waiting",
+      "details": "Modify payment validation (lines 35-65): conflict with alice's work"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395770",
+      "developer": "system",
+      "action": "ESCALATE_FOR_REVIEW",
+      "from_state": "conflict_waiting",
+      "to_state": "pending_review",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395775",
+      "developer": "charlie",
+      "action": "REVIEW_CONFLICT",
+      "from_state": "conflict_waiting",
+      "to_state": "pending_review",
+      "details": "Reviewing alice's fraud detection vs bob's validation changes"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395780",
+      "developer": "alice",
+      "action": "FINISH_EDITING",
+      "from_state": "pending_review",
+      "to_state": "both_done",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395786",
+      "developer": "bob",
+      "action": "FINISH_EDITING",
+      "from_state": "pending_review",
+      "to_state": "both_done",
+      "details": "Completed validation enhancement on top of alice's fraud detection"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395791",
+      "developer": "system",
+      "action": "QUEUE_HANDOFF",
+      "from_state": "both_done",
+      "to_state": "handoff_pending",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395799",
+      "developer": "system",
+      "action": "AGGREGATE_CHANGES",
+      "from_state": "both_done",
+      "to_state": "handoff_pending",
+      "details": "Temporal handoff queued: 75 lines aggregated, 0 conflicts"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395804",
+      "developer": "system",
+      "action": "CREATE_PR",
+      "from_state": "handoff_pending",
+      "to_state": "in_pr",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395811",
+      "developer": "system",
+      "action": "CREATE_PR",
+      "from_state": "handoff_pending",
+      "to_state": "in_pr",
+      "details": "PR created with aggregate of alice & bob's changes"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395815",
+      "developer": "charlie",
+      "action": "APPROVE_PR",
+      "from_state": "in_pr",
+      "to_state": "approved",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395820",
+      "developer": "charlie",
+      "action": "APPROVE_PR",
+      "from_state": "in_pr",
+      "to_state": "approved",
+      "details": "PR #42 approved: fraud detection solid, validation logic sound"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395825",
+      "developer": "system",
+      "action": "MERGE_TO_MAIN",
+      "from_state": "approved",
+      "to_state": "merged",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395831",
+      "developer": "system",
+      "action": "MERGE_TO_MAIN",
+      "from_state": "approved",
+      "to_state": "merged",
+      "details": "Merged PR #42 to main. Commit a7f3e2c. All CI passed. Deployed to staging."
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395835",
+      "developer": "system",
+      "action": "ROLLBACK",
+      "from_state": "merged",
+      "to_state": "rolled_back",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395845",
+      "developer": "system",
+      "action": "ROLLBACK",
+      "from_state": "merged",
+      "to_state": "rolled_back",
+      "details": "Rolled back commit a7f3e2c: false positives detected in staging tests"
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395850",
+      "developer": "alice",
+      "action": "RESTART_FIX",
+      "from_state": "rolled_back",
+      "to_state": "editing",
+      "details": ""
+    },
+    {
+      "timestamp": "2026-09-20T19:22:37.395855",
+      "developer": "alice",
+      "action": "RESTART_FIX",
+      "from_state": "rolled_back",
+      "to_state": "editing",
+      "details": "Fixing false positive logic in fraud detection ML model"
+    }
+  ]
+}
