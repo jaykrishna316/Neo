@@ -14,6 +14,22 @@ import threading
 
 from workflow_state_machine import WorkflowStateMachine, WorkflowState
 from notification_manager import NotificationManager, NotificationType, NotificationChannel
+try:
+    from event_model import Event, EventType, EventFactory
+    from development_memory import DevelopmentMemory
+    from temporal_handoff_engine import TemporalHandoffEngine
+    from dependency_graph import DependencyGraph
+    from reviewer_provenance_engine import ReviewerProvenanceEngine
+    from context_invalidation_engine import ContextInvalidationEngine
+    from agent_autonomy_engine import AgentAutonomyEngine, AgentAutonomyPolicy, AutonomyLevel
+except ImportError:
+    from .event_model import Event, EventType, EventFactory
+    from .development_memory import DevelopmentMemory
+    from .temporal_handoff_engine import TemporalHandoffEngine
+    from .dependency_graph import DependencyGraph
+    from .reviewer_provenance_engine import ReviewerProvenanceEngine
+    from .context_invalidation_engine import ContextInvalidationEngine
+    from .agent_autonomy_engine import AgentAutonomyEngine, AgentAutonomyPolicy, AutonomyLevel
 
 app = Flask(__name__)
 STORAGE_DIR = Path("./activity_log_storage")
@@ -22,6 +38,17 @@ LOCK = threading.Lock()  # Prevent concurrent writes
 # Global managers
 state_machines = {}  # file::function -> WorkflowStateMachine
 notification_manager = NotificationManager()
+development_memory = DevelopmentMemory()  # Neo 2.0: Development Memory
+temporal_handoff_engine = TemporalHandoffEngine(development_memory)  # Neo 2.0: Temporal Handoff
+dependency_graph = DependencyGraph()  # Neo 2.0: Dependency Graph
+context_invalidation_engine = ContextInvalidationEngine(development_memory, dependency_graph)  # Neo 2.0: Phase 3
+reviewer_provenance_engine = ReviewerProvenanceEngine(development_memory, dependency_graph)  # Neo 2.0: Phase 4
+agent_autonomy_engine = AgentAutonomyEngine(  # Neo 2.0: Phase 5
+    development_memory,
+    context_invalidation_engine,
+    temporal_handoff_engine,
+    dependency_graph
+)
 developer_registry = {}  # developer -> {"type": "agent" or "human", "subscribed_at": timestamp}
 
 # Ensure storage directory exists
@@ -59,6 +86,15 @@ def register_developer():
             "type": dev_type,
             "registered_at": datetime.now().isoformat(),
         }
+
+        # Neo 2.0: Record developer registration event
+        event = Event(
+            event_type=EventType.DEVELOPER_REGISTERED,
+            actor=developer,
+            actor_type=dev_type,
+            details={"developer_type": dev_type}
+        )
+        development_memory.record_event(event)
 
         return (
             jsonify(
@@ -167,6 +203,25 @@ def start_editing_endpoint():
         allowed, message, new_state = machine.start_editing(developer)
 
         if allowed:
+            # Neo 2.0: Record intent and resource claim events
+            resource_key = f"{file_path}::{function_name}"
+            actor_type = developer_registry.get(developer, {}).get("type", "human")
+
+            event_intent = EventFactory.intent_declared(
+                actor=developer,
+                actor_type=actor_type,
+                resource=resource_key,
+                details={"file": file_path, "function": function_name}
+            )
+            development_memory.record_event(event_intent)
+
+            event_claim = EventFactory.resource_claimed(
+                actor=developer,
+                actor_type=actor_type,
+                resource=resource_key
+            )
+            development_memory.record_event(event_claim)
+
             # Notify others if this is first developer
             if new_state == WorkflowState.EDITING:
                 notification_manager.notify(
@@ -257,6 +312,19 @@ def finish_editing_endpoint():
         success, message, new_state = machine.finish_editing(developer)
 
         if success:
+            # Neo 2.0: Record work completion event
+            resource_key = f"{file_path}::{function_name}"
+            actor_type = developer_registry.get(developer, {}).get("type", "human")
+
+            event_complete = EventFactory.work_completed(
+                actor=developer,
+                actor_type=actor_type,
+                resource=resource_key,
+                summary=data.get("summary", f"Completed editing {function_name}"),
+                task_id=data.get("task_id")
+            )
+            development_memory.record_event(event_complete)
+
             # Notify that lock is released
             notification_manager.notify(
                 "all",
@@ -1212,6 +1280,572 @@ def _create_escalation(change_record: Dict, related_developers: List[str]):
             / f"{change_record['file'].replace('/', '_')}_{change_record['function']}_escalation.json"
         )
         escalation_file.write_text(json.dumps(escalation, indent=2))
+
+
+# ========== NEO 2.0 PHASE 2: Temporal Handoff Endpoints ==========
+
+
+@app.route("/api/complete_work_session", methods=["POST"])
+def complete_work_session():
+    """
+    Record work completion and create handoff record.
+    Called when developer finishes editing and creates handoff.
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+        summary = data.get("summary")
+        task_id = data.get("task_id")
+        branch = data.get("branch")
+        base_commit = data.get("base_commit")
+        final_commit = data.get("final_commit")
+        known_risks = data.get("known_risks", [])
+        follow_up_required = data.get("follow_up_required", False)
+        follow_up_description = data.get("follow_up_description")
+
+        if not all([developer, file_path, function_name]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        resource = f"{file_path}::{function_name}"
+        actor_type = developer_registry.get(developer, {}).get("type", "human")
+
+        # Create handoff record
+        handoff = temporal_handoff_engine.create_handoff(
+            actor=developer,
+            actor_type=actor_type,
+            resource=resource,
+            task_id=task_id,
+            summary=summary,
+            base_commit=base_commit,
+            final_commit=final_commit,
+            branch=branch,
+            known_risks=known_risks,
+            follow_up_required=follow_up_required,
+            follow_up_description=follow_up_description,
+        )
+
+        return jsonify({
+            "success": True,
+            "handoff_id": handoff.handoff_id,
+            "resource": resource,
+            "message": f"Work session completed and handoff created",
+            "status": "HANDOFF_PENDING"
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_pending_handoffs", methods=["GET"])
+def get_pending_handoffs():
+    """Get list of pending handoffs waiting to be consumed."""
+    try:
+        handoffs = temporal_handoff_engine.get_pending_handoffs()
+        return jsonify({
+            "count": len(handoffs),
+            "handoffs": handoffs
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/intercept_intent", methods=["POST"])
+def intercept_intent():
+    """
+    Next Intent Interceptor: Check if new developer's intent
+    overlaps with recent handoff.
+    """
+    try:
+        data = request.json
+        developer = data.get("developer")
+        file_path = data.get("file_path")
+        function_name = data.get("function_name")
+
+        if not all([developer, file_path, function_name]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        resource = f"{file_path}::{function_name}"
+
+        # Check for overlapping handoff
+        has_prior, primary_handoff, recommendations = temporal_handoff_engine.intercept_new_intent(
+            developer, resource
+        )
+
+        if has_prior and primary_handoff:
+            # Get human-friendly summary
+            summary = temporal_handoff_engine.get_handoff_summary_for_developer(
+                developer, resource
+            )
+
+            return jsonify({
+                "has_prior_work": True,
+                "message": f"Prior work detected: {primary_handoff.actor} completed changes",
+                "handoff_summary": summary,
+                "recommendations": recommendations
+            }), 200
+        else:
+            return jsonify({
+                "has_prior_work": False,
+                "message": "No recent prior work detected",
+                "handoff_summary": None
+            }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/acknowledge_handoff", methods=["POST"])
+def acknowledge_handoff():
+    """Record that developer acknowledged a handoff."""
+    try:
+        data = request.json
+        developer = data.get("developer")
+        handoff_id = data.get("handoff_id")
+
+        if not all([developer, handoff_id]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        success, message = temporal_handoff_engine.acknowledge_handoff(developer, handoff_id)
+
+        if success:
+            return jsonify({"success": True, "message": message}), 200
+        else:
+            return jsonify({"success": False, "message": message}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/consume_handoff", methods=["POST"])
+def consume_handoff_endpoint():
+    """Record that developer consumed a handoff and proceeded."""
+    try:
+        data = request.json
+        developer = data.get("developer")
+        handoff_id = data.get("handoff_id")
+
+        if not all([developer, handoff_id]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        success, message = temporal_handoff_engine.consume_handoff(developer, handoff_id)
+
+        if success:
+            return jsonify({"success": True, "message": message}), 200
+        else:
+            return jsonify({"success": False, "message": message}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ========== NEO 2.0: Development Memory Endpoints ==========
+
+
+@app.route("/api/development_history", methods=["GET"])
+def get_development_history():
+    """Get complete development history for a resource (file::function)"""
+    try:
+        resource = request.args.get("resource")
+        if not resource:
+            return jsonify({"error": "Missing resource parameter"}), 400
+
+        history = development_memory.get_development_history(resource)
+        return jsonify(history), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/actor_activity", methods=["GET"])
+def get_actor_activity():
+    """Get all activity for an actor (developer or agent)"""
+    try:
+        actor = request.args.get("actor")
+        limit = int(request.args.get("limit", 100))
+
+        if not actor:
+            return jsonify({"error": "Missing actor parameter"}), 400
+
+        activity = development_memory.get_actor_activity(actor, limit)
+        return jsonify({"actor": actor, "activity": activity}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/resource_history", methods=["GET"])
+def get_resource_history():
+    """Get all events for a specific resource (file, symbol, branch, etc)"""
+    try:
+        resource = request.args.get("resource")
+        limit = int(request.args.get("limit", 100))
+
+        if not resource:
+            return jsonify({"error": "Missing resource parameter"}), 400
+
+        history = development_memory.get_resource_history(resource, limit)
+        return jsonify({"resource": resource, "history": history}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/recent_activity", methods=["GET"])
+def get_recent_activity():
+    """Get recent activity for a resource (last N hours)"""
+    try:
+        resource = request.args.get("resource")
+        hours_ago = int(request.args.get("hours", 24))
+
+        if not resource:
+            return jsonify({"error": "Missing resource parameter"}), 400
+
+        activity = development_memory.get_recent_activity_for_resource(resource, hours_ago)
+        return jsonify({"resource": resource, "hours_ago": hours_ago, "activity": activity}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/development_memory/statistics", methods=["GET"])
+def get_memory_statistics():
+    """Get development memory statistics"""
+    try:
+        stats = development_memory.get_statistics()
+        return jsonify(stats), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/development_memory/all_events", methods=["GET"])
+def get_all_events():
+    """Get all recorded events (for debugging/audit)"""
+    try:
+        limit = int(request.args.get("limit", 1000))
+        events = development_memory.get_all_events(limit)
+        return jsonify({"total_events": len(development_memory.events), "events": events}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# Neo 2.0 Phase 4: Reviewer Provenance Engine
+# ============================================================================
+
+@app.route("/api/get_reviewer_provenance", methods=["GET"])
+def get_reviewer_provenance():
+    """
+    Get reviewer candidates for a resource based on development provenance.
+
+    Query parameters:
+    - resource: file or file::function to get reviewers for
+    - exclude_author: (optional) developer to exclude from candidates
+    - min_relevance: (optional, 0-1) minimum relevance score threshold
+    """
+    try:
+        resource = request.args.get("resource")
+        if not resource:
+            return jsonify({"error": "resource parameter required"}), 400
+
+        exclude_author = request.args.get("exclude_author")
+        min_relevance = float(request.args.get("min_relevance", 0.2))
+
+        candidates = reviewer_provenance_engine.get_reviewer_provenance(
+            resource=resource,
+            exclude_author=exclude_author,
+            min_relevance=min_relevance
+        )
+
+        return jsonify({
+            "resource": resource,
+            "candidates": [c.to_dict() for c in candidates],
+            "count": len(candidates)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/explain_reviewer_relevance", methods=["GET"])
+def explain_reviewer_relevance():
+    """
+    Get detailed explanation of why someone is relevant to review a resource.
+
+    Query parameters:
+    - resource: file or file::function
+    - actor: developer to explain relevance for
+    """
+    try:
+        resource = request.args.get("resource")
+        actor = request.args.get("actor")
+
+        if not resource or not actor:
+            return jsonify({"error": "resource and actor parameters required"}), 400
+
+        explanation = reviewer_provenance_engine.explain_reviewer_relevance(resource, actor)
+
+        if not explanation:
+            return jsonify({
+                "error": f"No provenance found for {actor} on {resource}"
+            }), 404
+
+        return jsonify(explanation), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# Neo 2.0 Phase 5: Agent Autonomy Engine
+# ============================================================================
+
+@app.route("/api/register_agent_policy", methods=["POST"])
+def register_agent_policy():
+    """
+    Register or update an agent's autonomy policy.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "autonomy_level": "sync_and_revalidate",
+        "can_auto_sync": true,
+        "can_auto_revalidate": true,
+        "can_auto_consume_handoffs": false
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        if not agent_id:
+            return jsonify({"error": "agent_id required"}), 400
+
+        autonomy_level = AutonomyLevel(data.get("autonomy_level", "sync_and_revalidate"))
+
+        policy = AgentAutonomyPolicy(
+            agent_id=agent_id,
+            autonomy_level=autonomy_level,
+            can_auto_sync=data.get("can_auto_sync", True),
+            can_auto_revalidate=data.get("can_auto_revalidate", True),
+            can_auto_consume_handoffs=data.get("can_auto_consume_handoffs", False),
+            can_auto_resolve_conflicts=data.get("can_auto_resolve_conflicts", False),
+            max_retry_attempts=int(data.get("max_retry_attempts", 3)),
+            rollback_on_failure=data.get("rollback_on_failure", True),
+            notify_human_on_failure=data.get("notify_human_on_failure", True),
+        )
+
+        success, message = agent_autonomy_engine.register_agent_policy(policy)
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "policy": policy.to_dict()
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/execute_auto_sync", methods=["POST"])
+def execute_auto_sync():
+    """
+    Execute autonomous context sync for an agent.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "resource": "service.py::query"
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        resource = data.get("resource")
+
+        if not agent_id or not resource:
+            return jsonify({"error": "agent_id and resource required"}), 400
+
+        success, message, workflow_id = agent_autonomy_engine.execute_auto_sync(agent_id, resource)
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "workflow_id": workflow_id
+        }), 200 if success else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/execute_auto_revalidate", methods=["POST"])
+def execute_auto_revalidate():
+    """
+    Execute autonomous context revalidation for an agent.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "resource": "service.py::query"
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        resource = data.get("resource")
+
+        if not agent_id or not resource:
+            return jsonify({"error": "agent_id and resource required"}), 400
+
+        success, message, workflow_id = agent_autonomy_engine.execute_auto_revalidate(agent_id, resource)
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "workflow_id": workflow_id
+        }), 200 if success else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/execute_auto_consume_handoff", methods=["POST"])
+def execute_auto_consume_handoff():
+    """
+    Execute autonomous handoff consumption for an agent.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "handoff_id": "handoff_xxxxx"
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        handoff_id = data.get("handoff_id")
+
+        if not agent_id or not handoff_id:
+            return jsonify({"error": "agent_id and handoff_id required"}), 400
+
+        success, message, workflow_id = agent_autonomy_engine.execute_auto_consume_handoff(
+            agent_id, handoff_id
+        )
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "workflow_id": workflow_id
+        }), 200 if success else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/execute_full_workflow_orchestration", methods=["POST"])
+def execute_full_workflow_orchestration():
+    """
+    Execute full autonomous workflow orchestration for an agent.
+
+    Request body:
+    {
+        "agent_id": "agent1",
+        "resource": "order.py::process",
+        "include_sync": true,
+        "include_revalidate": true,
+        "include_consume_handoff": true,
+        "handoff_id": "handoff_xxxxx"
+    }
+    """
+    try:
+        data = request.get_json()
+
+        agent_id = data.get("agent_id")
+        resource = data.get("resource")
+
+        if not agent_id or not resource:
+            return jsonify({"error": "agent_id and resource required"}), 400
+
+        success, message, workflow_id = agent_autonomy_engine.execute_full_workflow_orchestration(
+            agent_id=agent_id,
+            resource=resource,
+            include_sync=data.get("include_sync", True),
+            include_revalidate=data.get("include_revalidate", True),
+            include_consume_handoff=data.get("include_consume_handoff", False),
+            handoff_id=data.get("handoff_id")
+        )
+
+        return jsonify({
+            "success": success,
+            "message": message,
+            "workflow_id": workflow_id
+        }), 200 if success else 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_workflow_status", methods=["GET"])
+def get_workflow_status():
+    """
+    Get status of an autonomous workflow.
+
+    Query parameters:
+    - workflow_id: workflow to get status for
+    """
+    try:
+        workflow_id = request.args.get("workflow_id")
+
+        if not workflow_id:
+            return jsonify({"error": "workflow_id required"}), 400
+
+        workflow = agent_autonomy_engine.get_workflow_status(workflow_id)
+
+        if not workflow:
+            return jsonify({"error": f"Workflow {workflow_id} not found"}), 404
+
+        return jsonify(workflow), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_agent_workflows", methods=["GET"])
+def get_agent_workflows():
+    """
+    Get active workflows for an agent.
+
+    Query parameters:
+    - agent_id: (optional) filter by agent
+    """
+    try:
+        agent_id = request.args.get("agent_id")
+
+        workflows = agent_autonomy_engine.get_active_workflows(agent_id)
+
+        return jsonify({
+            "agent_id": agent_id,
+            "workflows": workflows,
+            "count": len(workflows)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get_workflow_history", methods=["GET"])
+def get_workflow_history():
+    """
+    Get workflow execution history.
+
+    Query parameters:
+    - agent_id: (optional) filter by agent
+    - limit: (optional) limit results
+    """
+    try:
+        agent_id = request.args.get("agent_id")
+        limit = int(request.args.get("limit", 100))
+
+        workflows = agent_autonomy_engine.get_workflow_history(agent_id, limit)
+
+        return jsonify({
+            "agent_id": agent_id,
+            "workflows": workflows,
+            "count": len(workflows)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

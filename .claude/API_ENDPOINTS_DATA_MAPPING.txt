@@ -1,0 +1,339 @@
+================================================================================
+ACTIVITY LOG SERVER - API ENDPOINTS & DATA MAPPING
+================================================================================
+
+📍 ENDPOINT 1: /api/start_editing (POST)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When: Developer starts editing
+REQUEST DATA:
+{
+  "developer": "dev1",
+  "file_path": "src/auth/login.py",
+  "function_name": "validate_user"
+}
+
+RESPONSE (Lock Acquired):
+{
+  "success": true,
+  "message": "dev1 started editing",
+  "lock_acquired": true,
+  "state": "editing",
+  "developer": "dev1"
+}
+
+RESPONSE (Lock Blocked - Queued):
+{
+  "success": false,
+  "message": "BLOCKED: dev1 is editing. Waiting list: ['dev2']",
+  "lock_acquired": false,
+  "state": "conflict_waiting",
+  "blocking_developer": "dev1",
+  "waiting_in_queue": 1
+}
+
+STATE MACHINE IMPACT:
+├─ First dev: state = EDITING, current_editor = dev1
+└─ 2nd+ dev: state = CONFLICT_WAITING, queued_at = NOW(), queue_position auto-calc
+
+STORED DATA:
+├─ State machine state_history entry
+├─ Development memory INTENT_DECLARED event
+└─ Development memory RESOURCE_CLAIMED event
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📍 ENDPOINT 2: /api/finish_editing (POST)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When: Developer finishes editing
+REQUEST DATA:
+{
+  "developer": "dev1",
+  "file_path": "src/auth/login.py",
+  "function_name": "validate_user",
+  "summary": "Completed editing validate_user",
+  "task_id": "task_12345"
+}
+
+RESPONSE:
+{
+  "success": true,
+  "message": "dev1 finished. dev2 notified to review and continue.",
+  "state": "pending_review",
+  "next_developer": "dev2"
+}
+
+KEY LOGIC:
+├─ next_dev = waiting_developers with MIN(queued_at) ← TIMESTAMP ORDERING!
+├─ Remove that dev from queue
+└─ Notify next_dev to start editing
+
+STORED DATA:
+├─ State machine state_history entry
+├─ Development memory WORK_COMPLETED event
+└─ Notification queued for next_developer
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📍 ENDPOINT 3: /api/log_change (POST)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When: Developer logs code changes
+REQUEST DATA:
+{
+  "developer": "dev1",
+  "file_path": "src/auth/login.py",
+  "function_name": "validate_user",
+  "old_code": "def validate_user(...):\n  ...",
+  "new_code": "def validate_user(...):\n  ...",
+  "feature_branch": "feature/auth-refactor",
+  "verbal_description": "Refactored validation logic"
+}
+
+RESPONSE:
+{
+  "id": "2026-09-18T10:45:00.123456Z",
+  "developer": "dev1",
+  "file": "src/auth/login.py",
+  "function": "validate_user",
+  "branch": "feature/auth-refactor",
+  "timestamp": "2026-09-18T10:45:00Z",
+  "description": "Refactored validation logic",
+  "old_lines": 12,
+  "new_lines": 10,
+  "line_changes": 4,
+  "conflict_severity": "low",
+  "related_changes": []
+}
+
+CONFLICT DETECTION LOGIC:
+├─ Load previous changes from activity_log_storage/changes/
+├─ Calculate diff between old_code and new_code
+├─ Compare with previous developer's changes
+├─ Calculate overlap_ratio = min_lines_changed / max_lines_changed
+├─ Map overlap_ratio to severity:
+│  ├─ 0.0 = "low"
+│  ├─ < 0.5 = "medium"
+│  └─ >= 0.5 = "high"
+└─ If "high" → CREATE ESCALATION
+
+STORED DATA:
+├─ activity_log_storage/changes/{file}_{function}_{timestamp}.json
+├─ If HIGH: activity_log_storage/escalations/{file}_{function}_escalation.json
+└─ Development memory EVENT_CHANGE_LOGGED
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📍 ENDPOINT 4: /api/record_approval (POST)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When: Developer approves or rejects changes
+REQUEST DATA:
+{
+  "developer": "dev1",
+  "file_path": "src/auth/login.py",
+  "function_name": "validate_user",
+  "approval_status": "approved"  ← or "rejected"
+}
+
+RESPONSE:
+{
+  "approved_by": ["dev1"],
+  "rejected_by": [],
+  "last_update": "2026-09-18T11:45:00Z"
+}
+
+APPROVAL TRACKING:
+├─ Load existing approvals from approvals/{file}_{function}_approvals.json
+├─ Add developer to approved_by if status="approved"
+├─ Add developer to rejected_by if status="rejected"
+├─ Remove from other list if switching status
+└─ Update last_update timestamp
+
+STORED DATA:
+├─ activity_log_storage/approvals/{file}_{function}_approvals.json
+└─ Must track BOTH approved_by and rejected_by lists
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📍 ENDPOINT 5: /api/merge_to_main (POST)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When: PR merged to main branch
+REQUEST DATA:
+{
+  "developer": "dev2",
+  "file_path": "src/auth/login.py",
+  "function_name": "validate_user",
+  "pr_number": 42,
+  "merge_commit_sha": "abc123def456"
+}
+
+RESPONSE:
+{
+  "success": true,
+  "message": "PR 42 merged to main",
+  "pr_number": 42,
+  "merged_to": "main",
+  "all_approvers_required": ["dev1", "dev2", "dev3", "dev4", "dev5"],
+  "state": "merged"
+}
+
+MERGE VALIDATION:
+├─ Load approval data from approvals/{file}_{function}_approvals.json
+├─ Get all developers from state_machine.all_developers
+├─ Check if rejected_by list is empty (no rejections)
+└─ Check if len(approved_by) == len(all_developers_involved)
+
+STORED DATA:
+├─ activity_log_storage/merge_{file}_{function}_{pr_number}.json
+├─ Development memory MERGE_TO_MAIN event
+└─ State machine state_history entry
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📍 ENDPOINT 6: /api/can_merge (GET)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When: Check if merge is allowed
+REQUEST PARAMS:
+{
+  "file_path": "src/auth/login.py",
+  "function_name": "validate_user"
+}
+
+RESPONSE (Can Merge):
+{
+  "can_merge": true,
+  "status": {
+    "reason": "All developers approved",
+    "approved_by": ["dev1", "dev3"],
+    "status": "APPROVED"
+  }
+}
+
+RESPONSE (Cannot Merge - Pending):
+{
+  "can_merge": false,
+  "status": {
+    "reason": "Waiting for approvals",
+    "approved_by": ["dev1"],
+    "waiting_for": ["dev2", "dev3"],
+    "status": "PENDING_APPROVAL"
+  }
+}
+
+RESPONSE (Cannot Merge - Rejected):
+{
+  "can_merge": false,
+  "status": {
+    "reason": "Merge REJECTED by developers",
+    "rejected_by": ["dev2"],
+    "approved_by": ["dev1"],
+    "status": "REJECTED"
+  }
+}
+
+MERGE CHECK LOGIC:
+├─ Find all changes for file::function
+├─ Check for HIGH conflicts (conflict_severity="high")
+├─ If no HIGH conflicts → can_merge = true
+├─ If HIGH conflicts exist:
+│  ├─ Load approvals/{file}_{function}_approvals.json
+│  ├─ If rejected_by != empty → can_merge = false (REJECTED)
+│  ├─ If approved_by == all_developers → can_merge = true
+│  └─ Else → can_merge = false (PENDING_APPROVAL)
+└─ Return detailed status
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📍 ENDPOINT 7: /api/complete_work_session (POST) - NEO 2.0 PHASE 2
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+When: Developer completes work session and creates handoff
+REQUEST DATA:
+{
+  "developer": "dev1",
+  "file_path": "src/auth/login.py",
+  "function_name": "validate_user",
+  "summary": "Refactored validation logic for clarity",
+  "task_id": "task_12345",
+  "branch": "feature/auth-refactor",
+  "base_commit": "parent_sha",
+  "final_commit": "dev1_sha",
+  "known_risks": ["email_validation_edge_case"],
+  "follow_up_required": true,
+  "follow_up_description": "Need to handle external accounts"
+}
+
+RESPONSE:
+{
+  "success": true,
+  "handoff_id": "handoff_xxxxx",
+  "resource": "src/auth/login.py::validate_user",
+  "message": "Work session completed and handoff created",
+  "status": "HANDOFF_PENDING"
+}
+
+STORED DATA:
+├─ Temporal handoff in temporal_handoff_engine
+├─ Development memory WORK_COMPLETED event
+└─ Can be consumed by next developer via /api/intercept_intent
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+================================================================================
+DATA STORAGE DIRECTORY STRUCTURE
+================================================================================
+
+activity_log_storage/
+├── changes/
+│   ├── src_auth_login.py_validate_user_2026-09-18T10-45-00.123456Z.json
+│   ├── src_auth_login.py_validate_user_2026-09-18T11-15-00.234567Z.json
+│   └── auto_review_src_auth_login.py_validate_user_...json
+├── approvals/
+│   └── src_auth_login.py_validate_user_approvals.json
+├── escalations/
+│   └── src_auth_login.py_validate_user_escalation.json
+├── rollbacks/
+│   └── src_auth_login.py_validate_user_2026-09-18T13-00-00Z.json
+├── pr_src_auth_login.py_validate_user_42.json
+├── merge_src_auth_login.py_validate_user_42.json
+└── (state machines persisted in memory during Flask session)
+
+KEY FILES PATTERN:
+├─ Changes: changes/{file}_{function}_{timestamp}.json
+├─ Approvals: approvals/{file}_{function}_approvals.json
+├─ Escalations: escalations/{file}_{function}_escalation.json
+├─ Rollbacks: rollbacks/{file}_{function}_{timestamp}.json
+├─ PRs: pr_{file}_{function}_{pr_number}.json
+└─ Merges: merge_{file}_{function}_{pr_number}.json
+
+================================================================================
+CRITICAL VERIFICATION POINTS FOR DATA MODELS
+================================================================================
+
+✅ Queue Timestamp Ordering (MOST CRITICAL):
+   File: workflow_state_machine.py (waiting_developers)
+   Test: 
+   - Dev2 joins at T1 (10:35:01Z)
+   - Dev3 joins at T2 (10:36:00Z)
+   - Dev4 joins at T3 (10:37:15Z)
+   - When Dev1 finishes: MIN(T1, T2, T3) = Dev2 gets lock ← VERIFY THIS
+
+✅ State Machine State Transitions:
+   AVAILABLE → EDITING (First dev)
+   EDITING → CONFLICT_WAITING (2nd+ dev joins)
+   EDITING/CONFLICT_WAITING → BOTH_DONE (dev finishes)
+   → No state change for subsequent queue members until they get lock
+
+✅ Conflict Severity Calculation:
+   overlap_ratio = min(prev_changes, curr_changes) / max(prev_changes, curr_changes)
+   - 0.0 → "low"
+   - 0.0 < x < 0.5 → "medium"
+   - >= 0.5 → "high" → CREATE ESCALATION
+
+✅ Approval Tracking:
+   Both approved_by and rejected_by lists must be maintained
+   If dev changes from rejected to approved: remove from rejected, add to approved
+   Merge blocked if ANY developer rejected (unless they change approval)
+
+✅ Lock Exclusivity:
+   Only one current_editor at any time
+   All others must be in waiting_developers with queued_at timestamp
+   No "hidden" developers outside of these two states
+
