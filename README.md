@@ -1,13 +1,38 @@
-# Neo: Semantic Multi-Developer Coordination Engine
+# Neo 4.0: Semantic Multi-Developer Coordination Engine
 
 > **Eliminate context thrashing and token waste in multi-developer workflows through intelligent state tracking and semantic conflict prevention**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 [![Production Ready](https://img.shields.io/badge/status-production--ready-brightgreen)](#production-readiness)
+[![All 5 Phases Tested](https://img.shields.io/badge/phases-5/5_validated-brightgreen)](#validate-neo-works)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](#quick-start)
 
 Neo is a semantic coordination engine that solves the fundamental problem in AI-assisted multi-developer workflows: **context explosion and token waste**. It maintains a complete, versioned state machine that tracks every change to every file, enabling intelligent context refresh, semantic conflict detection, and zero wasted tokens on stale or irrelevant context.
+
+---
+
+## ✅ Validate Neo Works: Run the Legitimate Two-Developer Test
+
+**Proof that Neo solves the stale context problem** - Real end-to-end test with actual data:
+
+```bash
+python tests/test_two_dev_legitimate.py
+```
+
+**Results** (All 5 phases validated):
+- ✅ Phase 1: Lock-Only-When-Needed (applied at 2 developers)
+- ✅ Phase 2: Temporal Handoff (auto-queue + work tracking)
+- ✅ Phase 3: Context Invalidation (stale detection + mandatory refresh)
+- ✅ Phase 4: Reviewer Provenance (history-based suggestions)
+- ✅ Phase 5: Agent Autonomy (policy registration + workflows)
+
+**Event Log** (Timestamped proof):
+```bash
+cat tests/test_two_dev_legitimate_log.md
+```
+
+See: [Test Results & Event Log](tests/test_two_dev_legitimate_log.md)
 
 ---
 
