@@ -4,30 +4,30 @@
     "passed": 4,
     "failed": 0,
     "total": 4,
-    "time_seconds": 3.958468437194824
+    "time_seconds": 3.9582338333129883
   },
   "details": {
     "test_cases": [
       {
-        "timestamp": "2026-09-20T16:49:54.285984",
+        "timestamp": "2026-09-20T19:18:28.028385",
         "test": "Rapid Declarations",
         "passed": true,
-        "details": "All 3 developers declared within 0.8ms. Lock should be ACTIVE (2+ devs). Entries recorded: 3/3"
+        "details": "All 3 developers declared within 0.5ms. Lock should be ACTIVE (2+ devs). Entries recorded: 3/3"
       },
       {
-        "timestamp": "2026-09-20T16:49:57.287824",
+        "timestamp": "2026-09-20T19:18:31.030155",
         "test": "Long-Running Edit",
         "passed": true,
         "details": "Alice worked for 3.0s while Bob waited. No timeout or deadlock. Completed: 1/1. Bob can now proceed."
       },
       {
-        "timestamp": "2026-09-20T16:49:57.638728",
+        "timestamp": "2026-09-20T19:18:31.380893",
         "test": "Staleness Detection",
         "passed": true,
-        "details": "At 200ms: staleness=200ms (FRESH). At 350ms: staleness=351ms (STALE). Threshold correctly detects: fresh then stale."
+        "details": "At 200ms: staleness=200ms (FRESH). At 350ms: staleness=350ms (STALE). Threshold correctly detects: fresh then stale."
       },
       {
-        "timestamp": "2026-09-20T16:49:58.243354",
+        "timestamp": "2026-09-20T19:18:31.985869",
         "test": "Merge Summary Aggregation",
         "passed": true,
         "details": "Developers: 3/3. Total changes: +75/75, -10/10. Conflicts: 0/0. Merge summary aggregates correctly."
@@ -35,6 +35,6 @@
     ],
     "passed": 4,
     "failed": 0,
-    "total_time": 3.958468437194824
+    "total_time": 3.9582338333129883
   }
 }
