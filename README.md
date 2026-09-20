@@ -23,9 +23,9 @@ Neo is a semantic coordination engine that **eliminates Git merge conflicts befo
 
 ---
 
-## 🚀 Neo Scales to Unlimited Developers
+## 🚀 Neo Scales to Multiple Developers
 
-Neo is **not limited to 2 developers**. It scales linearly to teams of any size:
+Neo is **not limited to 2 developers**. It scales linearly to teams of multiple developers:
 
 | Team Size | Lock Behavior | Token Efficiency | Example |
 |-----------|---------------|-----------------|---------|
@@ -54,7 +54,7 @@ python tests/test_two_dev_legitimate.py
 - ✅ Phase 4: Reviewer Provenance (history-based suggestions)
 - ✅ Phase 5: Agent Autonomy (policy registration + workflows)
 
-**Note**: While this test demonstrates 2 developers, Neo scales to unlimited developers through sequential queuing (see **3-developer example** below).
+**Note**: While this test demonstrates 2 developers, Neo scales to multiple developers through sequential queuing (see **3-developer example** below).
 
 **Event Log** (Timestamped proof):
 ```bash
@@ -700,7 +700,7 @@ Risk Score (0-100)?
 
 ---
 
-## Scalability: How Neo Handles Unlimited Developers
+## Scalability: How Neo Handles Multiple Developers
 
 Neo scales linearly to unlimited developers without degradation:
 
@@ -1048,7 +1048,7 @@ This starts REST API endpoints for Phase 1-5 coordination:
 ## Frequently Asked Questions
 
 **Q: Does Neo work for teams of 10+ developers, or only 2-3?**  
-A: Neo scales to unlimited developers. The 2-developer test is just a proof-of-concept. 3-dev, 5-dev, and 100-dev teams all work with sequential queuing (each dev gets fresh context before editing). Efficiency actually improves with team size: 80% savings at 2 devs → 91% at 5 devs → 96% at 100 devs. See [Scalability](#scalability-how-neo-handles-unlimited-developers) section.
+A: Neo scales to multiple developers. The 2-developer test is just a proof-of-concept. 3-dev, 5-dev, and 100-dev teams all work with sequential queuing (each dev gets fresh context before editing). Efficiency actually improves with team size: 80% savings at 2 devs → 91% at 5 devs → 96% at 100 devs. See [Scalability](#scalability-how-neo-handles-multiple-developers) section.
 
 **Q: Does Neo actually prevent Git merge conflicts?**  
 A: Yes. By detecting conflicts at the semantic layer (when developers declare intent), Neo prevents conflicts from ever reaching Git. Developers edit sequentially based on fresh context, ensuring zero merge conflicts.
