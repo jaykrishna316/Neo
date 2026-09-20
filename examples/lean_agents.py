@@ -26,7 +26,7 @@ class AgentResponse:
 class LocalAgent:
     """Ollama local model - free, unlimited"""
 
-    def __init__(self, model: str = "mistral", base_url: str = "http://localhost:11434"):
+    def __init__(self, model: str = "qwen2.5:3b", base_url: str = "http://localhost:11434"):
         self.model = model
         self.base_url = base_url
         self.agent_id = f"local-{model}"
@@ -81,8 +81,8 @@ class GroqAgent:
 
     def __init__(self):
         self.api_key = os.getenv("GROQ_API_KEY")
-        self.model = "mixtral-8x7b-32768"  # Free tier model
-        self.agent_id = "groq-mixtral"
+        self.model = "qwen/qwen3.8-27b"  # Available on this API key
+        self.agent_id = "groq-qwen38"
         self.base_url = "https://api.groq.com/openai/v1/chat/completions"
 
         if not self.api_key:

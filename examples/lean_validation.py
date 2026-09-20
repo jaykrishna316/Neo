@@ -140,7 +140,7 @@ def run_validation(num_scenarios: int = 100, use_sonnet: bool = True):
     print(f"   Cost estimate: <$3\n")
 
     # Initialize agents
-    local_agent = LocalAgent(model="mistral")
+    local_agent = LocalAgent(model="qwen2.5:3b")
     groq_agent = GroqAgent()
     sonnet_agent = SonnetAgent(max_calls=5) if use_sonnet else None
 
