@@ -480,6 +480,50 @@ def finish_editing_endpoint():
                     function_name,
                 )
 
+            # PHASE 4 INTEGRATION: Suggest reviewers based on provenance
+            suggested_reviewers = []
+            reviewer_explanations = {}
+            try:
+                suggested_reviewers = reviewer_provenance_engine.get_reviewer_provenance(
+                    resource=resource_key,
+                    new_actor=developer
+                )
+
+                # Get explanations for suggested reviewers
+                for reviewer in suggested_reviewers:
+                    explanation = reviewer_provenance_engine.explain_reviewer_relevance(
+                        resource=resource_key,
+                        actor=reviewer
+                    )
+                    reviewer_explanations[reviewer] = explanation
+            except Exception as e:
+                # Phase 4 is optional, don't fail if it errors
+                pass
+
+            # PHASE 5 INTEGRATION: Register agent autonomy workflow if applicable
+            agent_workflow_id = None
+            if actor_type == "agent":
+                try:
+                    # If this is an agent, register workflow for autonomous execution
+                    success, message_phase5, workflow_id = agent_autonomy_engine.execute_full_workflow_orchestration(
+                        agent_id=developer,
+                        resource=resource_key,
+                        action="coordinate_handoff",
+                        parameters={
+                            "next_developer": next_dev,
+                            "changed_symbols": changed_symbols,
+                            "handoff_id": handoff_id,
+                            "auto_sync": True,
+                            "auto_revalidate": True,
+                            "auto_consume_handoff": True
+                        }
+                    )
+                    if success:
+                        agent_workflow_id = workflow_id
+                except Exception as e:
+                    # Phase 5 is optional, don't fail if it errors
+                    pass
+
             return (
                 jsonify(
                     {
@@ -493,7 +537,10 @@ def finish_editing_endpoint():
                         "lines_changed": {
                             "added": lines_added,
                             "removed": lines_removed
-                        }
+                        },
+                        "suggested_reviewers": suggested_reviewers,
+                        "reviewer_explanations": reviewer_explanations,
+                        "agent_workflow_id": agent_workflow_id
                     }
                 ),
                 200,
@@ -578,13 +625,29 @@ def mandatory_context_refresh():
             function_name,
         )
 
+        # PHASE 5 INTEGRATION: If this is an agent, trigger next workflow step
+        agent_next_workflow_id = None
+        if actor_type == "agent":
+            try:
+                # Agent refreshed context - now trigger next step in autonomy workflow
+                success, msg, workflow_id = agent_autonomy_engine.execute_auto_revalidate(
+                    agent_id=developer,
+                    resource=resource_key
+                )
+                if success:
+                    agent_next_workflow_id = workflow_id
+            except Exception as e:
+                # Phase 5 is optional
+                pass
+
         return jsonify({
             "success": True,
             "message": "Context successfully refreshed and revalidated",
             "refresh_status": "COMPLETE",
             "can_proceed": True,
             "developer": developer,
-            "resource": resource_key
+            "resource": resource_key,
+            "agent_workflow_id": agent_next_workflow_id
         }), 200
 
     except Exception as e:
