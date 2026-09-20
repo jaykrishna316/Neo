@@ -1,4 +1,4 @@
-# Neo 4.0: Semantic Multi-Developer Coordination Engine
+# Neo: Semantic Multi-Developer Coordination Engine
 
 > **Eliminate context thrashing and token waste in multi-developer workflows through intelligent state tracking and semantic conflict prevention**
 
@@ -6,7 +6,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 [![Production Ready](https://img.shields.io/badge/status-production--ready-brightgreen)](#production-readiness)
 [![All 5 Phases Tested](https://img.shields.io/badge/phases-5/5_validated-brightgreen)](#validate-neo-works)
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](#quick-start)
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)]
 
 Neo is a semantic coordination engine that solves the fundamental problem in AI-assisted multi-developer workflows: **context explosion and token waste**. It maintains a complete, versioned state machine that tracks every change to every file, enabling intelligent context refresh, semantic conflict detection, and zero wasted tokens on stale or irrelevant context.
 
@@ -16,7 +16,7 @@ Neo is a semantic coordination engine that solves the fundamental problem in AI-
 
 - **[What Problem Does Neo Solve?](#the-core-problem-working-with-stale-code)** — The stale code problem explained
 - **[How Neo Solves It](#neos-approach-prevent-stale-code-before-it-starts)** — The coordinated workflow
-- **[Key Neo 4.0 Files](#key-neo-40-files-reference)** — Core components explained
+- **[Key Neo Files](#key-neo-files-reference)** — Core components explained
 - **[Validate It Works](#-validate-neo-works-run-the-legitimate-two-developer-test)** — Run the test
 - **[Technical Architecture](#technical-architecture)** — How it works under the hood
 - **[Real-World Example](#real-world-example-3-developer-workflow)** — 3-dev workflow walkthrough
@@ -47,7 +47,7 @@ See: [Test Results & Event Log](tests/test_two_dev_legitimate_log.md)
 
 ---
 
-## Key Neo 4.0 Files Reference
+## Key Neo Files Reference
 
 ### 🎯 Core Coordination Engine
 
@@ -877,7 +877,7 @@ This starts REST API endpoints for Phase 1-5 coordination:
 - **Phase 1**: `.claude/workflow_state_machine.py` — Lock logic
 - **Phase 2**: `.claude/temporal_handoff_engine.py` — Auto-queue
 - **Phase 3**: `.claude/context_invalidation_engine.py` — Staleness detection
-- **Phases 4-5**: See table in [Key Neo 4.0 Files](#key-neo-40-files-reference) above
+- **Phases 4-5**: See table in [Key Neo Files](#key-neo-files-reference) above
 
 ---
 
