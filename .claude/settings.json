@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/user/Neo/scripts/check_conflict_hook.py",
+            "command": "python3 /Users/binarymind/Neo/scripts/check_conflict_hook.py",
             "timeout": 5
           }
         ]

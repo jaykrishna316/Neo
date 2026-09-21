@@ -17,10 +17,10 @@ This project exposes the **neo-conflict-detection** MCP server:
 ```json
 {
   "neo-conflict-detection": {
-    "command": "python3",
+    "command": "/absolute/path/to/Neo/.venv/bin/python3",
     "args": ["-m", "ide.mcp_neo_server"],
     "env": {
-      "PYTHONPATH": "/home/user/Neo",
+      "PYTHONPATH": "/absolute/path/to/Neo",
       "NEO_MULTITENANCY": "false",
       "CLAUDE_TENANT_ID": "default"
     }
@@ -28,22 +28,24 @@ This project exposes the **neo-conflict-detection** MCP server:
 }
 ```
 
+`command` must point at a Python environment with the `mcp` SDK installed (see `requirements.txt`) — a project-local virtualenv (`.venv`) works well since Claude Code invokes this as a subprocess and won't otherwise see your shell's environment.
+
 ### MCP Methods
 
-The Neo MCP server provides 4 methods to Claude Code:
+The Neo MCP server provides 4 tools to Claude Code (tool names use underscores, not slashes, per the MCP tool-naming spec):
 
-1. **neo/check_conflicts** - Check for conflicts before code generation
+1. **neo_check_conflicts** - Check for conflicts before code generation
    - Input: `agent_id`, `file_path`, `intent`, `region`
    - Output: Risk level (LOW/MEDIUM/HIGH), message
 
-2. **neo/log_activity** - Log developer intent
+2. **neo_log_activity** - Log developer intent
    - Input: `agent_id`, `file_path`, `intent`, `intent_category`
    - Output: Success confirmation
 
-3. **neo/get_active_work** - View all active developers
+3. **neo_get_active_work** - View all active developers
    - Output: List of active entries with timestamps
 
-4. **neo/get_status** - Check server status
+4. **neo_get_status** - Check server status
    - Output: Server status, version, multitenancy state
 
 ---
@@ -110,15 +112,34 @@ IDE Response (✅/⚠️/🚫)
 
 ## Testing MCP Connection
 
-Run the MCP server directly:
+The server speaks real MCP (JSON-RPC 2.0 over stdio) via the `mcp` SDK, so
+running it directly just blocks waiting for a client — it won't print
+anything on its own. Verify it with the SDK's client instead:
+
 ```bash
-python3 -m ide.mcp_neo_server
+PYTHONPATH=. .venv/bin/python3 -c "
+import asyncio
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+async def main():
+    params = StdioServerParameters(
+        command='.venv/bin/python3',
+        args=['-m', 'ide.mcp_neo_server'],
+        env={'PYTHONPATH': '.', 'NEO_MULTITENANCY': 'false', 'CLAUDE_TENANT_ID': 'default'},
+    )
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as session:
+            print(await session.initialize())
+            print(await session.list_tools())
+
+asyncio.run(main())
+"
 ```
 
-Should output:
-```json
-{"name": "neo-conflict-detection", "version": "1.0", "supported_methods": [...]}
-```
+A successful run prints the server info and the 4 registered tools
+(`neo_check_conflicts`, `neo_log_activity`, `neo_get_active_work`,
+`neo_get_status`).
 
 ---
 
