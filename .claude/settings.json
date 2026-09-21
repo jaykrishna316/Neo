@@ -31,5 +31,20 @@
   "defaults": {
     "functions_are_small": true,
     "description": "Increases HIGH conflict sensitivity for small functions"
+  },
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/user/Neo/scripts/check_conflict_hook.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }

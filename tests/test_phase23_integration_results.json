@@ -1,0 +1,29 @@
+{
+  "integrations_verified": [
+    [
+      "Context Snapshot",
+      true
+    ],
+    [
+      "Temporal Handoff",
+      true
+    ],
+    [
+      "Symbol Change Marking",
+      true
+    ],
+    [
+      "Context Invalidation",
+      true
+    ],
+    [
+      "Refresh Workflow",
+      true
+    ],
+    [
+      "Handoff Consumption",
+      true
+    ]
+  ],
+  "status": "PASSED"
+}
