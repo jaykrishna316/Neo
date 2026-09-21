@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "neo": {
+      "command": "/Users/binarymind/Neo/.venv/bin/python3",
+      "args": ["-m", "ide.mcp_neo_server"],
+      "env": {
+        "PYTHONPATH": "/Users/binarymind/Neo",
+        "NEO_MULTITENANCY": "false",
+        "CLAUDE_TENANT_ID": "default"
+      }
+    }
+  }
+}
