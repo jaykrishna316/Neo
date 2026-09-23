@@ -13,7 +13,40 @@ Neo is a semantic coordination engine that **eliminates Git merge conflicts befo
 
 ---
 
-## 📋 Quick Navigation
+## 🚀 Quick Start for New Developers
+
+**NEW TO NEO?** Start here based on your role:
+
+### For New Team Members (10 minutes)
+→ **[Getting Started Guide](docs/getting-started/GETTING_STARTED_MCP.md)**
+- Complete setup from zero
+- Step-by-step environment configuration
+- Your first 2-developer conflict detection test
+- Perfect for: First-time users, fresh development environment
+
+### For Testing & Validation (5 minutes)
+→ **[MCP Testing Hub](docs/testing/MCP_TESTING.md)**
+- Quick test commands (2-dev and 4-dev)
+- Test evidence and proof-of-concept
+- How to verify Neo works on your system
+
+### For Deep Learning (30 minutes)
+→ **[Complete Technical Guide](docs/testing/NEO_MCP_QUICK_START.md)**
+- Full MCP architecture explanation
+- Conflict detection scenarios
+- Risk levels and classification
+- Troubleshooting guide
+
+### For Onboarding (Checklist)
+→ **[Onboarding Checklist](docs/getting-started/ONBOARDING_CHECKLIST.md)**
+- Phase-based progression
+- Key concepts to learn
+- Success criteria
+- Time breakdown (15 min total)
+
+---
+
+## 📋 Full Navigation
 
 - **[MCP Server Integration](#mcp-server-integration)** — Claude Code IDE integration (✅ locally verified)
 - **[Test Evidence](#test-evidence-mcp-integration-working-locally)** — Proof that neo_check_conflicts works with multiple developers
