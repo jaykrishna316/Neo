@@ -1,0 +1,32 @@
+{
+  "timestamp": 1790286482.5942566,
+  "scenario": "3-developer auth.py edits",
+  "developers": [
+    "alice",
+    "bob",
+    "charlie"
+  ],
+  "traditional": {
+    "conflicts_detected": true,
+    "conflict_count": 2,
+    "conflicts_per_merge": [
+      false,
+      true,
+      true
+    ]
+  },
+  "neo": {
+    "conflicts_detected": false,
+    "conflict_count": 0,
+    "coordination_time": 0.0011031627655029297,
+    "context_refreshes": 2,
+    "total_lines_added": 9
+  },
+  "comparison": {
+    "conflicts_prevented": 2,
+    "conflict_reduction_percentage": 100.0,
+    "developers": 3,
+    "context_refreshes": 2,
+    "coordination_time_seconds": 0.0011031627655029297
+  }
+}

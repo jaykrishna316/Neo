@@ -1,0 +1,22 @@
+{
+  "timestamp": 1790286042.8429391,
+  "scenario": "2-developer auth.py edits",
+  "traditional": {
+    "conflicts_detected": true,
+    "conflict_count": 1,
+    "merge_time": 1790286043.0858626,
+    "manual_resolution_required": true
+  },
+  "neo": {
+    "conflicts_detected": false,
+    "conflict_count": 0,
+    "coordination_time": 0.0019621849060058594,
+    "manual_resolution_required": false,
+    "context_refreshes": 1
+  },
+  "comparison": {
+    "conflicts_prevented": 1,
+    "conflict_reduction_percentage": 100.0,
+    "manual_work_eliminated": true
+  }
+}

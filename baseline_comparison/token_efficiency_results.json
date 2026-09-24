@@ -1,0 +1,59 @@
+{
+  "timestamp": 1790287381.689412,
+  "test_type": "Token Efficiency Measurement",
+  "methodology": "Real token counting from merge conflicts and coordination messages",
+  "scenarios": {},
+  "2dev": {
+    "traditional": {
+      "file_size_chars": 11435,
+      "conflict_markers": 2,
+      "file_tokens": 2858,
+      "resolution_prompt_tokens": 314,
+      "total_tokens": 3172,
+      "developers": 2
+    },
+    "neo": {
+      "alice_declaration_tokens": 9,
+      "bob_declaration_tokens": 8,
+      "conflict_check_tokens": 26,
+      "alice_delta_tokens": 8,
+      "bob_completion_tokens": 11,
+      "total_tokens": 62,
+      "developers": 2
+    },
+    "comparison": {
+      "traditional_tokens": 3172,
+      "neo_tokens": 62,
+      "savings_percentage": 98.0453972257251
+    }
+  },
+  "3dev": {
+    "traditional": {
+      "conflict_count": 2,
+      "total_conflict_tokens": 5722,
+      "developers": 3
+    },
+    "neo": {
+      "declaration_tokens": 22,
+      "delta_tokens": 17,
+      "total_tokens": 39,
+      "developers": 3
+    },
+    "comparison": {
+      "traditional_tokens": 5722,
+      "neo_tokens": 39,
+      "savings_percentage": 99.31842013282069
+    }
+  },
+  "validation": {
+    "2dev_traditional_tokens": 3172,
+    "2dev_neo_tokens": 62,
+    "2dev_savings_percentage": 98.0453972257251,
+    "3dev_traditional_tokens": 5722,
+    "3dev_neo_tokens": 39,
+    "3dev_savings_percentage": 99.31842013282069,
+    "readme_claim_2dev": 80,
+    "readme_claim_3dev": 87,
+    "validated": true
+  }
+}
