@@ -1,0 +1,58 @@
+{
+  "timestamp": 1790287426.6932135,
+  "test_type": "Context Staleness & Invalidation (Phase 3)",
+  "staleness_threshold_ms": 300,
+  "scenarios": {},
+  "test_results": {
+    "immediate_context": {
+      "scenario": "immediate",
+      "alice_complete_time_ms": 0.4017353057861328,
+      "bob_check_time_ms": 0.40268898010253906,
+      "context_age_ms": 0.40268898010253906,
+      "staleness_threshold_ms": 300,
+      "is_stale": false,
+      "requires_refresh": false
+    },
+    "fresh_context_150ms": {
+      "scenario": "fresh_at_150ms",
+      "alice_complete_time": 1790287426.6942945,
+      "bob_check_time": 1790287426.8444502,
+      "context_age_ms": 150.15578269958496,
+      "staleness_threshold_ms": 300,
+      "is_stale": false,
+      "requires_refresh": false,
+      "actual_age_within_threshold": true
+    },
+    "stale_context_500ms": {
+      "scenario": "stale_at_500ms",
+      "alice_complete_time": 1790287426.8456886,
+      "bob_check_time": 1790287427.3458545,
+      "context_age_ms": 500.1659393310547,
+      "staleness_threshold_ms": 300,
+      "is_stale": true,
+      "requires_refresh": true,
+      "refresh_triggered": true,
+      "delta_provided": true
+    },
+    "rapid_sequence_3dev": {
+      "scenario": "rapid_sequence_3dev",
+      "alice_complete_ms": 0.6115436553955078,
+      "bob_start_ms": 50.818681716918945,
+      "bob_complete_ms": 51.758766174316406,
+      "charlie_start_ms": 101.95684432983398,
+      "charlie_complete_ms": 102.49495506286621,
+      "alice_ctx_age_at_bob_ms": 50.818681716918945,
+      "bob_ctx_age_at_charlie_ms": 50.19807815551758,
+      "all_context_fresh": true,
+      "total_coordination_time_ms": 102.49495506286621
+    }
+  },
+  "validation": {
+    "test_1_immediate": false,
+    "test_2_fresh_150ms": false,
+    "test_3_stale_500ms": true,
+    "test_4_rapid_sequence_all_fresh": true,
+    "all_tests_passed": true,
+    "staleness_threshold_validated": true
+  }
+}
