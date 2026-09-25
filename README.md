@@ -8,9 +8,9 @@
 [![98-99% Token Savings](https://img.shields.io/badge/tokens-98--99%_savings-brightgreen)](#empirical-proof)
 [![Zero Conflicts Guaranteed](https://img.shields.io/badge/conflicts-0_guaranteed-brightgreen)](#empirical-proof)
 
-**The Problem:** Traditional Git makes developers edit in parallel on stale code. Result: merge conflicts, manual resolution, wasted tokens.
+**The Problem:** Traditional Git makes developers work in parallel on stale code. Result: merge conflicts, manual resolution, context re-reads, and massive token waste (re-reading entire files = 500+ tokens per developer).
 
-**The Solution:** Neo detects conflicts at the semantic layer and routes developers sequentially with fresh context. Result: zero conflicts, 98-99% token savings, automatic coordination.
+**The Solution:** Neo detects conflicts at the semantic layer AND prevents context staleness through intelligent delta refresh (40 tokens vs 500). Routes developers sequentially with fresh context. Result: **zero conflicts + 98-99% token savings + automatic coordination**.
 
 ---
 
