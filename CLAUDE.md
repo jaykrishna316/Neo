@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Neo is a semantic coordination engine that eliminates Git merge conflicts by moving conflict resolution one layer below Git through intelligent semantic coordination and automatic conflict prevention.
+Neo is a semantic coordination engine that eliminates Git merge conflicts **before they happen**, preventing expensive re-generations and saving tokens. Instead of detecting conflicts at merge time (after code is generated), Neo detects them at the semantic layer during intent declaration, preventing wasted generations entirely. This saves both developer time and API tokens by coordinating multi-developer work automatically.
 
 ---
 
@@ -62,11 +62,13 @@ The Neo MCP server provides 4 tools to Claude Code (tool names use underscores, 
 
 When Claude Code generates code:
 
-1. **Before generation** → Neo checks for conflicts
-2. **Risk assessment** → Returns LOW/MEDIUM/HIGH
+1. **Before generation** → Neo checks for conflicts at semantic layer
+2. **Risk assessment** → Returns LOW/MEDIUM/HIGH (prevents wasted generations)
 3. **Display** → Shows status (✅/⚠️/🚫)
 4. **User decision** → Block, warn, or allow generation
 5. **Log activity** → Records intent to shared activity log
+
+**Token savings**: By preventing conflicts before code generation, Neo eliminates expensive re-generations that would occur during merge conflict resolution. Multiple developers coordinating work save tokens and time through upfront conflict prevention.
 
 ---
 
