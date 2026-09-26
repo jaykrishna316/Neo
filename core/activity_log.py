@@ -89,6 +89,16 @@ class ActivityEntry:
     intent_scope: Optional[str] = None
     blocking_others: bool = False
     estimated_completion: Optional[int] = None
+    # Explicit lock fields (NEW - optional for backward compatibility)
+    lock_state: Optional[str] = None       # "ACQUIRED", "WAITING", "RELEASED"
+    lock_holder: Optional[str] = None      # developer_id who holds the lock
+    lock_acquired_at: Optional[float] = None
+    lock_expires_at: Optional[float] = None  # Unix timestamp (lock expiration)
+    lock_timeout_seconds: int = 1800       # default 30 minutes
+    lock_reason: Optional[str] = None      # "MEDIUM_CONFLICT", "HIGH_CONFLICT"
+    lock_scope: Optional[str] = None       # "file", "function", "region"
+    queue_position: Optional[int] = None   # Position in queue if waiting (0=next)
+    waiting_for: Optional[str] = None      # developer_id this one is waiting for
 
     def to_dict(self):
         return asdict(self)
@@ -121,6 +131,16 @@ def log_activity(
     blocking_others: bool = False,
     estimated_completion: Optional[int] = None,
     tenant_id: Optional[str] = None,
+    # Explicit lock parameters (NEW)
+    lock_state: Optional[str] = None,
+    lock_holder: Optional[str] = None,
+    lock_acquired_at: Optional[float] = None,
+    lock_expires_at: Optional[float] = None,
+    lock_timeout_seconds: int = 1800,
+    lock_reason: Optional[str] = None,
+    lock_scope: Optional[str] = None,
+    queue_position: Optional[int] = None,
+    waiting_for: Optional[str] = None,
 ) -> ActivityEntry:
     """Log a developer's or agent's intent to work on a file (tenant-isolated).
 
@@ -135,6 +155,15 @@ def log_activity(
         blocking_others: Whether this change blocks other developers
         estimated_completion: Estimated completion time in seconds
         tenant_id: Tenant ID (company). Defaults to CLAUDE_TENANT_ID env var.
+        lock_state: Explicit lock state ("ACQUIRED", "WAITING", "RELEASED")
+        lock_holder: Developer ID who holds the lock
+        lock_acquired_at: When lock was acquired (Unix timestamp)
+        lock_expires_at: When lock expires (Unix timestamp)
+        lock_timeout_seconds: Lock timeout in seconds (default 30 min)
+        lock_reason: Reason for lock ("MEDIUM_CONFLICT", "HIGH_CONFLICT")
+        lock_scope: Lock scope ("file", "function", "region")
+        queue_position: Position in waiting queue (0=next)
+        waiting_for: Developer ID this one is waiting for
     """
     resolved_tenant = tenant_id or DEFAULT_TENANT_ID
     ensure_tenant_isolation(resolved_tenant)
@@ -152,6 +181,15 @@ def log_activity(
         intent_scope=intent_scope,
         blocking_others=blocking_others,
         estimated_completion=estimated_completion,
+        lock_state=lock_state,
+        lock_holder=lock_holder,
+        lock_acquired_at=lock_acquired_at,
+        lock_expires_at=lock_expires_at,
+        lock_timeout_seconds=lock_timeout_seconds,
+        lock_reason=lock_reason,
+        lock_scope=lock_scope,
+        queue_position=queue_position,
+        waiting_for=waiting_for,
     )
 
     entries = json.loads(log_file.read_text())
