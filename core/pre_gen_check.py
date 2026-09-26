@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Pre-generation conflict checking API for Neo coordination layer (tenant-isolated)."""
 
-from typing import Tuple, Optional
-from core.activity_log import get_active_entries, DEFAULT_TENANT_ID
+from typing import Tuple, Optional, Dict, Any
+from core.activity_log import get_active_entries, DEFAULT_TENANT_ID, log_activity
 from core.risk_classifier import RiskLevel, classify_risk
+from core.lock_manager import LockManager
 
 
 def check_for_conflicts(
@@ -12,7 +13,7 @@ def check_for_conflicts(
     intent: str,
     region: Optional[str] = None,
     tenant_id: Optional[str] = None,
-) -> Tuple[RiskLevel, str]:
+) -> Tuple[RiskLevel, str, Optional[Dict[str, Any]]]:
     """
     Check for conflicts before code generation (tenant-isolated).
 
@@ -25,7 +26,8 @@ def check_for_conflicts(
                   Conflict checks only see same-tenant work.
 
     Returns:
-        Tuple of (RiskLevel, message) indicating conflict risk and details
+        Tuple of (RiskLevel, message, lock_info) where lock_info contains
+        explicit lock state if MEDIUM/HIGH risk detected
     """
     # Resolve tenant context
     resolved_tenant = tenant_id or DEFAULT_TENANT_ID
@@ -40,7 +42,7 @@ def check_for_conflicts(
     ]
 
     if not same_file_entries:
-        return (RiskLevel.LOW, "No conflicting work detected. Safe to proceed.")
+        return (RiskLevel.LOW, "No conflicting work detected. Safe to proceed.", None)
 
     # Check each conflicting entry
     highest_risk = RiskLevel.LOW
@@ -71,12 +73,27 @@ def check_for_conflicts(
 
     # Format message
     if not conflict_details:
-        return (RiskLevel.LOW, "No conflicts. Safe to proceed.")
+        return (RiskLevel.LOW, "No conflicts. Safe to proceed.", None)
 
     conflict_info = "; ".join([
         f"{c['agent']} is {c['intent']}"
         for c in conflict_details
     ])
+
+    # Acquire explicit lock for MEDIUM/HIGH risk
+    lock_info = None
+    if highest_risk in (RiskLevel.MEDIUM, RiskLevel.HIGH):
+        lock_manager = LockManager(tenant_id=resolved_tenant)
+        lock_reason = "HIGH_CONFLICT" if highest_risk == RiskLevel.HIGH else "MEDIUM_CONFLICT"
+        lock_scope = "region" if region else "file"
+
+        lock_info = lock_manager.acquire_lock(
+            file_path=file_path,
+            region=region,
+            developer_id=agent_id,
+            reason=lock_reason,
+            scope=lock_scope,
+        )
 
     if highest_risk == RiskLevel.HIGH:
         msg = f"HIGH RISK: {conflict_info}. This may cause a merge conflict. Coordinate with the other agent."
@@ -85,7 +102,7 @@ def check_for_conflicts(
     else:
         msg = f"LOW RISK: {conflict_info}. Different regions in same file. Safe to proceed."
 
-    return (highest_risk, msg)
+    return (highest_risk, msg, lock_info)
 
 
 def handle_conflict_response(
