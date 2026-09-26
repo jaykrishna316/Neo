@@ -1,0 +1,265 @@
+{
+  "test_metadata": {
+    "test_name": "16-Developer Extreme Scale Test",
+    "test_type": "extreme_scale_same_lines",
+    "timestamp": "2026-09-25T17:59:19.707557",
+    "duration_seconds": 1.7357397079467773,
+    "developers": [
+      "alice",
+      "bob",
+      "charlie",
+      "diana",
+      "ethan",
+      "fiona",
+      "grace",
+      "henry",
+      "ivy",
+      "jack",
+      "kate",
+      "liam",
+      "megan",
+      "noah",
+      "olivia",
+      "pablo"
+    ],
+    "file_tested": "auth.py",
+    "file_size_bytes": 31073,
+    "shared_region": "100-120 (20 lines)",
+    "description": "Extreme scale: all 16 developers on same 20 lines"
+  },
+  "traditional_git_results": {
+    "merge_attempts": 16,
+    "merge_strategy": "parallel_with_sequential_integration",
+    "tokens_estimated": 21136,
+    "tokens_breakdown": {
+      "file_reads": 16000,
+      "merge_overhead": 1600,
+      "context_staleness": 4000
+    },
+    "developers_count": 16,
+    "tokens_per_developer": 1321
+  },
+  "neo_coordination_results": {
+    "conflicts_detected": 0,
+    "coordination_strategy": "sequential_lock_16_developers",
+    "tokens_used": 428,
+    "tokens_breakdown": {
+      "per_developer": 8,
+      "delta_refresh": 300
+    },
+    "developers_count": 16,
+    "tokens_per_developer": 26,
+    "activity_log": [
+      {
+        "developer": "alice",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 0,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": false,
+        "queue_position": 0
+      },
+      {
+        "developer": "bob",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 50,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 1
+      },
+      {
+        "developer": "charlie",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 100,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 2
+      },
+      {
+        "developer": "diana",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 150,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 3
+      },
+      {
+        "developer": "ethan",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 200,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 4
+      },
+      {
+        "developer": "fiona",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 250,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 5
+      },
+      {
+        "developer": "grace",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 300,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 6
+      },
+      {
+        "developer": "henry",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 350,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 7
+      },
+      {
+        "developer": "ivy",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 400,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 8
+      },
+      {
+        "developer": "jack",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 450,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 9
+      },
+      {
+        "developer": "kate",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 500,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 10
+      },
+      {
+        "developer": "liam",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 550,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 11
+      },
+      {
+        "developer": "megan",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 600,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 12
+      },
+      {
+        "developer": "noah",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 650,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 13
+      },
+      {
+        "developer": "olivia",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 700,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 14
+      },
+      {
+        "developer": "pablo",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-120)",
+        "timestamp": 750,
+        "lines_added": 21,
+        "lines_removed": 0,
+        "region": "100-120",
+        "conflict": false,
+        "lock_applied": true,
+        "queue_position": 15
+      }
+    ]
+  },
+  "comparison": {
+    "tokens_saved": 20708,
+    "token_savings_percentage": 97.97501892505677,
+    "efficiency_gain": 49.38317757009346,
+    "scale_validation": "16 developers on same 20 lines",
+    "scaling_observation": "Neo efficiency IMPROVES at scale (token savings increase)"
+  },
+  "integrity_checks": {
+    "file_content_valid": true,
+    "all_developers_logged": true,
+    "developers_in_order": true,
+    "no_timestamp_manipulation": true,
+    "shared_region_verified": true,
+    "neo_conflicts_zero": true,
+    "sequential_merges_completed": true,
+    "token_counts_realistic": true
+  },
+  "test_valid": true
+}

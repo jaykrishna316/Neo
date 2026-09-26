@@ -1,0 +1,134 @@
+{
+  "test_metadata": {
+    "test_name": "8-Developer Baseline Test",
+    "timestamp": "2026-09-25T17:53:37.614808",
+    "duration_seconds": 1.0559544563293457,
+    "developers": [
+      "alice",
+      "bob",
+      "charlie",
+      "diana",
+      "ethan",
+      "fiona",
+      "grace",
+      "henry"
+    ],
+    "file_tested": "auth.py",
+    "file_size_bytes": 41698
+  },
+  "traditional_git_results": {
+    "conflicts_detected": 2,
+    "merge_strategy": "parallel_with_conflict_resolution",
+    "tokens_estimated": 10774,
+    "developers_count": 8
+  },
+  "neo_coordination_results": {
+    "conflicts_detected": 0,
+    "coordination_strategy": "sequential_with_delta_refresh",
+    "tokens_used": 200,
+    "tokens_breakdown": {
+      "per_developer": 18,
+      "delta_refresh": 56
+    },
+    "developers_count": 8,
+    "activity_log": [
+      {
+        "developer": "alice",
+        "file": "auth.py",
+        "intent": "Add alice's authentication changes (lines 100-150)",
+        "timestamp": 0,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false
+      },
+      {
+        "developer": "bob",
+        "file": "auth.py",
+        "intent": "Add bob's authentication changes (lines 200-250)",
+        "timestamp": 50,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "200-250",
+        "conflict": false
+      },
+      {
+        "developer": "charlie",
+        "file": "auth.py",
+        "intent": "Add charlie's authentication changes (lines 300-350)",
+        "timestamp": 100,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "300-350",
+        "conflict": false
+      },
+      {
+        "developer": "diana",
+        "file": "auth.py",
+        "intent": "Add diana's authentication changes (lines 400-450)",
+        "timestamp": 150,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "400-450",
+        "conflict": false
+      },
+      {
+        "developer": "ethan",
+        "file": "auth.py",
+        "intent": "Add ethan's authentication changes (lines 500-550)",
+        "timestamp": 200,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "500-550",
+        "conflict": false
+      },
+      {
+        "developer": "fiona",
+        "file": "auth.py",
+        "intent": "Add fiona's authentication changes (lines 600-650)",
+        "timestamp": 250,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "600-650",
+        "conflict": false
+      },
+      {
+        "developer": "grace",
+        "file": "auth.py",
+        "intent": "Add grace's authentication changes (lines 700-750)",
+        "timestamp": 300,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "700-750",
+        "conflict": false
+      },
+      {
+        "developer": "henry",
+        "file": "auth.py",
+        "intent": "Add henry's authentication changes (lines 800-850)",
+        "timestamp": 350,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "800-850",
+        "conflict": false
+      }
+    ]
+  },
+  "comparison": {
+    "conflicts_prevented": 2,
+    "conflict_prevention_percentage": 100.0,
+    "tokens_saved": 10574,
+    "token_savings_percentage": 98.14367922777056
+  },
+  "integrity_checks": {
+    "file_content_valid": true,
+    "all_developers_logged": true,
+    "developers_in_order": true,
+    "no_timestamp_manipulation": true,
+    "regions_non_overlapping": true,
+    "neo_conflicts_zero": true,
+    "traditional_conflicts_positive": true,
+    "token_counts_realistic": true
+  },
+  "test_valid": true
+}

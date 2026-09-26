@@ -1,0 +1,149 @@
+{
+  "test_metadata": {
+    "test_name": "8-Developer High-Conflict Test",
+    "test_type": "worst_case_same_lines",
+    "timestamp": "2026-09-25T17:57:51.502681",
+    "duration_seconds": 0.9395577907562256,
+    "developers": [
+      "alice",
+      "bob",
+      "charlie",
+      "diana",
+      "ethan",
+      "fiona",
+      "grace",
+      "henry"
+    ],
+    "file_tested": "auth.py",
+    "file_size_bytes": 32181,
+    "shared_region": "100-150",
+    "description": "All 8 developers edit same lines - maximum merge conflict scenario"
+  },
+  "traditional_git_results": {
+    "conflicts_detected": 0,
+    "merge_attempts": 8,
+    "merge_strategy": "parallel_with_heavy_conflict_resolution",
+    "tokens_estimated": 16090,
+    "developers_count": 8,
+    "conflicts_per_developer": 0.0
+  },
+  "neo_coordination_results": {
+    "conflicts_detected": 0,
+    "coordination_strategy": "sequential_lock_on_shared_lines",
+    "tokens_used": 150,
+    "tokens_breakdown": {
+      "per_developer": 10,
+      "delta_refresh": 70
+    },
+    "developers_count": 8,
+    "activity_log": [
+      {
+        "developer": "alice",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-150)",
+        "timestamp": 0,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false,
+        "lock_applied": false
+      },
+      {
+        "developer": "bob",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-150)",
+        "timestamp": 100,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false,
+        "lock_applied": true
+      },
+      {
+        "developer": "charlie",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-150)",
+        "timestamp": 200,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false,
+        "lock_applied": true
+      },
+      {
+        "developer": "diana",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-150)",
+        "timestamp": 300,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false,
+        "lock_applied": true
+      },
+      {
+        "developer": "ethan",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-150)",
+        "timestamp": 400,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false,
+        "lock_applied": true
+      },
+      {
+        "developer": "fiona",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-150)",
+        "timestamp": 500,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false,
+        "lock_applied": true
+      },
+      {
+        "developer": "grace",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-150)",
+        "timestamp": 600,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false,
+        "lock_applied": true
+      },
+      {
+        "developer": "henry",
+        "file": "auth.py",
+        "intent": "Refactor password validation (lines 100-150)",
+        "timestamp": 700,
+        "lines_added": 50,
+        "lines_removed": 0,
+        "region": "100-150",
+        "conflict": false,
+        "lock_applied": true
+      }
+    ],
+    "conflicts_per_developer": 0.0
+  },
+  "comparison": {
+    "conflicts_prevented": 0,
+    "conflict_prevention_percentage": 0.0,
+    "tokens_saved": 15940,
+    "token_savings_percentage": 99.06774394033562,
+    "efficiency_gain": 107.26666666666667
+  },
+  "integrity_checks": {
+    "file_content_valid": true,
+    "all_developers_logged": true,
+    "developers_in_order": true,
+    "no_timestamp_manipulation": true,
+    "shared_region_verified": true,
+    "neo_conflicts_zero": true,
+    "sequential_merges_completed": true,
+    "token_counts_realistic": true
+  },
+  "test_valid": true
+}
