@@ -6,6 +6,14 @@ Neo is a semantic coordination engine that eliminates Git merge conflicts by mov
 
 ---
 
+## Git Development Branch
+
+**Designated Feature Branch**: `neo-4.0`
+
+All development and feature work should be committed and pushed to the `neo-4.0` branch. Changes are merged to `main` when ready for release.
+
+---
+
 ## MCP Server Configuration
 
 Neo provides an MCP (Model Context Protocol) server for Claude Code IDE integration.
