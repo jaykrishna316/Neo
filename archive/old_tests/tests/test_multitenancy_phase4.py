@@ -76,7 +76,7 @@ class TestConcurrentTenants:
         log_activity("bob", "src/payment.py", "Add PayPal integration", tenant_id="startup-ai-lab")
 
         # Company A checks conflicts - should see no conflict (different tenant)
-        risk_a, msg_a = check_for_conflicts(
+        risk_a, msg_a, _ = check_for_conflicts(
             agent_id="alice-2",
             file_path="src/payment.py",
             intent="Add Refund logic",
@@ -85,7 +85,7 @@ class TestConcurrentTenants:
         assert risk_a == RiskLevel.LOW
 
         # Company B checks conflicts - should see no conflict (different tenant)
-        risk_b, msg_b = check_for_conflicts(
+        risk_b, msg_b, _ = check_for_conflicts(
             agent_id="bob-2",
             file_path="src/payment.py",
             intent="Add Dispute resolution",
@@ -161,7 +161,7 @@ class TestConcurrentTenants:
 
         def concurrent_conflict_check(tenant, agent_num):
             try:
-                risk, msg = check_for_conflicts(
+                risk, msg, _ = check_for_conflicts(
                     agent_id=f"agent-{agent_num}",
                     file_path="src/core.py",
                     intent=f"Agent {agent_num} intent",
@@ -345,7 +345,7 @@ class TestBackwardCompatibility:
 
         # Verify conflict checking works
         log_activity("agent-2", "src/auth.py", "Add SAML")
-        risk, msg = check_for_conflicts(
+        risk, msg, _ = check_for_conflicts(
             agent_id="agent-3",
             file_path="src/auth.py",
             intent="Add custom auth"

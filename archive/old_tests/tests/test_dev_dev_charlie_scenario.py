@@ -29,7 +29,7 @@ log_activity(
 )
 
 # Check conflicts (should see both Alice AND Bob)
-risk, msg = check_for_conflicts(
+risk, msg, _ = check_for_conflicts(
     agent_id="dev_charlie",
     file_path="src/auth.py",
     intent="Add 2FA support"

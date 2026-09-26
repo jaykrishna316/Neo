@@ -290,7 +290,7 @@ class DeploymentTest:
 
             # Tenant A: Two agents on same file with clear conflict indicators
             log_activity("alice", "src/core.py", "Rename MainClass and update signature", tenant_id="conflict-a")
-            risk_a, msg_a = check_for_conflicts(
+            risk_a, msg_a, _ = check_for_conflicts(
                 agent_id="alice-2",
                 file_path="src/core.py",
                 intent="Rename MainClass",
@@ -298,7 +298,7 @@ class DeploymentTest:
             )
 
             # Tenant B: Same file, should see no conflict
-            risk_b, msg_b = check_for_conflicts(
+            risk_b, msg_b, _ = check_for_conflicts(
                 agent_id="bob",
                 file_path="src/core.py",
                 intent="Modify core",
