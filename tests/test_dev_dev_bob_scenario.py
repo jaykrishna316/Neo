@@ -29,7 +29,7 @@ log_activity(
 )
 
 # Check conflicts (should see Alice's work now)
-risk, msg = check_for_conflicts(
+risk, msg, _ = check_for_conflicts(
     agent_id="dev_bob",
     file_path="src/auth.py",
     intent="Add JWT token validation"

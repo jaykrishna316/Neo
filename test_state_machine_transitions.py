@@ -184,7 +184,7 @@ TIMESTAMPS:
 
         # Check conflicts (should be LOW - only 1 dev)
         ts_1_check = datetime.now()
-        risk, msg = check_for_conflicts(
+        risk, msg, _ = check_for_conflicts(
             agent_id="dev_alice",
             file_path="src/auth.py",
             intent="Add OAuth2 authentication module"
@@ -220,7 +220,7 @@ TIMESTAMPS:
 
         # Check conflicts for dev_bob
         ts_2_check = datetime.now()
-        risk, msg = check_for_conflicts(
+        risk, msg, _ = check_for_conflicts(
             agent_id="dev_bob",
             file_path="src/auth.py",
             intent="Add JWT token validation"
@@ -334,7 +334,7 @@ TIMESTAMPS:
         )
 
         ts_6_check = datetime.now()
-        risk, msg = check_for_conflicts(
+        risk, msg, _ = check_for_conflicts(
             agent_id="dev_charlie",
             file_path="src/database.py",
             intent="Add connection pooling"
@@ -379,7 +379,7 @@ TIMESTAMPS:
         # Check conflicts for each
         risk_summary = []
         for dev_id, intent in developers:
-            risk, _ = check_for_conflicts(
+            risk, _, _ = check_for_conflicts(
                 agent_id=dev_id,
                 file_path="src/auth.py",
                 intent=intent
@@ -402,7 +402,7 @@ TIMESTAMPS:
             ts_8
         )
 
-        risk, msg = check_for_conflicts(
+        risk, msg, _ = check_for_conflicts(
             agent_id="dev_grace",
             file_path="src/auth.py",
             intent="Refactor password validation",

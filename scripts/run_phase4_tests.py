@@ -94,7 +94,7 @@ def test_file_conflict_isolation():
         log_activity("alice", "src/payment.py", "Add Stripe integration", tenant_id="acme-corp")
         log_activity("bob", "src/payment.py", "Add PayPal integration", tenant_id="startup-ai-lab")
 
-        risk_a, msg_a = check_for_conflicts(
+        risk_a, msg_a, _ = check_for_conflicts(
             agent_id="alice-2",
             file_path="src/payment.py",
             intent="Add Refund logic",
@@ -102,7 +102,7 @@ def test_file_conflict_isolation():
         )
         assert risk_a == RiskLevel.LOW, f"Company A should see LOW risk, got {risk_a.value}"
 
-        risk_b, msg_b = check_for_conflicts(
+        risk_b, msg_b, _ = check_for_conflicts(
             agent_id="bob-2",
             file_path="src/payment.py",
             intent="Add Dispute resolution",

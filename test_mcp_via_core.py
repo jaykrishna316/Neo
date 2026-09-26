@@ -46,7 +46,7 @@ def simulate_mcp_tool(tool_name, **kwargs):
         }
 
     elif tool_name == "neo_check_conflicts":
-        risk_level, message = check_for_conflicts(
+        risk_level, message, lock_info = check_for_conflicts(
             agent_id=kwargs.get('agent_id'),
             file_path=kwargs.get('file_path'),
             intent=kwargs.get('intent'),

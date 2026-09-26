@@ -24,7 +24,7 @@ log_activity(
 )
 
 # Check conflicts (should be LOW - only her)
-risk, msg = check_for_conflicts(
+risk, msg, _ = check_for_conflicts(
     agent_id="dev_alice",
     file_path="src/auth.py",
     intent="Add OAuth2 authentication module"
