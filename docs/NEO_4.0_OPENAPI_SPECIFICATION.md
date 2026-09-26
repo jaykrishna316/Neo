@@ -174,137 +174,169 @@ Neo implements a complete state machine to coordinate multi-developer work and m
 
 ### States Overview
 
-| State | Description | Triggered When | Lock Status |
-|-------|-------------|-----------------|------------|
-| `INITIAL` | No developers active, log is empty | System startup or all developers complete | None |
-| `SINGLE_DEV` | One developer working on a file (LOW risk) | First developer declares intent on a file | No lock applied (only 1 dev) |
-| `MULTI_DEV_SAME_FILE` | Multiple developers on same file (MEDIUM/HIGH risk) | Second developer declares intent on same file as first | Lock applies automatically |
-| `MULTI_DEV_SMART_DETECTION` | Intent-based conflict analysis (different functions/regions) | Developers work on different regions but same file | MEDIUM risk lock (semantic analysis) |
-| `DEV_COMPLETES_WORK` | Developer finishes and publishes changes | Developer marks work as completed in activity log | Lock released, next dev queued gets promoted |
-| `DEV_GETS_FRESH_CONTEXT` | Next developer sees completed work in log | Developer checks conflicts after previous dev completes | Lock acquired for this developer |
-| `MULTI_DEV_DIFFERENT_FILES` | Multiple developers on different files (LOW risk) | Developer works on different file than others | No lock (file-level isolation) |
-| `STRESS_TEST` | 4+ developers on same file (HIGH risk) | Third or more developer declares on same file | Lock maintains queue, auto-promotion |
-| `REGION_SPECIFIC_CHECK` | Function-level conflict detection | Developer specifies region (lines/function name) | Region-scoped lock applied |
-| `ALL_DEVELOPERS_COMPLETE` | All developers finished, ready to merge | Last developer completes and publishes | All locks released → back to INITIAL |
+| State | Description | Triggered When | Transitions To |
+|-------|-------------|-----------------|-----------------|
+| `ACTIVE` | Developer is actively working and generating code | Developer logs intent via `neo_log_activity()` | LOCKED (if conflict), COMPLETED (when done) |
+| `LOCKED` | High-risk conflict detected, developer blocked | Another developer on same file with HIGH risk conflict | WAITING (developer pauses), COLLABORATE (if agreed) |
+| `WAITING` | Developer paused, sleeping, checkpoint saved | Developer chooses WAIT option when locked | RESUMED (when lock released and event fires) |
+| `COLLABORATE` | Developers reached out to collaborate together | Developer chooses COLLABORATE option instead of waiting | COORDINATED (when collaboration completes) |
+| `COMPLETED` | Developer finished work, changes published | Developer marks work complete in activity log | LOCK_REMOVED (next dev in queue promoted) |
+| `LOCK_REMOVED` | Event fired: lock cleared, next developer ready to wake | Previous developer released lock | RESUMED (next developer in queue wakes up) |
+| `RESUMED` | Developer woke from WAITING, resuming from checkpoint | Lock released and developer subscribed to event | ACTIVE (resume generation) |
+| `COORDINATED` | Collaboration resulted in joint coordination | Multiple developers agreed on shared approach | COMPLETED (after joint work) |
 
 ### State Transition Diagram
 
 ```
-    ┌─────────────┐
-    │   INITIAL   │  (No developers active)
-    │  (State 0)  │
-    └──────┬──────┘
-           │
-           ▼
-    ┌──────────────────────┐
-    │ SINGLE_DEV (LOW RISK)│  Developer A declares intent
-    │     (State 1)        │  → Check conflicts: LOW
-    │  risk_level: LOW     │  → No lock applied
-    └──────┬───────────────┘
-           │
-           ▼
-    ┌───────────────────────────┐
-    │ MULTI_DEV_SAME_FILE       │  Developer B declares on same file
-    │  (State 2)                │  → Check conflicts: MEDIUM/HIGH
-    │ risk_level: MEDIUM/HIGH   │  → Lock applied (sequential access)
-    └──────┬────────────────────┘
-           │
-           ├─ (If different regions)
-           │  ▼
-           │ MULTI_DEV_SMART_DETECTION (State 2b)
-           │  → Intent-based analysis (OAuth2 vs JWT)
-           │  → Still MEDIUM (2 devs on same file)
-           │
-           ▼
-    ┌──────────────────────────────┐
-    │ DEV_A_COMPLETES_WORK         │  Developer A finishes & publishes
-    │  (State 3)                   │  → Add metadata to activity log
-    │  Next: Context refresh       │  → Lines added/removed recorded
-    └──────┬───────────────────────┘
-           │
-           ▼
-    ┌──────────────────────────────┐
-    │ DEV_B_GETS_FRESH_CONTEXT     │  Developer B checks conflicts again
-    │  (State 4)                   │  → Sees Dev A's changes in log
-    │  Risk updated: now can see   │  → Context includes A's completion
-    │  A's changes                 │  → Ready to proceed safely
-    └──────┬───────────────────────┘
-           │
-           ▼
-    ┌──────────────────────────────┐
-    │ MULTI_DEV_DIFFERENT_FILES    │  Developer C on different file
-    │  (State 6)                   │  → Check conflicts: LOW
-    │  risk_level: LOW             │  → No lock (different file)
-    │  no_lock: file_isolation     │  → Works in parallel
-    └──────┬───────────────────────┘
-           │
-           ▼
-    ┌──────────────────────────────┐
-    │ STRESS_TEST (N_DEVS)         │  4+ developers on same file
-    │  (State 7)                   │  → Each new dev: risk increases
-    │  risk_level: HIGH            │  → Lock applies/maintains
-    │  all_tracked: true           │  → Sequential queuing
-    └──────┬───────────────────────┘
-           │
-           ▼
-    ┌──────────────────────────────┐
-    │ ALL_DEVELOPERS_COMPLETE      │  All devs finish → back to initial
-    │  (State 9 → 0)               │  → Log persisted for audit
-    │  ready_for_merge: true       │  → No conflicts detected
-    └──────────────────────────────┘
+                    ┌──────────────────────────────────────────┐
+                    │  DEVELOPER DECLARES INTENT               │
+                    │  neo_log_activity()                      │
+                    └───────────────────┬──────────────────────┘
+                                        │
+                                        ▼
+                    ┌──────────────────────────────────┐
+                    │         ACTIVE                   │
+                    │  Developer generating code       │
+                    │  (LOW risk, no conflict)         │
+                    └────────┬────────────────┬────────┘
+                             │                │
+                    (conflict detected)  (work complete)
+                             │                │
+                    ┌────────▼─────┐     ┌────▼─────────┐
+                    │   LOCKED     │     │  COMPLETED   │
+                    │ HIGH risk    │     │  Published   │
+                    │ conflict     │     │  changes     │
+                    └─┬──────────┬─┘     └────┬─────────┘
+                      │          │            │
+            ┌─────────┘          └────┐       │
+            │ (Developer chooses)     │       │
+            │                         │       │
+            ▼                         ▼       ▼
+    ┌────────────────┐    ┌────────────────────────┐
+    │   WAITING      │    │ LOCK_REMOVED           │
+    │ Paused, sleeping│   │ Event: Next dev ready  │
+    │ Checkpoint     │    │ Lock cleared           │
+    │ saved          │    └────┬───────────────────┘
+    └────┬───────────┘         │
+         │                      │ (wake up notification)
+         │            ┌─────────▼─────────┐
+         │            │    RESUMED        │
+         │            │ Woke from WAITING │
+         │            │ Restoring from    │
+         └────────────┤ checkpoint        │
+                      └────────┬──────────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │   ACTIVE     │
+                        │ Resume code  │
+                        │ generation   │
+                        └──────┬───────┘
+                               │
+                        (work complete)
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │ COMPLETED    │
+                        │ Changes ok   │
+                        └──────────────┘
+
+
+    ALTERNATIVE PATH (Collaboration):
+    
+         ┌─────────────────────────────────┐
+         │ COLLABORATE                     │
+         │ Developers agreed to work       │
+         │ together on the same file       │
+         └─────────────┬───────────────────┘
+                       │
+                       ▼
+         ┌─────────────────────────────────┐
+         │ COORDINATED                     │
+         │ Joint work result obtained      │
+         │ Collaboration complete          │
+         └─────────────┬───────────────────┘
+                       │
+                       ▼
+         ┌─────────────────────────────────┐
+         │ COMPLETED                       │
+         │ Both devs finished, changes ok  │
+         └─────────────────────────────────┘
 ```
 
 ### Lock Behavior by State
 
-- **INITIAL:** No locks
-- **SINGLE_DEV:** No locks (only 1 developer)
-- **MULTI_DEV_SAME_FILE:** Lock applies automatically (prevents simultaneous writes)
-- **MULTI_DEV_SMART_DETECTION:** MEDIUM risk lock on overlapping regions
-- **DEV_A_COMPLETES_WORK:** Lock released, next developer auto-promoted
-- **DEV_B_GETS_FRESH_CONTEXT:** New lock acquired for Developer B
-- **MULTI_DEV_DIFFERENT_FILES:** No locks (file isolation)
-- **STRESS_TEST:** Lock maintains queue: [bob (next), charlie (2nd), diana (3rd)] → Auto-promotion on each release
-- **ALL_DEVELOPERS_COMPLETE:** All locks released
+- **ACTIVE:** No lock if first developer on file (LOW risk). Lock held if developer acquired it on queue.
+- **LOCKED:** Lock acquired by current developer prevents this developer from proceeding. Risk level: HIGH.
+- **WAITING:** Developer queued with saved checkpoint. Lock held by previous developer. Queue position tracked.
+- **COLLABORATE:** Lock suspended for duration of collaboration. Both developers can work together.
+- **COMPLETED:** Lock released automatically. If queue exists, next developer promoted to RESUMED.
+- **LOCK_REMOVED:** Event fired. Signals next waiting developer to wake up.
+- **RESUMED:** Developer wakes from checkpoint. Lock acquired for this developer.
+- **COORDINATED:** Collaboration lock released. Returns to normal queue if other developers waiting.
 
 ### Risk Levels by State
 
 | State | Risk Level | Rationale |
 |-------|-----------|-----------|
-| INITIAL, SINGLE_DEV, MULTI_DEV_DIFFERENT_FILES | LOW | Single developer or different files → safe to proceed |
-| MULTI_DEV_SMART_DETECTION | MEDIUM | 2 developers, same file, potentially overlapping regions |
-| MULTI_DEV_SAME_FILE, STRESS_TEST | HIGH | 3+ developers or same-file work → sequential execution required |
+| ACTIVE (first dev) | LOW | Single developer on file → safe to proceed, no lock |
+| ACTIVE (queued dev) | MEDIUM/HIGH | Developer has acquired lock from queue → can generate once lock held |
+| LOCKED | HIGH | Conflict detected, current developer blocked from generating |
+| WAITING | HIGH | Developer paused, must wait for lock holder to complete |
+| COMPLETED | LOW | Work finished, lock released, ready for next developer |
+| RESUMED | MEDIUM | Resuming from checkpoint, lock just acquired, ready to continue |
+| COLLABORATE | MEDIUM | Joint work in progress, lock suspended for both developers |
+| COORDINATED | LOW | Collaboration complete, ready to release locks |
 
 ### Transitions Triggered by Events
 
-#### INITIAL → SINGLE_DEV
-- **Event:** Developer A declares intent via `neo_log_activity()`
-- **Condition:** No other developers active on any file
-- **Action:** Create activity log entry, set state to ACTIVE
-- **Result:** Developer can proceed (LOW risk, no lock)
+#### ACTIVE → LOCKED
+- **Event:** `check_for_conflicts()` detects HIGH risk conflict
+- **Condition:** Another developer already on same file with overlapping intent (HIGH risk)
+- **Action:** State marked as LOCKED, decision options provided to developer
+- **Result:** Developer must choose: WAIT (save checkpoint) or COLLABORATE
 
-#### SINGLE_DEV → MULTI_DEV_SAME_FILE
-- **Event:** Developer B declares intent on same file as Developer A
-- **Condition:** Developer B calls `check_for_conflicts()` with Developer A active on same file
-- **Action:** `LockManager.acquire_lock()` called, lock created with Developer A as holder
-- **Result:** Developer B queued (queue_position=0), lock_state=WAITING
+#### ACTIVE → COMPLETED
+- **Event:** Developer marks work complete via `neo_log_activity(status='completed')`
+- **Condition:** Developer finished generating code
+- **Action:** Update activity log, fire LOCK_REMOVED event, promote next queued developer
+- **Result:** Lock released, any waiting developers notified
 
-#### MULTI_DEV_SAME_FILE → DEV_A_COMPLETES_WORK
-- **Event:** Developer A finishes and publishes changes
-- **Condition:** activity log marked with status='completed', metadata added
-- **Action:** `LockManager.release_lock()` called, Developer B auto-promoted
-- **Result:** Lock state transitions: ACQUIRED (A) → RELEASED, WAITING (B) → ACQUIRED
+#### LOCKED → WAITING
+- **Event:** Developer chooses WAIT option
+- **Condition:** Developer prefers to pause rather than collaborate
+- **Action:** Save generation checkpoint, set state to WAITING, subscribe to lock_removed event
+- **Result:** Developer sleeps, checkpoint persisted, awaits wake-up signal
 
-#### MULTI_DEV_SAME_FILE → MULTI_DEV_DIFFERENT_FILES
-- **Event:** Developer C declares intent on different file
-- **Condition:** C's file_path differs from A's and B's file
-- **Action:** No lock created (file isolation)
-- **Result:** Developer C proceeds in parallel (LOW risk)
+#### LOCKED → COLLABORATE
+- **Event:** Developer chooses COLLABORATE option
+- **Condition:** Developer prefers joint work over waiting alone
+- **Action:** Notify both developers, set state to COLLABORATE, establish shared context
+- **Result:** Both developers coordinate and work together on same file
 
-#### MULTI_DEV_SAME_FILE → STRESS_TEST
-- **Event:** Third (Charlie) and fourth+ developers declare on same file
-- **Condition:** 3+ developers active on same file
-- **Action:** Lock maintains queue, queue_position increments
-- **Result:** Queue: [bob (0), charlie (1), diana (2)], each waits for previous
+#### WAITING → RESUMED
+- **Event:** Lock holder completes work (fires LOCK_REMOVED event)
+- **Condition:** Waiting developer subscribed to event and receives notification
+- **Action:** Restore generation checkpoint, set state to RESUMED, acquire lock for this developer
+- **Result:** Developer wakes up, resumes from exact checkpoint, can continue generation
+
+#### RESUMED → ACTIVE
+- **Event:** Developer continues generating from checkpoint
+- **Condition:** Checkpoint restored, lock acquired, ready to proceed
+- **Action:** Resume code generation from saved context
+- **Result:** Developer can now generate code (lock held exclusively for them)
+
+#### COLLABORATE → COORDINATED
+- **Event:** Both developers reach agreement on shared approach
+- **Condition:** Collaboration discussion complete
+- **Action:** Merge changes, update shared state, set state to COORDINATED
+- **Result:** Ready to complete work without conflict
+
+#### COORDINATED → COMPLETED
+- **Event:** Joint work finishes
+- **Condition:** Both developers publish coordinated changes
+- **Action:** Release locks, fire LOCK_REMOVED event
+- **Result:** Lock released, next waiting developer promoted
 
 ### Context Refresh Mechanics
 
