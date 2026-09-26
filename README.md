@@ -215,6 +215,144 @@ See: [`.claude/workflow_state_machine.py`](core/workflow_state_machine.py)
 
 ---
 
+## Phase 1.0: Explicit Lock Mechanism (Neo 4.0)
+
+**The Evolution**: Neo 4.0 enhances Phase 1 with explicit lock tracking, making lock state visible, auditable, and queryable.
+
+### What Changed
+
+**Implicit Lock (Before)**:
+- Lock state was encoded in `RiskLevel` enum (LOW/MEDIUM/HIGH)
+- Lock holder, queue position, expiration invisible
+- No audit trail of lock operations
+
+**Explicit Lock (Neo 4.0)**:
+- Dedicated lock fields in `ActivityEntry` dataclass
+- Lock state, holder, acquisition time, expiration, reason, scope all tracked
+- Queue position and wait-for relationships visible
+- Complete audit trail in activity log
+
+### Lock Fields (New)
+
+```python
+@dataclass
+class ActivityEntry:
+    # ... existing fields ...
+    lock_state: Optional[str]          # "ACQUIRED", "WAITING", "RELEASED"
+    lock_holder: Optional[str]         # developer_id who holds lock
+    lock_acquired_at: Optional[float]  # Unix timestamp (lock acquisition)
+    lock_expires_at: Optional[float]   # Unix timestamp (lock expiration)
+    lock_timeout_seconds: int          # default 30 minutes
+    lock_reason: Optional[str]         # "MEDIUM_CONFLICT", "HIGH_CONFLICT"
+    lock_scope: Optional[str]          # "file" or "region"
+    queue_position: Optional[int]      # Position if waiting (0=next)
+    waiting_for: Optional[str]         # developer_id this one is waiting for
+```
+
+### Lock Lifecycle
+
+```
+1. Developer A declares intent on auth.py::validate_password
+   → log_activity() creates entry with lock_state=None (no lock yet)
+
+2. Developer B declares intent on SAME region
+   → LockManager.acquire_lock() called automatically
+   → Lock holder: A, Lock state: ACQUIRED
+   → B's entry: lock_state=WAITING, queue_position=0, waiting_for=A
+
+3. Developer A completes work
+   → LockManager.release_lock() called
+   → A's lock marked: lock_state=RELEASED
+   → B promoted automatically: lock_state=ACQUIRED, queue_position=None
+
+4. Developer B completes, Developer C promoted
+   → Sequential execution guaranteed
+   → Zero conflicts, zero manual merges
+```
+
+### Lock Manager API
+
+**File**: [`core/lock_manager.py`](core/lock_manager.py)
+
+```python
+manager = LockManager(tenant_id="default")
+
+# Acquire lock (or queue if held)
+result = manager.acquire_lock(
+    file_path="auth.py",
+    region="validate_password",
+    developer_id="bob",
+    reason="MEDIUM_CONFLICT",
+    scope="region"
+)
+# Returns: {success: bool, lock_holder: str, queue_position: int, ...}
+
+# Release lock (auto-promotes next developer)
+result = manager.release_lock(
+    file_path="auth.py",
+    region="validate_password",
+    developer_id="alice"
+)
+
+# Check lock state
+state = manager.get_lock_state("auth.py", "validate_password")
+# Returns: {locked: bool, lock_holder: str, queue_size: int, queue_list: [...]}
+
+# Check if lock expired
+expired = manager.check_expired("auth.py", "validate_password")
+
+# Auto-cleanup expired locks
+cleaned = manager.cleanup_expired()
+```
+
+### Integration with Risk Classification
+
+**Before**: RiskLevel returned lock "signal" (MEDIUM/HIGH)
+**After**: LockManager creates explicit lock entry + RiskLevel still returned
+
+```python
+# In pre_gen_check.py
+risk_level, msg, lock_info = check_for_conflicts(
+    agent_id="bob",
+    file_path="auth.py",
+    intent="Refactor validation",
+    region="validate_password"
+)
+
+# RiskLevel.MEDIUM detected → LockManager.acquire_lock() called automatically
+# lock_info contains explicit lock state: {success, lock_holder, queue_position, ...}
+```
+
+### Backward Compatibility
+
+✅ **Fully backward compatible**:
+- All lock fields are optional (None by default)
+- Existing `RiskLevel` classification unchanged
+- Existing tests still pass
+- Old activity log entries still readable (lock fields absent)
+
+### Testing Phase 1.0
+
+```bash
+# Run explicit lock tests (9 tests, all passing)
+python tests/test_explicit_locks.py
+
+# Tests cover:
+# ✓ Lock acquisition when free
+# ✓ Lock blocking when held
+# ✓ Queue tracking with 3+ developers
+# ✓ Auto-promotion on release
+# ✓ Lock expiration after timeout
+# ✓ Backward compatibility with RiskLevel
+# ✓ 2-dev workflow with explicit locks
+# ✓ 3-dev workflow with queue
+# ✓ Lock state persisted in activity log
+```
+
+See: [`tests/test_explicit_locks.py`](tests/test_explicit_locks.py)
+
+---
+
 ## Quick Start
 
 ### Run Neo Tests (Proves Real Implementation)

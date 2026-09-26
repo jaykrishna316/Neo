@@ -102,7 +102,7 @@ class TwoDevCoordinationTest:
 
         # First, B checks for conflicts (this is how they discover A's work)
         print("\nDev B checking for conflicts before declaring intent...")
-        risk_level, conflict_msg = check_for_conflicts(
+        risk_level, conflict_msg, lock_info = check_for_conflicts(
             agent_id="bob",
             file_path=self.file_path,
             intent="Add password strength requirements",
@@ -200,7 +200,7 @@ class TwoDevCoordinationTest:
 
         # Dev B checks for conflicts again (this triggers context refresh)
         print("\nDev B checking for conflicts after A's changes...")
-        risk_level, conflict_msg = check_for_conflicts(
+        risk_level, conflict_msg, lock_info = check_for_conflicts(
             agent_id="bob",
             file_path=self.file_path,
             intent="Add password strength requirements",

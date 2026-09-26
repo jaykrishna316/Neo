@@ -106,7 +106,7 @@ class ThreeDevCoordinationTest:
 
         # First, B checks for conflicts (this is how they discover A's work)
         print("\nDev B checking for conflicts before declaring intent...")
-        risk_level, conflict_msg = check_for_conflicts(
+        risk_level, conflict_msg, _ = check_for_conflicts(
             agent_id="bob",
             file_path=self.file_path,
             intent="Add password strength requirements",
@@ -168,7 +168,7 @@ class ThreeDevCoordinationTest:
 
         # First, C checks for conflicts (discovers A and B's work)
         print("\nDev C checking for conflicts before declaring intent...")
-        risk_level, conflict_msg = check_for_conflicts(
+        risk_level, conflict_msg, _ = check_for_conflicts(
             agent_id="charlie",
             file_path=self.file_path,
             intent="Add authentication logging",
@@ -266,7 +266,7 @@ class ThreeDevCoordinationTest:
 
         # Dev B checks for conflicts again (this triggers context refresh)
         print("\nDev B checking for conflicts after A's changes...")
-        risk_level, conflict_msg = check_for_conflicts(
+        risk_level, conflict_msg, _ = check_for_conflicts(
             agent_id="bob",
             file_path=self.file_path,
             intent="Add password strength requirements",
@@ -359,7 +359,7 @@ class ThreeDevCoordinationTest:
 
         # Dev C checks for conflicts again (this triggers context refresh with A+B's changes)
         print("\nDev C checking for conflicts after A and B's changes...")
-        risk_level, conflict_msg = check_for_conflicts(
+        risk_level, conflict_msg, _ = check_for_conflicts(
             agent_id="charlie",
             file_path=self.file_path,
             intent="Add authentication logging",
