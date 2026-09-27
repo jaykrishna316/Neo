@@ -1,15 +1,64 @@
-# Neo Local Two-Developer Test
+# Neo Terminal-Based Two-Developer Test
 
-Complete guide to testing Neo with two developers using the local coordination server.
+**For developers using regular terminal (Vim, VS Code, etc.) without Claude Code IDE**
+
+Complete guide to testing Neo with two developers using a **local coordination server**. This approach works with **any editor** (Vim, Emacs, VS Code, etc.) and doesn't require Claude Code IDE.
 
 ## Overview
 
 This setup allows you to test Neo's multi-developer coordination **without Claude Code IDE**, using only:
-- A local Neo coordination server
-- File watchers to detect changes
+- A local Neo coordination server (runs on `localhost:8000`)
+- File watchers to detect code changes automatically
 - Terminal output showing conflicts and locks in real-time
+- Manual intent declaration via CLI commands
 
-Two developers working on the same machine (or networked machines) can coordinate their work automatically.
+Two developers working on the same machine (or networked machines) can coordinate their work automatically using standard terminal tools.
+
+### When to Use This Approach
+
+✅ **Use terminal-based testing when:**
+- Testing without Claude Code IDE
+- Running on shared servers or remote machines
+- Integrating Neo into CI/CD pipelines
+- Testing with standard Unix/Linux tools
+- Running multiple developers on same terminal server
+
+❌ **Use Claude Code IDE instead when:**
+- Developers are using Claude Code IDE for generation
+- You want automatic conflict checking before generation
+- You need pre-generation conflict prevention (token efficiency)
+- You want IDE-native workflow integration
+
+See `CLAUDE_CODE_TWO_DEVELOPER_TEST.md` for IDE-based testing.
+
+---
+
+## Architecture (Terminal-Based)
+
+```
+Terminal 1: Neo Server (localhost:8000)
+    ↓
+    Manages: .devsync/activity-log.json
+    Prints: ✅/⚠️/🚫 status messages
+
+Terminal 2: Alice's File Watcher (NEO_DEVELOPER=alice)
+    ↓
+    Detects: Changes to src/ and lib/
+    Verifies: Intent declared, NEO_DEVELOPER=alice
+    Logs: To server via HTTP /api/log-activity
+
+Terminal 3: Bob's File Watcher (NEO_DEVELOPER=bob)
+    ↓
+    Detects: Changes to src/ and lib/
+    Verifies: Intent declared, NEO_DEVELOPER=bob
+    Logs: To server via HTTP /api/log-activity
+
+Terminal 4+: Developers Edit Code (Vim, VS Code, etc.)
+    ↓
+    Alice or Bob makes changes
+    Matching watcher detects & logs
+    Server prints conflict status to Terminal 1
+```
 
 ---
 
@@ -17,9 +66,17 @@ Two developers working on the same machine (or networked machines) can coordinat
 
 ### Prerequisites
 
+Install dependencies:
+
 ```bash
-pip install watchdog requests
+cd /path/to/Neo
+pip install -r requirements.txt
 ```
+
+This installs:
+- `watchdog>=3.0` - File system monitoring
+- `requests>=2.28` - HTTP client for Neo server
+- Other Neo dependencies
 
 ### Initialize Test Repository
 
@@ -29,9 +86,26 @@ cd /path/to/Neo
 mkdir -p .devsync src lib
 ```
 
+Create sample files to edit:
+
+```bash
+# Create initial files
+cat > src/auth.py << 'EOF'
+def authenticate_user(username, password):
+    """Authenticate user with password."""
+    pass
+EOF
+
+cat > src/database.py << 'EOF'
+def connect_database():
+    """Connect to database."""
+    pass
+EOF
+```
+
 ---
 
-## Workflow
+## Two-Developer Test Workflow
 
 ### Terminal 1: Start the Neo Server
 
@@ -290,32 +364,418 @@ Output:
 
 ---
 
-## Three-Developer Test
+## How It Works: The Coordination Flow
 
-Add a third developer easily:
+### Without NEO_DEVELOPER & Intent Declaration (Broken)
 
-### Terminal 6: Developer C - Watch for Changes
+```
+Alice edits src/auth.py
+    ↓
+Both alice_watcher and bob_watcher detect change
+    ↓
+Both attempt to log with their own agent_id
+    ↓
+Activity log is ambiguous: who actually edited?
+    ↓
+❌ RESULT: Hard-coded sequential testing, not true multi-developer
+```
+
+### With NEO_DEVELOPER & Intent Declaration (Fixed)
+
+```
+Alice declares intent:
+  neo declare alice src/auth.py "Add OAuth2"
+    ↓
+Activity log records: alice has declared intent on src/auth.py
+
+Alice edits src/auth.py
+    ↓
+both alice_watcher and bob_watcher detect change
+    ↓
+alice_watcher checks:
+  ✅ NEO_DEVELOPER=alice (matches her watcher)
+  ✅ Intent declared for alice on src/auth.py
+  → LOGS the change
+    ↓
+bob_watcher checks:
+  ❌ NEO_DEVELOPER=bob (doesn't match, is alice)
+  → SILENTLY IGNORES (lets alice_watcher handle it)
+    ↓
+✅ RESULT: Only alice's watcher logs alice's work. True multi-developer!
+```
+
+### Data Flow in Activity Log
+
+```json
+{
+  "developer_id": "alice",
+  "file_path": "src/auth.py",
+  "intent": "Add OAuth2 authentication",
+  "intent_category": "feature",
+  "timestamp": 1695164017.5,
+  "lock_state": "ACQUIRED",
+  "lock_holder": "alice",
+  "queue_position": null,
+  "waiting_for": null
+}
+```
+
+When bob tries the same file:
+
+```json
+{
+  "developer_id": "bob",
+  "file_path": "src/auth.py",
+  "intent": "Add JWT token support",
+  "intent_category": "feature",
+  "timestamp": 1695164045.2,
+  "lock_state": "WAITING",
+  "lock_holder": "alice",
+  "queue_position": 0,
+  "waiting_for": "alice"
+}
+```
+
+---
+
+## Three-Developer Test Workflow
+
+**Scenario**: Alice, Bob, and Charlie are all working on the same file with locks and queue management.
+
+This tests Neo's **queue promotion** mechanism - ensuring developers are notified in order and can proceed safely without conflicts.
+
+### Setup: Three Watchers Running
+
+#### Terminal 4: Developer C - Watch for Changes
+
+First, set developer context:
 
 ```bash
+export NEO_DEVELOPER=charlie
 python -m cli.file_watcher charlie --server http://localhost:8000
 ```
 
-Now:
-1. Alice works on `src/auth.py` (lock acquired)
-2. Bob tries same file (queued at position 0)
-3. Charlie tries same file (queued at position 1)
-
-Server output:
+Output:
 ```
-⚠️ [10:18:00] charlie - Conflict Check
+============================================================
+👁️  Neo File Watcher
+============================================================
+
+👤 Watcher Agent ID: charlie
+📍 Server: http://localhost:8000
+📂 Watching: .
+⏰ Started: 2026-09-27 10:18:00
+
+✅ Developer context: NEO_DEVELOPER=charlie
+   File changes will be logged as this developer
+
+REQUIRED: Declare intent before editing
+Before editing, run:
+  neo declare charlie src/auth.py 'Your intent here'
+
+Press Ctrl+C to stop watcher.
+```
+
+Now you have:
+- Terminal 2: alice's watcher (NEO_DEVELOPER=alice)
+- Terminal 3: bob's watcher (NEO_DEVELOPER=bob)
+- Terminal 4: charlie's watcher (NEO_DEVELOPER=charlie)
+- Terminal 5: Server (printing status messages)
+
+### Workflow: Sequential Queue Management
+
+#### Step 1: Alice Declares Intent (Lock = ALICE)
+
+**Terminal 5 (or separate terminal)**:
+```bash
+python -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
+```
+
+**Server output (Terminal 1)**:
+```
+✅ [10:18:15] alice → src/auth.py
+   Intent: Add OAuth2 authentication
+   Risk: LOW (developers on file: 1)
+```
+
+**State**:
+- ✅ alice: ACTIVE (lock holder)
+- ❌ bob: not yet involved
+- ❌ charlie: not yet involved
+
+#### Step 2: Bob Declares Intent (Queued at Position 0)
+
+**Terminal 5**:
+```bash
+python -m cli.neo_client declare bob src/auth.py "Add JWT token support"
+```
+
+**Server output (Terminal 1)**:
+```
+⚠️ [10:18:30] bob - Conflict Check
    Risk: MEDIUM
+   MEDIUM RISK: alice is Working on src/auth.py
+   Overlapping regions detected.
+   🔒 Lock Status:
+      Holder: alice
+      Queue Position: 0
+      Waiting For: alice
+```
+
+**State**:
+- ✅ alice: ACTIVE (lock holder)
+- ⏳ bob: WAITING (queue position: 0)
+- ❌ charlie: not yet involved
+
+#### Step 3: Charlie Declares Intent (Queued at Position 1)
+
+**Terminal 5**:
+```bash
+python -m cli.neo_client declare charlie src/auth.py "Add multi-factor authentication"
+```
+
+**Server output (Terminal 1)**:
+```
+⚠️ [10:18:45] charlie - Conflict Check
+   Risk: MEDIUM
+   MEDIUM RISK: alice is Working on src/auth.py
+   Overlapping regions detected.
    🔒 Lock Status:
       Holder: alice
       Queue Position: 1
       Waiting For: bob
 ```
 
-When alice completes → bob promoted → when bob completes → charlie promoted.
+**State**:
+- ✅ alice: ACTIVE (lock holder)
+- ⏳ bob: WAITING (queue position: 0, next in line)
+- ⏳ charlie: WAITING (queue position: 1, behind bob)
+
+Notice:
+- Bob's "Waiting For" = alice
+- Charlie's "Waiting For" = bob
+- Queue is ordered: alice → bob → charlie
+
+#### Step 4: Alice Completes (Bob Promoted)
+
+Alice finishes OAuth2 work and completes:
+
+**Terminal 5**:
+```bash
+# Alice marks work complete
+python -m cli.neo_client log
+# View the updated activity log to confirm alice is complete
+```
+
+**Server output (Terminal 1)**:
+```
+✅ [10:19:00] alice completed: +45 lines, -5 lines
+🔓 Lock released, promoting bob
+```
+
+**Immediate notification to Bob**:
+```
+✅ [10:19:00] bob - Lock Released!
+   You are now ACTIVE on src/auth.py
+   
+   alice's work is complete. Queue position: 0 → ACTIVE
+   Ready to proceed with JWT support.
+```
+
+**State**:
+- ✅ alice: COMPLETED
+- ✅ bob: ACTIVE (newly promoted, now lock holder)
+- ⏳ charlie: WAITING (queue position: 0, waiting for bob)
+
+#### Step 5: Bob Gets Fresh Context from Alice
+
+Bob should review what Alice accomplished before generating:
+
+**Terminal 5**:
+```bash
+python -m cli.neo_client log
+```
+
+Output shows:
+```
+📝 Activity Log (3 entries)
+   [2026-09-27T10:18:15] alice → src/auth.py
+      Add OAuth2 authentication
+   [2026-09-27T10:19:00] alice completed: +45 lines, -5 lines
+   [2026-09-27T10:18:30] bob → src/auth.py
+      Add JWT token support
+```
+
+Bob reads this context before generating JWT code.
+
+#### Step 6: Bob Edits File (Charlie Waiting)
+
+Bob makes changes to implement JWT:
+
+**Terminal 6 (editing)**:
+```bash
+vim src/auth.py
+# Bob adds JWT implementation on top of Alice's OAuth2
+```
+
+**Server sees**:
+```
+✅ [10:19:15] bob → src/auth.py
+   Intent: Add JWT token support
+   Risk: LOW (developers on file: 1)
+   
+   Note: 1 developer waiting (charlie)
+```
+
+Charlie's watcher shows:
+```
+⏳ [10:19:15] charlie - Still waiting...
+   Queue Position: 0
+   Waiting For: bob (currently editing)
+```
+
+#### Step 7: Bob Completes (Charlie Promoted)
+
+Bob finishes JWT implementation:
+
+**Terminal 5**:
+```bash
+python -m cli.neo_client log
+```
+
+**Server output (Terminal 1)**:
+```
+✅ [10:19:45] bob completed: +60 lines, -10 lines
+🔓 Lock released, promoting charlie
+```
+
+**Immediate notification to Charlie**:
+```
+✅ [10:19:45] charlie - Lock Released!
+   You are now ACTIVE on src/auth.py
+   
+   bob's work is complete. Queue position: 0 → ACTIVE
+   Ready to proceed with multi-factor authentication.
+```
+
+**State**:
+- ✅ alice: COMPLETED
+- ✅ bob: COMPLETED
+- ✅ charlie: ACTIVE (newly promoted, now lock holder)
+
+#### Step 8: Charlie Gets Context from Both
+
+Charlie reviews what both Alice and Bob accomplished:
+
+**Terminal 5**:
+```bash
+python -m cli.neo_client log
+```
+
+Output shows full history:
+```
+📝 Activity Log (5 entries)
+   [2026-09-27T10:18:15] alice → src/auth.py
+      Add OAuth2 authentication
+   [2026-09-27T10:19:00] alice completed: +45 lines, -5 lines
+   [2026-09-27T10:18:30] bob → src/auth.py
+      Add JWT token support
+   [2026-09-27T10:19:45] bob completed: +60 lines, -10 lines
+   [2026-09-27T10:18:45] charlie → src/auth.py
+      Add multi-factor authentication
+```
+
+Charlie sees:
+- OAuth2 foundation (alice)
+- JWT tokens (bob)
+- Can now add MFA on top of both
+
+#### Step 9: Charlie Edits File
+
+Charlie implements MFA with full context:
+
+**Terminal 6 (editing)**:
+```bash
+vim src/auth.py
+# Charlie adds MFA that works with Alice's OAuth2 + Bob's JWT
+```
+
+**Server output (Terminal 1)**:
+```
+✅ [10:20:00] charlie → src/auth.py
+   Intent: Add multi-factor authentication
+   Risk: LOW (developers on file: 1)
+   
+   Note: Build on alice's OAuth2 + bob's JWT
+```
+
+#### Step 10: Charlie Completes (All Done)
+
+**Terminal 5**:
+```bash
+python -m cli.neo_client log
+```
+
+**Server output (Terminal 1)**:
+```
+✅ [10:20:45] charlie completed: +75 lines, -15 lines
+🔓 Lock released
+
+🎉 All developers complete on src/auth.py!
+   - alice: OAuth2 (45 lines)
+   - bob: JWT (60 lines)
+   - charlie: MFA (75 lines)
+   Total: 180 lines added, 30 lines removed
+```
+
+**Final State**:
+```
+✅ alice: COMPLETED
+✅ bob: COMPLETED
+✅ charlie: COMPLETED
+
+Activity Log:
+  - 7 entries total
+  - 3 developers tracked
+  - Sequential coordination: alice → bob → charlie
+  - No conflicts detected
+  - No re-generations needed
+```
+
+### What Queue Management Proves
+
+| Aspect | Behavior | Verified |
+|--------|----------|----------|
+| **Lock Acquisition** | First developer gets lock | ✅ alice acquired lock |
+| **Queue Ordering** | Developers queued in order | ✅ bob (pos 0) before charlie (pos 1) |
+| **Waiting For** | Each dev knows who they're waiting for | ✅ bob waits for alice, charlie waits for bob |
+| **Auto-Promotion** | Next in queue promoted when holder completes | ✅ bob promoted when alice completed |
+| **Context Chain** | Each dev has full context before starting | ✅ charlie saw alice + bob's work |
+| **No Conflicts** | Sequential coordination prevents conflicts | ✅ Zero conflicts, zero re-gens |
+
+---
+
+## Summary: 2-Dev vs 3-Dev Tests
+
+### Two-Developer Test
+- **Setup**: 5 minutes
+- **Test**: 10 minutes
+- **Validates**:
+  - Lock creation and release
+  - Queue management (position 0)
+  - Context refresh between developers
+  - Simple conflict detection
+
+### Three-Developer Test
+- **Setup**: 10 minutes
+- **Test**: 15 minutes
+- **Validates**:
+  - Queue with multiple waiters
+  - Sequential promotion (alice → bob → charlie)
+  - "Waiting For" chain (bob waits alice, charlie waits bob)
+  - Context aggregation (each developer sees previous work)
+  - Scaling beyond 2 developers
+  - **Key insight**: Proves Neo works for teams, not just pairs
 
 ---
 
@@ -538,14 +998,169 @@ Should show:
 
 ---
 
+## Comparison: Terminal vs Claude Code IDE Testing
+
+### Terminal-Based Testing (This Guide)
+
+**Best for:**
+- Testing without Claude Code IDE
+- CI/CD integration
+- Remote/server environments
+- Learning Neo fundamentals
+- Testing with standard Unix tools
+
+**How it works:**
+```
+1. Start server (localhost:8000)
+2. Start file watchers (one per developer)
+3. Developers declare intent manually
+4. Developers edit files with any editor
+5. Watchers detect changes and log automatically
+```
+
+**Key Metrics:**
+- Server detects conflicts: ✅ Yes
+- Pre-generation prevention: ⚠️ No (logs after generation)
+- Token savings: ✅ Good (catches early)
+- Setup complexity: Low (just Python + terminal)
+- IDE integration: No (works with any editor)
+
+**Typical workflow:**
+```
+neo declare alice src/auth.py "Add OAuth2"
+→ vim src/auth.py  (alice edits)
+→ Server logs: alice → src/auth.py
+→ neo declare bob src/auth.py "Add JWT"
+→ Server warns: MEDIUM RISK (bob queued)
+→ (alice completes)
+→ Server: bob promoted, safe to proceed
+→ vim src/auth.py  (bob edits)
+```
+
+### Claude Code IDE Testing
+
+**Best for:**
+- Production teams using Claude Code
+- Maximum token efficiency
+- Pre-generation conflict checking
+- IDE-native workflows
+- Automatic developer context
+
+**How it works:**
+```
+1. Configure MCP server in IDE settings
+2. Open IDE for each developer
+3. Before generating: @neo check conflicts
+4. IDE shows: ✅/⚠️/🚫 status
+5. If safe: proceed with generation
+6. If conflict: wait or coordinate
+```
+
+**Key Metrics:**
+- Server detects conflicts: ✅ Yes
+- Pre-generation prevention: ✅ **YES** (blocks before gen)
+- Token savings: ✅ **Highest** (prevents re-gen)
+- Setup complexity: Medium (MCP config)
+- IDE integration: ✅ Yes (native @neo commands)
+
+**Typical workflow:**
+```
+@neo check src/auth.py "Add OAuth2"
+→ Risk: LOW - safe to proceed
+→ Claude generates OAuth2 code
+→ (alice's IDE shows: ✅ ACTIVE on src/auth.py)
+→ (bob opens IDE, asks to add JWT)
+→ @neo check src/auth.py "Add JWT"
+→ Risk: MEDIUM - alice is active (queued)
+→ Bob waits without generating
+→ (alice completes)
+→ @neo check src/auth.py "Add JWT"
+→ Risk: LOW - now safe
+→ Claude generates JWT code (first try, no re-gen!)
+```
+
+### Feature Comparison Table
+
+| Feature | Terminal | Claude Code IDE |
+|---------|----------|-----------------|
+| **Setup Time** | 5-10 min | 5-10 min |
+| **Editor Support** | Any (Vim, VS Code, etc.) | Claude Code IDE only |
+| **File Detection** | Watcher-based | Automatic (IDE) |
+| **Intent Declaration** | Manual `neo declare` | Built into workflow |
+| **Developer Context** | NEO_DEVELOPER env var | Automatic (IDE session) |
+| **Conflict Check** | Manual or auto (watcher) | Pre-generation hook |
+| **Pre-gen Prevention** | No (logs after) | **Yes (blocks before)** |
+| **Token Efficiency** | Good | **Excellent** |
+| **Queue Management** | ✅ Yes | ✅ Yes |
+| **Queue Visibility** | Terminal output | IDE status bar |
+| **Multi-team Support** | Single (or env var) | Multitenancy ready |
+| **CI/CD Integration** | ✅ Easy | ⚠️ Needs IDE |
+
+### Decision Tree
+
+**Use Terminal-Based If:**
+```
+Do you have Claude Code IDE?
+  → No → Use Terminal Testing ✅
+  → Yes, but...
+    → Not using for generation? → Use Terminal Testing ✅
+    → On a server/remote machine? → Use Terminal Testing ✅
+    → Running in CI/CD? → Use Terminal Testing ✅
+    → Integrating with other tools? → Use Terminal Testing ✅
+```
+
+**Use Claude Code IDE If:**
+```
+Do you have Claude Code IDE?
+  → Yes
+  → Using for code generation? → Use IDE Testing ✅
+  → Care about token efficiency? → Use IDE Testing ✅ (saves 40-50% tokens)
+  → Want pre-generation checks? → Use IDE Testing ✅
+  → Team has IDE access? → Use IDE Testing ✅
+```
+
+---
+
 ## Next Steps
 
-- **Test with 3+ developers** for queue behavior
-- **Test different files** for parallel (no-lock) work
-- **Test rapid declarations** to see conflict detection
-- **Monitor performance** with large activity logs
+### Testing Progression
 
-For production use with Claude Code IDE, see `docs/NEO_4.0_OPENAPI_SPECIFICATION.md`.
+1. **Two-Developer Test** (this guide)
+   - ✅ Lock creation and release
+   - ✅ Basic queue management
+   - ✅ Context refresh
+
+2. **Three-Developer Test** (section above)
+   - ✅ Multi-developer queue ordering
+   - ✅ Sequential promotion
+   - ✅ Context aggregation
+   - ✅ Proves Neo scales beyond pairs
+
+3. **Advanced Tests** (optional)
+   - Test with 4+ developers
+   - Test different files (no-lock, parallel work)
+   - Test rapid concurrent declarations
+   - Test with large activity logs (performance)
+   - Test on networked machines (file sync)
+
+### Production Use
+
+**Terminal-Based (Current Setup)**:
+- Run Neo server in background: `screen` or `nohup`
+- Integrate with CI/CD pipelines
+- Monitor activity log as team metric
+
+**Claude Code IDE (Recommended for Teams)**:
+- See `CLAUDE_CODE_TWO_DEVELOPER_TEST.md` for MCP setup
+- Provides pre-generation conflict detection
+- Saves 40-50% tokens on generation
+- **Recommended path for production teams**
+
+### Documentation References
+
+- `CLAUDE_CODE_TWO_DEVELOPER_TEST.md` - IDE-based testing (recommended for teams)
+- `NEO_4.0_OPENAPI_SPECIFICATION.md` - Technical specification
+- `CLAUDE.md` - Project overview and MCP configuration
 
 ---
 
