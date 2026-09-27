@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """File watcher for Neo - detects code changes and logs to server.
 
-Watches for file modifications and automatically logs activity to the Neo server.
-Developers specify their ID and file patterns, and changes are tracked in real-time.
+SECURITY: Requires explicit developer context via:
+1. NEO_DEVELOPER environment variable (must match watcher's agent_id)
+2. Prior intent declaration via CLI
+
+This prevents accidental double-logging when multiple watchers are running.
 """
 
 import sys
 import json
 import time
+import os
 from pathlib import Path
 from typing import Dict, List, Set, Optional
 import hashlib
@@ -18,15 +22,15 @@ from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 
 
 class NeoFileWatcher(FileSystemEventHandler):
-    """Watches for file changes and logs to Neo server"""
+    """Watches for file changes and logs to Neo server with context validation"""
 
     def __init__(self, agent_id: str, server_url: str = 'http://localhost:8000', watched_patterns: Optional[List[str]] = None):
         self.agent_id = agent_id
         self.server_url = server_url
         self.watched_patterns = watched_patterns or ['src/**/*.py', 'lib/**/*.py']
-        self.file_hashes: Dict[str, str] = {}  # Track file hashes to detect actual changes
-        self.last_logged: Dict[str, float] = {}  # Rate limiting
-        self.min_interval = 5  # Minimum seconds between logs for same file
+        self.file_hashes: Dict[str, str] = {}
+        self.last_logged: Dict[str, float] = {}
+        self.min_interval = 5
 
     def on_modified(self, event: FileModifiedEvent):
         """Handle file modification"""
@@ -39,7 +43,13 @@ class NeoFileWatcher(FileSystemEventHandler):
         if not self._should_watch(file_path):
             return
 
-        # Calculate file hash to detect actual changes (avoid double-triggers)
+        # REQUIRED: Check NEO_DEVELOPER environment variable
+        current_developer = os.getenv('NEO_DEVELOPER')
+        if current_developer != self.agent_id:
+            # Silently ignore - another developer's watcher should handle this
+            return
+
+        # Calculate file hash to detect actual changes
         try:
             with open(file_path, 'rb') as f:
                 content = f.read()
@@ -53,7 +63,7 @@ class NeoFileWatcher(FileSystemEventHandler):
 
         self.file_hashes[str(file_path)] = current_hash
 
-        # Rate limit: don't log same file too frequently
+        # Rate limit
         now = time.time()
         if str(file_path) in self.last_logged:
             if now - self.last_logged[str(file_path)] < self.min_interval:
@@ -61,28 +71,58 @@ class NeoFileWatcher(FileSystemEventHandler):
 
         self.last_logged[str(file_path)] = now
 
+        # Verify intent was declared (Option 2)
+        if not self._verify_intent_declared(file_path):
+            print(f"\n⚠️  [{datetime.now().strftime('%H:%M:%S')}] Edit blocked for {file_path}")
+            print(f"   ❌ No intent declared by {self.agent_id}")
+            print(f"   💡 Declare intent first: neo declare {self.agent_id} {file_path} '<intent>'")
+            return
+
         # Log to server
         self._log_to_server(file_path)
 
     def _should_watch(self, file_path: Path) -> bool:
         """Check if file matches watched patterns"""
-        # For now, watch Python files in src/ and lib/
-        parts = str(file_path).split('/')
         return (
             any(p in str(file_path) for p in ['src/', 'lib/']) and
             str(file_path).endswith('.py')
         )
 
+    def _verify_intent_declared(self, file_path: Path) -> bool:
+        """Check if intent was declared for this file"""
+        try:
+            rel_path = str(file_path.relative_to(Path.cwd()))
+        except ValueError:
+            rel_path = str(file_path)
+
+        try:
+            # Query server for active entries
+            response = requests.get(
+                f'{self.server_url}/api/activity',
+                timeout=2
+            )
+            data = response.json()
+
+            # Check if this developer has declared intent on this file
+            if data.get('success'):
+                entries = data.get('entries', [])
+                for entry in entries:
+                    if (entry.get('developer_id') == self.agent_id and
+                        entry.get('file_path') == rel_path):
+                        return True
+            return False
+        except:
+            # If can't verify, allow (server might be down)
+            return True
+
     def _log_to_server(self, file_path: Path):
         """Log file change to Neo server"""
         try:
-            # Convert absolute path to relative
             try:
                 rel_path = str(file_path.relative_to(Path.cwd()))
             except ValueError:
                 rel_path = str(file_path)
 
-            # Default intent based on file
             intent = f"Working on {rel_path}"
 
             payload = {
@@ -110,15 +150,35 @@ class NeoFileWatcher(FileSystemEventHandler):
 def run_watcher(agent_id: str, server_url: str = 'http://localhost:8000', watched_dir: str = '.'):
     """Run the file watcher"""
 
+    # Check for environment variable context
+    current_dev = os.getenv('NEO_DEVELOPER')
+
     print("\n" + "="*60)
     print("👁️  Neo File Watcher")
     print("="*60)
-    print(f"\n👤 Agent ID: {agent_id}")
+    print(f"\n👤 Watcher Agent ID: {agent_id}")
     print(f"📍 Server: {server_url}")
     print(f"📂 Watching: {watched_dir}")
     print(f"⏰ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("\nFile changes will be automatically logged.")
-    print("Press Ctrl+C to stop.\n")
+
+    if current_dev:
+        if current_dev == agent_id:
+            print(f"\n✅ Developer context: NEO_DEVELOPER={current_dev}")
+            print("   File changes will be logged as this developer")
+        else:
+            print(f"\n⚠️  WARNING: NEO_DEVELOPER={current_dev} (watcher is for {agent_id})")
+            print(f"   Watcher inactive until NEO_DEVELOPER={agent_id}")
+    else:
+        print(f"\n⚠️  WARNING: NEO_DEVELOPER not set!")
+        print(f"   Set it to activate this watcher:")
+        print(f"   export NEO_DEVELOPER={agent_id}")
+
+    print("\n" + "="*60)
+    print("REQUIRED: Declare intent before editing")
+    print("="*60)
+    print(f"\nBefore editing, run:")
+    print(f"  neo declare {agent_id} src/auth.py 'Your intent here'")
+    print("\nPress Ctrl+C to stop watcher.\n")
 
     watcher = NeoFileWatcher(agent_id, server_url)
     observer = Observer()
@@ -139,8 +199,8 @@ def run_watcher(agent_id: str, server_url: str = 'http://localhost:8000', watche
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description='Neo File Watcher')
-    parser.add_argument('agent_id', help='Developer ID')
+    parser = argparse.ArgumentParser(description='Neo File Watcher (requires NEO_DEVELOPER environment variable)')
+    parser.add_argument('agent_id', help='Developer ID this watcher monitors')
     parser.add_argument('--server', default='http://localhost:8000', help='Neo server URL')
     parser.add_argument('--dir', default='.', help='Directory to watch')
 

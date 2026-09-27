@@ -64,7 +64,10 @@ The server now:
 
 ### Terminal 2: Developer A - Watch for Changes
 
+First, set the developer context environment variable:
+
 ```bash
+export NEO_DEVELOPER=alice
 python -m cli.file_watcher alice --server http://localhost:8000
 ```
 
@@ -74,33 +77,60 @@ Output:
 👁️  Neo File Watcher
 ============================================================
 
-👤 Agent ID: alice
+👤 Watcher Agent ID: alice
 📍 Server: http://localhost:8000
 📂 Watching: .
 ⏰ Started: 2026-09-27 10:15:45
 
-File changes will be automatically logged.
-Press Ctrl+C to stop.
+✅ Developer context: NEO_DEVELOPER=alice
+   File changes will be logged as this developer
+
+REQUIRED: Declare intent before editing
+Before editing, run:
+  neo declare alice src/auth.py 'Your intent here'
+
+Press Ctrl+C to stop watcher.
 
 ```
 
-Now, when alice edits files in `src/` or `lib/`, they're automatically logged.
+**Important**: The `NEO_DEVELOPER=alice` environment variable ensures that only alice's watcher logs alice's changes (prevents double-logging when multiple watchers are running).
+
+Now, when alice edits files in `src/` or `lib/`, they'll be detected by this watcher.
 
 ---
 
 ### Terminal 3: Developer B - Watch for Changes
 
+Set the developer context for bob:
+
 ```bash
+export NEO_DEVELOPER=bob
 python -m cli.file_watcher bob --server http://localhost:8000
 ```
 
-Same setup, but for developer bob.
+Same setup, but with `NEO_DEVELOPER=bob` so bob's changes are tracked by bob's watcher only.
 
 ---
 
-### Terminal 4: Developer A - Make Changes
+### Terminal 4: Developer A - Declare Intent First
 
-Edit a file that alice is working on:
+Before editing, alice must declare intent:
+
+```bash
+python -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication" --category feature
+```
+
+Output:
+```
+✅ Intent Declared
+   Developer: alice
+   File: src/auth.py
+   Developers on file: 1
+```
+
+### Terminal 4 (continued): Developer A - Make Changes
+
+Now edit the file:
 
 ```bash
 # Edit src/auth.py
@@ -343,6 +373,63 @@ When alice completes → bob promoted → when bob completes → charlie promote
 
 ---
 
+## Developer Context Validation
+
+### Why NEO_DEVELOPER and Intent Declaration?
+
+When multiple file watchers are running simultaneously (alice's watcher in Terminal 2 and bob's watcher in Terminal 3), both watchers detect file changes in Terminal 4. Without developer context validation, **both watchers would log the same change with their own agent_id**, making it impossible to determine who actually made the edit.
+
+### How It Works
+
+Neo solves this with two mechanisms working together:
+
+**1. NEO_DEVELOPER Environment Variable**
+```bash
+export NEO_DEVELOPER=alice
+python -m cli.file_watcher alice --server http://localhost:8000
+```
+
+- Each watcher checks if `NEO_DEVELOPER` matches its own `agent_id`
+- If it matches: the watcher processes and logs the change
+- If it doesn't match: the watcher **silently ignores** the change (allows other watchers to handle it)
+- If not set: the watcher warns the developer and remains inactive
+
+**2. Intent Declaration Before Editing**
+```bash
+python -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
+```
+
+- Before a file can be logged, the developer must declare intent
+- The watcher verifies intent was declared before allowing logs
+- If no intent: the watcher blocks the edit and prompts the developer with the required command
+- This prevents accidental logging and ensures explicit developer intent
+
+### Example Workflow
+
+```
+Terminal 2 (Alice's watcher):
+  $ export NEO_DEVELOPER=alice
+  $ python -m cli.file_watcher alice --server http://localhost:8000
+  ✅ Developer context: NEO_DEVELOPER=alice
+
+Terminal 3 (Bob's watcher):
+  $ export NEO_DEVELOPER=bob
+  $ python -m cli.file_watcher bob --server http://localhost:8000
+  ✅ Developer context: NEO_DEVELOPER=bob
+
+Terminal 4 (Editing):
+  $ python -m cli.neo_client declare alice src/auth.py "Add OAuth2"
+  ✅ Intent Declared
+  
+  $ vim src/auth.py  # Make changes
+  # Alice's watcher logs the change (NEO_DEVELOPER=alice matches)
+  # Bob's watcher ignores it (NEO_DEVELOPER=bob doesn't match)
+  
+  Result: Only alice's watcher logs alice's work
+```
+
+---
+
 ## Troubleshooting
 
 ### Server Connection Failed
@@ -358,10 +445,41 @@ python -m cli.neo_server --clear
 
 **Problem:** Changes aren't being logged
 
-**Solution:** 
-- Make sure watchers are running: `python -m cli.file_watcher <agent_id>`
-- Check that you're editing files in `src/` or `lib/` directories
-- Verify the file actually changed (not just opened/closed)
+**Causes and Solutions:**
+1. **NEO_DEVELOPER not set or mismatched**
+   ```bash
+   # Check if environment variable is set
+   echo $NEO_DEVELOPER
+   
+   # Set it correctly before starting the watcher
+   export NEO_DEVELOPER=alice
+   python -m cli.file_watcher alice --server http://localhost:8000
+   ```
+
+2. **Intent not declared**
+   ```bash
+   # Declare intent before editing
+   python -m cli.neo_client declare alice src/auth.py "Your intent here"
+   ```
+
+3. **Files not in watched directories**
+   - Make sure you're editing files in `src/` or `lib/` directories
+   - Other directories are not watched by default
+
+4. **File didn't actually change**
+   - Verify the file content actually changed (not just opened/closed)
+   - Hash-based detection prevents duplicate logs of the same content
+
+### Edit Blocked: "No intent declared"
+
+**Problem:** Watcher shows error: `Edit blocked for {file_path}. No intent declared by {agent_id}`
+
+**Solution:** Declare intent before editing:
+```bash
+python -m cli.neo_client declare alice src/auth.py "Your intent here"
+```
+
+This prevents accidental logging and ensures explicit developer intent.
 
 ### Activity Log Not Clearing
 
