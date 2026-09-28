@@ -74,29 +74,73 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {'error': 'Missing required fields'})
                 return
 
+            # Check for conflicts BEFORE logging to get lock info
+            risk_level, conflict_msg, lock_info = check_for_conflicts(
+                agent_id=agent_id,
+                file_path=file_path,
+                intent=intent,
+                region=region
+            )
+
+            # Extract lock state from conflict check
+            lock_state = None
+            lock_holder = None
+            lock_acquired_at = None
+            lock_expires_at = None
+            lock_reason = None
+            lock_scope = None
+            queue_position = None
+            waiting_for = None
+
+            if lock_info:
+                lock_state = lock_info.get('lock_state')
+                lock_holder = lock_info.get('lock_holder')
+                lock_acquired_at = lock_info.get('lock_acquired_at')
+                lock_expires_at = lock_info.get('lock_expires_at')
+                lock_reason = lock_info.get('lock_reason')
+                lock_scope = lock_info.get('lock_scope')
+                queue_position = lock_info.get('queue_position')
+                waiting_for = lock_info.get('waiting_for')
+
+            # Log activity with lock state
             log_activity(
                 developer_id=agent_id,
                 file_path=file_path,
                 intent=intent,
                 intent_category=intent_category,
-                region=region
+                region=region,
+                lock_state=lock_state,
+                lock_holder=lock_holder,
+                lock_acquired_at=lock_acquired_at,
+                lock_expires_at=lock_expires_at,
+                lock_reason=lock_reason,
+                lock_scope=lock_scope,
+                queue_position=queue_position,
+                waiting_for=waiting_for
             )
 
             # Get current state to show user
             entries = get_active_entries()
             same_file_count = len([e for e in entries if e.get('file_path') == file_path])
 
+            # Build response with lock info
             response = {
                 'success': True,
                 'message': f'✅ Logged: {intent}',
                 'agent_id': agent_id,
                 'file_path': file_path,
                 'active_on_file': same_file_count,
+                'risk_level': risk_level.value,
+                'lock_info': lock_info,
                 'timestamp': datetime.now().isoformat()
             }
 
-            # Print to terminal
-            self._print_activity_log(agent_id, file_path, intent, same_file_count)
+            # Show lock status in terminal output if applicable
+            if risk_level in (RiskLevel.MEDIUM, RiskLevel.HIGH):
+                self._print_lock_status(agent_id, file_path, lock_info, risk_level)
+            else:
+                # Print to terminal
+                self._print_activity_log(agent_id, file_path, intent, same_file_count)
 
             self._send_json(200, response)
         except Exception as e:
@@ -189,6 +233,33 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             print(f"      Holder: {lock_info.get('lock_holder')}")
             print(f"      Queue Position: {lock_info.get('queue_position', 'N/A')}")
             print(f"      Waiting For: {lock_info.get('waiting_for', 'N/A')}")
+
+    def _print_lock_status(self, agent_id: str, file_path: str, lock_info: Optional[Dict], risk_level: RiskLevel):
+        """Print lock status when activity is logged with lock state"""
+        if risk_level == RiskLevel.MEDIUM:
+            icon = "⚠️"
+        else:
+            icon = "🚫"
+
+        print(f"\n{icon} [{datetime.now().strftime('%H:%M:%S')}] {agent_id} → {file_path}")
+
+        if lock_info:
+            lock_state = lock_info.get('lock_state')
+            lock_holder = lock_info.get('lock_holder')
+            queue_position = lock_info.get('queue_position')
+            waiting_for = lock_info.get('waiting_for')
+
+            if lock_state == "ACQUIRED":
+                print(f"   ✅ Lock ACQUIRED - you are active on this file")
+            elif lock_state == "WAITING":
+                print(f"   ⏳ Lock WAITING - queued for this file")
+                print(f"      Position: {queue_position}")
+                print(f"      Waiting for: {waiting_for}")
+
+            print(f"   🔒 Lock Status:")
+            print(f"      Holder: {lock_holder}")
+            print(f"      Queue Position: {queue_position}")
+            print(f"      Waiting For: {waiting_for}")
 
     def log_message(self, format, *args):
         """Suppress default logging"""
