@@ -87,10 +87,19 @@ def test_refresh_count_at_old_threshold():
 def test_refresh_count_at_new_threshold():
     """Count refresh triggers at new 1000ms threshold"""
     now = time.time()
+    OLD_THRESHOLD_MS = 300
 
     # Simulate 5 developers working with 500ms spacing
-    refresh_count_new = 0
+    # Calculate old threshold refreshes
+    refresh_count_old = 0
+    for i in range(5):
+        entry_time = now - ((i + 1) * 0.5)  # 0.5s, 1.0s, 1.5s, etc.
+        age_ms = (now - entry_time) * 1000
+        if age_ms > OLD_THRESHOLD_MS:
+            refresh_count_old += 1
 
+    # Calculate new threshold refreshes
+    refresh_count_new = 0
     for i in range(5):
         entry_time = now - ((i + 1) * 0.5)  # 0.5s, 1.0s, 1.5s, etc.
         is_stale, age_ms = is_context_stale(entry_time, now)

@@ -19,6 +19,7 @@ import requests
 from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
+import threading
 
 
 class NeoFileWatcher(FileSystemEventHandler):
@@ -31,6 +32,8 @@ class NeoFileWatcher(FileSystemEventHandler):
         self.file_hashes: Dict[str, str] = {}
         self.last_logged: Dict[str, float] = {}
         self.min_interval = 5
+        self.last_lock_state: Optional[str] = None
+        self.monitoring = True
 
     def on_modified(self, event: FileModifiedEvent):
         """Handle file modification"""
@@ -146,6 +149,51 @@ class NeoFileWatcher(FileSystemEventHandler):
         except Exception as e:
             print(f"⚠️  Error logging to server: {e}")
 
+    def get_lock_status(self) -> Optional[Dict]:
+        """Check current lock status for this developer"""
+        try:
+            response = requests.get(
+                f'{self.server_url}/api/activity',
+                timeout=2
+            )
+            data = response.json()
+
+            if data.get('success'):
+                entries = data.get('entries', [])
+                # Find this developer's most recent entry
+                for entry in reversed(entries):
+                    if entry.get('developer_id') == self.agent_id:
+                        return {
+                            'lock_state': entry.get('lock_state'),
+                            'queue_position': entry.get('queue_position'),
+                            'waiting_for': entry.get('waiting_for'),
+                            'lock_holder': entry.get('lock_holder')
+                        }
+            return None
+        except:
+            return None
+
+    def monitor_promotions(self):
+        """Background thread: poll for lock promotions"""
+        while self.monitoring:
+            try:
+                status = self.get_lock_status()
+                if status:
+                    current_state = status.get('lock_state')
+
+                    # Detect promotion: was WAITING, now ACQUIRED
+                    if (self.last_lock_state == 'WAITING' and
+                        current_state == 'ACQUIRED'):
+                        print(f"\n✅ [{datetime.now().strftime('%H:%M:%S')}] {self.agent_id} - Lock Released!")
+                        print(f"   🔓 You are now ACTIVE")
+                        print(f"   Ready to proceed with editing.\n")
+
+                    self.last_lock_state = current_state
+
+                time.sleep(2)  # Poll every 2 seconds
+            except:
+                time.sleep(2)
+
 
 def run_watcher(agent_id: str, server_url: str = 'http://localhost:8000', watched_dir: str = '.'):
     """Run the file watcher"""
@@ -184,11 +232,16 @@ def run_watcher(agent_id: str, server_url: str = 'http://localhost:8000', watche
     observer = Observer()
     observer.schedule(watcher, path=watched_dir, recursive=True)
 
+    # Start background promotion monitor
+    monitor_thread = threading.Thread(target=watcher.monitor_promotions, daemon=True)
+    monitor_thread.start()
+
     try:
         observer.start()
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
+        watcher.monitoring = False
         observer.stop()
         print("\n\n" + "="*60)
         print("🛑 Watcher stopped")

@@ -147,7 +147,7 @@ class BaselineComparisonTest:
 
         # Step 2: Bob attempts to declare - checks for conflicts
         print("✓ Step 2: Bob declares intent on SAME file")
-        risk_level, message = check_for_conflicts(
+        risk_level, message, lock_info = check_for_conflicts(
             agent_id="bob",
             file_path="auth.py",
             intent="Add JWT token validation",

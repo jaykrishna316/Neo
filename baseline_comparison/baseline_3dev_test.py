@@ -151,7 +151,7 @@ class Baseline3DevTest:
 
         # Step 2: Bob checks for conflicts
         print("  Step 2: Bob checks conflicts")
-        risk_alice_bob, msg1 = check_for_conflicts(
+        risk_alice_bob, msg1, lock_info1 = check_for_conflicts(
             agent_id="bob",
             file_path="auth.py",
             intent="Add JWT token validation",
@@ -161,7 +161,7 @@ class Baseline3DevTest:
 
         # Step 3: Charlie checks for conflicts
         print("  Step 3: Charlie checks conflicts")
-        risk_alice_charlie, msg2 = check_for_conflicts(
+        risk_alice_charlie, msg2, lock_info2 = check_for_conflicts(
             agent_id="charlie",
             file_path="auth.py",
             intent="Add SAML assertion validation",

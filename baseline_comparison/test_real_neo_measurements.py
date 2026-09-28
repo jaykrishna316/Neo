@@ -64,7 +64,7 @@ def test_conflict_detection_real():
     # Scenario 1: No existing work (should be LOW risk)
     print("\n[SCENARIO 1] Alice starts - no existing work")
     start_time = time.time()
-    risk_level, message = check_for_conflicts(
+    risk_level, message, lock_info = check_for_conflicts(
         agent_id="alice",
         file_path="auth.py",
         intent="Add password validation",
@@ -89,7 +89,7 @@ def test_conflict_detection_real():
     # Scenario 2: Bob on SAME lines (should be HIGH risk)
     print("\n[SCENARIO 2] Bob on SAME lines (overlap)")
     start_time = time.time()
-    risk_level, message = check_for_conflicts(
+    risk_level, message, lock_info = check_for_conflicts(
         agent_id="bob",
         file_path="auth.py",
         intent="Refactor password validation",
@@ -111,7 +111,7 @@ def test_conflict_detection_real():
     # Scenario 3: Charlie on DIFFERENT lines (should be LOW risk)
     print("\n[SCENARIO 3] Charlie on DIFFERENT lines (no overlap)")
     start_time = time.time()
-    risk_level, message = check_for_conflicts(
+    risk_level, message, lock_info = check_for_conflicts(
         agent_id="charlie",
         file_path="auth.py",
         intent="Add salt handling",
@@ -271,7 +271,7 @@ def test_lock_mechanism_simulation():
         dev_start = time.time()
 
         # Check for conflicts
-        risk_level, msg = check_for_conflicts(dev, "shared.py", f"{dev} updates", "lines 50-100")
+        risk_level, msg, lock_info = check_for_conflicts(dev, "shared.py", f"{dev} updates", "lines 50-100")
 
         # Log activity
         log_activity(dev, "shared.py", f"{dev} updates shared code", "lines 50-100")
