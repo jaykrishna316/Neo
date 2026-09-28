@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neo Conflict Dashboard</title>
+<style>
+:root{--p:#8b5cf6;--s:#3b82f6;--ok:#22c55e;--w:#f97316;--e:#ef4444;--c1:rgba(139,92,246,.2);--c2:rgba(59,130,246,.2);--c3:rgba(34,197,94,.2);--c4:rgba(249,115,22,.2)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier New','JetBrains Mono',monospace;background:#0a0e27;background-image:radial-gradient(circle at 20% 50%,rgba(139,92,246,.1)),radial-gradient(circle at 80% 80%,rgba(59,130,246,.1));min-height:100vh;padding:20px;color:#e0e7ff}
+.container{max-width:1400px;margin:0 auto}
+.header{background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(59,130,246,.1));backdrop-filter:blur(12px);border:1px solid rgba(139,92,246,.3);padding:40px;border-radius:16px;margin-bottom:40px;box-shadow:0 8px 32px rgba(139,92,246,.15)}
+.header h1{color:#c7d2fe;font-size:42px;font-weight:700;background:linear-gradient(135deg,#c7d2fe,#a5b4fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+.header p{color:#a5b4fc;font-size:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px}
+@media (max-width:1024px){.grid{grid-template-columns:1fr}}
+.panel{background:linear-gradient(135deg,rgba(30,27,75,.4),rgba(20,30,60,.3));backdrop-filter:blur(12px);border:1px solid rgba(139,92,246,.25);border-radius:16px;padding:28px;box-shadow:0 8px 32px rgba(139,92,246,.1);transition:all .3s ease}
+.panel:hover{border-color:rgba(139,92,246,.4);box-shadow:0 12px 48px rgba(139,92,246,.2)}
+.panel h2{color:#c7d2fe;margin-bottom:24px;font-size:18px;font-weight:600;border-bottom:2px solid rgba(139,92,246,.3);padding-bottom:14px}
+.file-item,.conflict-card{background:linear-gradient(135deg,rgba(67,56,202,.1),rgba(59,130,246,.05));border-left:3px solid var(--p);border-radius:12px;padding:18px;margin-bottom:14px;transition:all .3s ease;border:1px solid rgba(139,92,246,.2)}
+.file-item:hover{background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(59,130,246,.1));border-left-color:#a78bfa;transform:translateX(6px);box-shadow:0 8px 20px rgba(139,92,246,.15)}
+.file-name{font-weight:700;color:#c7d2fe;margin-bottom:12px;font-size:15px}
+.developers-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.dev-tag{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:24px;font-size:12px;font-weight:600;border:1px solid;backdrop-filter:blur(8px);transition:all .3s}
+.dev-tag.devA{background:var(--c2);color:#60a5fa;border-color:rgba(59,130,246,.4)}
+.dev-tag.devB{background:rgba(168,85,247,.2);color:#d8b4fe;border-color:rgba(168,85,247,.4)}
+.dev-tag.devC{background:var(--c3);color:#86efac;border-color:rgba(34,197,94,.4)}
+.dev-tag.devD{background:var(--c4);color:#fed7aa;border-color:rgba(249,115,22,.4)}
+.dev-tag .dot{width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.region{font-size:12px;color:#94a3b8;margin-bottom:6px}
+.risk-indicator{display:inline-block;padding:6px 14px;border-radius:24px;font-size:11px;font-weight:700;text-transform:uppercase;border:1px solid;backdrop-filter:blur(8px)}
+.risk-low{background:var(--c3);color:#86efac;border-color:rgba(34,197,94,.4)}
+.risk-medium{background:var(--c4);color:#fed7aa;border-color:rgba(249,115,22,.4)}
+.risk-high{background:var(--e,.2);color:#fca5a5;border-color:rgba(239,68,68,.4)}
+.developer-card{background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(59,130,246,.1));backdrop-filter:blur(12px);padding:24px;border-radius:16px;margin-bottom:16px;border:1px solid rgba(139,92,246,.3);transition:all .3s}
+.developer-card:hover{border-color:rgba(139,92,246,.5);box-shadow:0 12px 40px rgba(139,92,246,.2);transform:translateY(-2px)}
+.developer-card h3{margin-bottom:16px;font-size:20px;font-weight:700}
+.dev-info{font-size:13px;opacity:.9;line-height:1.8}
+.dev-info strong{display:block;margin-top:10px;color:#c7d2fe;font-weight:600}
+.scenarios{background:linear-gradient(135deg,rgba(30,27,75,.4),rgba(20,30,60,.3));backdrop-filter:blur(12px);border:1px solid rgba(139,92,246,.25);border-radius:16px;padding:32px;margin-bottom:40px;box-shadow:0 8px 32px rgba(139,92,246,.1)}
+.scenarios h2{color:#c7d2fe;margin-bottom:28px;font-size:20px;font-weight:700;border-bottom:2px solid rgba(139,92,246,.3);padding-bottom:16px}
+.scenario-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.controls{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+button{padding:12px 24px;border:1px solid;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;transition:all .3s;letter-spacing:.5px;text-transform:uppercase;backdrop-filter:blur(8px)}
+.btn-primary{background:linear-gradient(135deg,rgba(139,92,246,.3),rgba(59,130,246,.2));color:#c7d2fe;border-color:rgba(139,92,246,.4)}
+.btn-primary:hover{background:linear-gradient(135deg,rgba(139,92,246,.5),rgba(59,130,246,.4));border-color:rgba(139,92,246,.6);transform:translateY(-2px);box-shadow:0 8px 24px rgba(139,92,246,.4)}
+.btn-secondary{background:rgba(100,116,139,.2);color:#cbd5e1;border-color:rgba(100,116,139,.3)}
+.btn-secondary:hover{background:rgba(100,116,139,.3);border-color:rgba(100,116,139,.5);transform:translateY(-2px)}
+.empty-state{text-align:center;color:#64748b;padding:50px 20px}
+.timeline{position:relative;padding:20px 0}
+.timeline::before{content:'';position:absolute;left:6px;top:30px;bottom:0;width:2px;background:linear-gradient(180deg,rgba(139,92,246,.4),transparent)}
+.timeline-item{display:flex;gap:20px;margin-bottom:20px;position:relative}
+.timeline-marker{width:14px;height:14px;border-radius:50%;background:var(--p);flex-shrink:0;box-shadow:0 0 12px rgba(139,92,246,.5);border:2px solid #1e293b;position:relative;z-index:1}
+.timeline-content{flex:1;background:rgba(30,27,75,.3);padding:14px;border-radius:10px;border-left:2px solid rgba(139,92,246,.3);transition:all .3s}
+.timeline-content:hover{background:rgba(30,27,75,.5);border-left-color:rgba(139,92,246,.6)}
+.timeline-content strong{color:#a5b4fc;display:block;margin-bottom:6px;font-weight:700}
+.timeline-content p{color:#cbd5e1;font-size:13px;margin-bottom:4px;opacity:.85}
+.conflict-card.medium{background:linear-gradient(135deg,rgba(249,115,22,.1),rgba(249,115,22,.05));border-color:rgba(249,115,22,.25);border-left-color:rgba(249,115,22,.6)}
+.conflict-card.high{background:linear-gradient(135deg,rgba(239,68,68,.12),rgba(239,68,68,.06));border-color:rgba(239,68,68,.3);border-left-color:rgba(239,68,68,.7)}
+.status-active::before{content:'●';display:inline-block;margin-right:6px;animation:pulse 2s}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>🔍 Conflict Warning Dashboard</h1>
+<p>Real-time concurrent developer activity and conflict detection</p>
+</div>
+<div class="scenarios">
+<h2>Scenarios</h2>
+<div class="controls"><button class="btn-secondary" onclick="clearDashboard()">Clear</button></div>
+<div class="scenario-buttons">
+<button class="btn-primary" onclick="runScenario1()">S1: Overlapping</button>
+<button class="btn-primary" onclick="runScenario2()">S2: Non-Overlap</button>
+<button class="btn-primary" onclick="runScenario3()">S3: Signature</button>
+<button class="btn-primary" onclick="runScenario4()">S4: Expiry</button>
+<button class="btn-primary" onclick="runScenario5()">S5: Multi-Dev</button>
+<button class="btn-primary" onclick="runAllScenarios()">Run All</button>
+</div>
+</div>
+<div class="grid">
+<div class="panel"><h2>📁 Active Files</h2><div id="filesPanel" class="empty-state"><p>No active changes. Run a scenario.</p></div></div>
+<div class="panel"><h2>👨‍💻 Developers</h2><div id="developersPanel" class="empty-state"><p>No developers active.</p></div></div>
+</div>
+<div class="grid">
+<div class="panel"><h2>⚠️ Warnings</h2><div id="warningsPanel" class="empty-state"><p>No conflicts detected.</p></div></div>
+<div class="panel"><h2>📋 Activity</h2><div id="logPanel" class="empty-state"><p>Activity log is empty.</p></div></div>
+</div>
+</div>
+<script>let log=[],RISK={LOW:{l:'Low',c:'risk-low'},MEDIUM:{l:'Medium',c:'risk-medium'},HIGH:{l:'High',c:'risk-high'}},DEV={DevA:{c:'devA',col:'#1976d2'},DevB:{c:'devB',col:'#7b1fa2'},DevC:{c:'devC',col:'#388e3c'},DevD:{c:'devD',col:'#f57c00'}};function fmt(s){return s<60?Math.floor(s)+'s':Math.floor(s/60)+'m'}function add(d,f,i,r,risk){let e={developer:d,file:f,intent:i,region:r,ts:Date.now(),risk};return log.push(e),render(),e}function classify(cr,or,oi){if(!or||!cr)return'LOW';let cl=s=>{let m=s.match(/lines?\s+(\d+)[^\d]*(\d+)?/i);return m?{s:parseInt(m[1]),e:parseInt(m[2]||m[1])}:null},clines=cl(cr),olines=cl(or),overlap=clines&&olines?!(olines.e<clines.s||olines.s>clines.e):!clines&&!or&&cr.split('.')[0]===or.split('.')[0];let sig=['rename','remove','delete','change signature'].some(k=>oi.toLowerCase().includes(k));return overlap&&sig?'HIGH':overlap||sig?'MEDIUM':'LOW'}function detect(d,f,r){let c=[];return log.forEach(e=>{if(e.file===f&&e.developer!==d){let risk=classify(r,e.region,e.intent);risk!=='LOW'&&c.push({risk,dev:e.developer,intent:e.intent,region:e.region})}}),c}function clearDashboard(){log=[],render()}function render(){renderFiles();renderDevelopers();renderWarnings();renderLog()}function renderFiles(){let p=document.getElementById('filesPanel'),m=new Map;log.forEach(e=>{m.has(e.file)||m.set(e.file,[]);m.get(e.file).push(e)});if(m.size===0)return p.innerHTML='<div class="empty-state"><p>No active changes.</p></div>';let html='';m.forEach((entries,file)=>{let devs=[...new Set(entries.map(e=>e.developer))],regions=[...new Set(entries.map(e=>e.region).filter(Boolean))],risk=entries.reduce((max,e)=>e.risk==='HIGH'?'HIGH':e.risk==='MEDIUM'&&max!=='HIGH'?'MEDIUM':max||'LOW','LOW');html+=`<div class="file-item"><div class="file-name">📄 ${file}</div><div class="developers-list">${devs.map(d=>`<span class="dev-tag ${DEV[d].c}"><span class="dot"></span>${d}</span>`).join('')}</div>${regions.length>0?`<div class="region">Region: ${regions.join(', ')}</div>`:''}<span class="risk-indicator ${RISK[risk].c}">${RISK[risk].l}</span></div>`});p.innerHTML=html}function renderDevelopers(){let p=document.getElementById('developersPanel'),m=new Map;log.forEach(e=>{m.has(e.developer)||m.set(e.developer,[]);m.get(e.developer).push(e)});if(m.size===0)return p.innerHTML='<div class="empty-state"><p>No developers active.</p></div>';let html='';m.forEach((entries,dev)=>{let files=[...new Set(entries.map(e=>e.file))],age=fmt((Date.now()-entries[entries.length-1].ts)/1000);html+=`<div class="developer-card"><h3>${dev}</h3><div class="dev-info"><strong>Files: ${files.join(', ')}</strong><p>${entries.length} change${entries.length>1?'s':''}</p><span class="status-active">Active ${age} ago</span></div></div>`});p.innerHTML=html}function renderWarnings(){let p=document.getElementById('warningsPanel'),m=new Map;log.forEach(e=>{m.has(e.file)||m.set(e.file,[]);m.get(e.file).push(e)});let warnings=[];m.forEach((entries,file)=>{entries.forEach(e=>{detect(e.developer,file,e.region).forEach(c=>{warnings.push({file,dev:e.developer,cdev:c.dev,intent:e.intent,cintent:c.intent,region:e.region,cregion:c.region,risk:c.risk,ts:e.ts})})})});if(warnings.length===0)return p.innerHTML='<div class="empty-state"><p>No conflicts detected.</p></div>';let html='';warnings.forEach(w=>{let cls=w.risk==='HIGH'?'high':'medium',ico=w.risk==='HIGH'?'🛑':'⚠️';html+=`<div class="conflict-card ${cls}"><strong>${ico} ${w.risk} Conflict</strong><p><strong>${w.dev}</strong> on <code>${w.file}</code>: "${w.intent}"</p><p>But <strong>${w.cdev}</strong> editing: "${w.cintent}" ${w.cregion||''}</p></div>`});p.innerHTML=html}function renderLog(){let p=document.getElementById('logPanel');if(log.length===0)return p.innerHTML='<div class="empty-state"><p>Activity log empty.</p></div>';let html='<div class="timeline">';[...log].reverse().forEach(e=>{let age=fmt((Date.now()-e.ts)/1000);html+=`<div class="timeline-item"><div class="timeline-marker"></div><div class="timeline-content"><strong style="color:${DEV[e.developer].col}">${e.developer}</strong><p><code>${e.file}</code></p><p>"${e.intent}"</p><p style="font-size:11px">${e.region?`Region: ${e.region} · `:''}${age} ago</p></div></div>`});html+='</div>';p.innerHTML=html}function runScenario1(){clearDashboard();add('DevA','src/auth.py','Refactor login','login(20-40)');setTimeout(()=>{let c=detect('DevB','src/auth.py','login(25-35)');add('DevB','src/auth.py','Add validation','login(25-35)',c.length>0?c[0].risk:'LOW')},500)}function runScenario2(){clearDashboard();add('DevA','src/auth.py','Refactor','login(20-40)');setTimeout(()=>{let c=detect('DevB','src/auth.py','logout(100-120)');add('DevB','src/auth.py','Add logout','logout(100-120)',c.length>0?c[0].risk:'LOW')},500)}function runScenario3(){clearDashboard();add('DevA','src/auth.py','Rename & change','login(20-40)');setTimeout(()=>{let c=detect('DevB','src/auth.py','login(25-35)');add('DevB','src/auth.py','Call login','login(25-35)',c.length>0?c[0].risk:'LOW')},500)}function runScenario4(){clearDashboard();log.push({developer:'DevA',file:'src/config.py',intent:'Update config',region:'Config(5-15)',ts:Date.now()-186e5});setTimeout(()=>{let c=detect('DevB','src/config.py','Config(5-15)');add('DevB','src/config.py','Update config','Config(5-15)',c.length>0?c[0].risk:'LOW')},500)}function runScenario5(){clearDashboard();add('DevA','src/models.py','Refactor User','User(10-50)');setTimeout(()=>{add('DevB','src/models.py','Add hash','User(20-35)')},300);setTimeout(()=>{let c=detect('DevC','src/models.py','User(30-45)');add('DevC','src/models.py','Add email','User(30-45)',c.length>0?c[0].risk:'LOW')},600)}function runAllScenarios(){clearDashboard();let d=0;setTimeout(()=>add('DevA','src/auth.py','Refactor','login(20-40)'),d);d+=300;setTimeout(()=>{let c=detect('DevB','src/auth.py','login(25-35)');add('DevB','src/auth.py','Add validation','login(25-35)',c.length>0?c[0].risk:'LOW')},d);d+=400;setTimeout(()=>add('DevC','src/api.py','Add endpoint','create(50-70)'),d);d+=300;setTimeout(()=>{let c=detect('DevD','src/api.py','delete(100-120)');add('DevD','src/api.py','Add delete','delete(100-120)',c.length>0?c[0].risk:'LOW')},d);d+=400;setTimeout(()=>add('DevA','src/models.py','Rename','User(10-50)'),d);d+=300;setTimeout(()=>{let c=detect('DevB','src/models.py','User(30-40)');add('DevB','src/models.py','Call validate','User(30-40)',c.length>0?c[0].risk:'LOW')},d)}render();</script>
+</body>
+</html>
