@@ -1,23 +1,23 @@
 {
-  "timestamp": 1790287426.6932135,
+  "timestamp": 1790623872.8410792,
   "test_type": "Context Staleness & Invalidation (Phase 3)",
   "staleness_threshold_ms": 300,
   "scenarios": {},
   "test_results": {
     "immediate_context": {
       "scenario": "immediate",
-      "alice_complete_time_ms": 0.4017353057861328,
-      "bob_check_time_ms": 0.40268898010253906,
-      "context_age_ms": 0.40268898010253906,
+      "alice_complete_time_ms": 0.45990943908691406,
+      "bob_check_time_ms": 0.46062469482421875,
+      "context_age_ms": 0.46062469482421875,
       "staleness_threshold_ms": 300,
       "is_stale": false,
       "requires_refresh": false
     },
     "fresh_context_150ms": {
       "scenario": "fresh_at_150ms",
-      "alice_complete_time": 1790287426.6942945,
-      "bob_check_time": 1790287426.8444502,
-      "context_age_ms": 150.15578269958496,
+      "alice_complete_time": 1790623872.8425274,
+      "bob_check_time": 1790623872.9927723,
+      "context_age_ms": 150.24495124816895,
       "staleness_threshold_ms": 300,
       "is_stale": false,
       "requires_refresh": false,
@@ -25,9 +25,9 @@
     },
     "stale_context_500ms": {
       "scenario": "stale_at_500ms",
-      "alice_complete_time": 1790287426.8456886,
-      "bob_check_time": 1790287427.3458545,
-      "context_age_ms": 500.1659393310547,
+      "alice_complete_time": 1790623872.9943104,
+      "bob_check_time": 1790623873.4945335,
+      "context_age_ms": 500.22315979003906,
       "staleness_threshold_ms": 300,
       "is_stale": true,
       "requires_refresh": true,
@@ -36,15 +36,15 @@
     },
     "rapid_sequence_3dev": {
       "scenario": "rapid_sequence_3dev",
-      "alice_complete_ms": 0.6115436553955078,
-      "bob_start_ms": 50.818681716918945,
-      "bob_complete_ms": 51.758766174316406,
-      "charlie_start_ms": 101.95684432983398,
-      "charlie_complete_ms": 102.49495506286621,
-      "alice_ctx_age_at_bob_ms": 50.818681716918945,
-      "bob_ctx_age_at_charlie_ms": 50.19807815551758,
+      "alice_complete_ms": 0.6220340728759766,
+      "bob_start_ms": 50.82345008850098,
+      "bob_complete_ms": 51.442623138427734,
+      "charlie_start_ms": 101.68647766113281,
+      "charlie_complete_ms": 102.32353210449219,
+      "alice_ctx_age_at_bob_ms": 50.82345008850098,
+      "bob_ctx_age_at_charlie_ms": 50.24385452270508,
       "all_context_fresh": true,
-      "total_coordination_time_ms": 102.49495506286621
+      "total_coordination_time_ms": 102.32353210449219
     }
   },
   "validation": {
