@@ -452,3 +452,114 @@ The primary gap is **lock state not being persisted to the activity log** during
 - ⚠️ File watcher testing (needs watchdog package)
 - ✅ Claude Code IDE MCP testing (once lock persistence fixed)
 
+---
+
+## UPDATED ANALYSIS: Architectural Issue in Lock Tracking
+
+### Discovery During Testing
+
+After running the fix and analyzing the code flow, discovered a **fundamental architectural mismatch** in lock tracking:
+
+### The Problem
+
+When multiple developers declare intent on the same file:
+
+1. **Alice declares intent**
+   - `check_for_conflicts(alice)` → finds NO same-file entries → returns (LOW, msg, None)
+   - `log_activity(alice)` → stores entry with lock_state=null
+   - ❌ Alice is NOT registered as holding a lock!
+
+2. **Bob declares intent**
+   - `check_for_conflicts(bob)` → finds alice's entry
+   - `classify_risk()` → determines MEDIUM risk
+   - `acquire_lock(bob)` → searches activity log for entries where lock_state="ACQUIRED"
+   - Alice's entry has lock_state=null → not found!
+   - **BUG**: `_get_current_lock()` thinks lock is FREE
+   - **WRONG**: Bob acquires lock (should be alice!)
+   - Bob's entry stored with lock_state="ACQUIRED"
+
+3. **Charlie declares intent**
+   - `check_for_conflicts(charlie)` → finds bob's ACQUIRED lock
+   - `acquire_lock(charlie)` → correctly queued behind bob
+   - ✅ Queue works correctly AFTER first developer
+
+### Root Cause
+
+**LockManager._get_current_lock()** (line 332-354 in lock_manager.py):
+```python
+def _get_current_lock(self, lock_key: str):
+    log = read_log(self.tenant_id)
+    for entry in reversed(log):
+        if self._matches_lock_key(entry, lock_key):
+            if entry.get("lock_state") in ("ACQUIRED", "WAITING"):  # ← ONLY looks for these
+                return entry
+    return None
+```
+
+The lock detection only recognizes entries with explicit lock_state="ACQUIRED" or "WAITING". Initial intent entries have lock_state=null, so they're invisible to the lock system.
+
+### Solution: Pre-acquire Locks on Intent Declaration
+
+**Recommended Fix**:
+
+Modify `_handle_log_activity()` in neo_server.py to always acquire a lock when intent is declared:
+
+```python
+def _handle_log_activity(self, data: Dict):
+    # 1. Validate input
+    # 2. Create LockManager instance
+    lock_manager = LockManager()
+    
+    # 3. ALWAYS acquire lock when declaring intent
+    # This registers the developer as working on the file
+    lock_info = lock_manager.acquire_lock(
+        file_path=file_path,
+        region=region,
+        developer_id=agent_id,
+        reason="INTENT_DECLARATION",  # Not conflict-related yet
+        scope="file"
+    )
+    
+    # 4. Log activity WITH lock state
+    log_activity(
+        developer_id=agent_id,
+        file_path=file_path,
+        intent=intent,
+        lock_state=lock_info.get('lock_state'),
+        lock_holder=lock_info.get('lock_holder'),
+        queue_position=lock_info.get('queue_position'),
+        waiting_for=lock_info.get('waiting_for'),
+        # ... other fields
+    )
+```
+
+### Benefits of Pre-acquiring Locks
+
+1. **Correct lock holder**: First developer to declare intent becomes lock holder
+2. **Fair queuing**: Subsequent developers automatically queued in order
+3. **No duplicate entries**: Single activity log entry per developer with full lock state
+4. **Visible state**: Activity log directly shows lock state for every developer
+5. **Simpler logic**: No need to distinguish between "intent entries" and "lock entries"
+
+### Testing Pre-acquire Lock Fix
+
+Expected behavior after fix:
+
+```
+Alice declares:   ✅ Lock ACQUIRED by alice
+Bob declares:     ⏳ Lock WAITING, queue position 0, waiting for alice
+Charlie declares: ⏳ Lock WAITING, queue position 1, waiting for bob
+
+Activity Log:
+- alice: lock_state="ACQUIRED", lock_holder="alice"
+- bob:   lock_state="WAITING",   queue_position=0, waiting_for="alice"
+- charlie: lock_state="WAITING", queue_position=1, waiting_for="bob"
+```
+
+### Impact
+
+- **Critical Priority**: This fix is essential for the explicit lock mechanism to work as documented
+- **Scope**: Only affects neo_server._handle_log_activity() method
+- **Risk**: Low - only adds lock acquisition to existing flow
+- **Testing**: Requires rerunning tests with updated neo_server
+
