@@ -408,178 +408,100 @@ python baseline_comparison/test_16dev_extreme_scale.py
 
 ---
 
-## 2-Developer Coordination Test
+## Two-Developer Coordination Test
 
 **See Neo prevent merge conflicts in real-time with two developers on the same file.**
 
-Choose your testing environment:
+Choose your testing environment and follow the **step-by-step guides** with actual functional calls:
 
-### Path A: Regular Terminal (Single Machine)
+### Path A: Terminal-Based Testing (Local Server, No IDE)
 
-**Best for**: Understanding how Neo works, verifying the implementation locally
+**Best for**: Understanding how Neo works, testing without Claude Code IDE, CI/CD integration
 
-**Setup**:
+**Guide**: [`docs/LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md)
+
+**What you'll test**:
+- ✅ Local Neo server coordination
+- ✅ File watcher detection (NEO_DEVELOPER environment variable)
+- ✅ Intent declaration requirement
+- ✅ 2-developer workflow with locks
+- ✅ 3-developer workflow with queue management
+- ✅ Sequential promotion (alice → bob → charlie)
+- ✅ Context aggregation between developers
+
+**Quick start**:
 ```bash
-cd /home/user/Neo
-pip install -e .
+# Terminal 1: Start Neo server
+python -m cli.neo_server --clear
+
+# Terminal 2: Start alice's watcher
+export NEO_DEVELOPER=alice
+python -m cli.file_watcher alice
+
+# Terminal 3: Start bob's watcher
+export NEO_DEVELOPER=bob
+python -m cli.file_watcher bob
+
+# Terminal 4+: Declare intent and edit files
+python -m cli.neo_client declare alice src/auth.py "Add OAuth2"
+vim src/auth.py  # Make changes, watcher detects
 ```
 
-**Run the 2-dev test** (calls actual Neo functions, prints real return values):
-```bash
-python -c "
-import sys
-sys.path.insert(0, '.')
-
-from core.activity_log import log_activity, read_log, clear_log
-from core.pre_gen_check import check_for_conflicts
-
-print('\n' + '='*80)
-print('2-DEVELOPER COORDINATION TEST - Real Function Calls')
-print('='*80)
-
-clear_log()
-
-# Step 1: Alice declares intent
-print('\n[Step 1] Alice declares intent')
-alice = log_activity('alice', 'src/auth.py', 'Add bcrypt hashing', 'authenticate_user')
-print(f'  Function: log_activity()')
-print(f'  Return value: ActivityEntry(developer_id={repr(alice.developer_id)}, file_path={repr(alice.file_path)})')
-
-# Step 2: Bob checks for conflicts BEFORE declaring
-print('\n[Step 2] Bob checks for conflicts (before declaring)')
-risk, msg = check_for_conflicts('bob', 'src/auth.py', 'Add validation', 'authenticate_user')
-print(f'  Function: check_for_conflicts()')
-print(f'  Return value: RiskLevel={risk}, Message={repr(msg)}')
-
-# Step 3: Bob declares intent
-print('\n[Step 3] Bob declares intent (now 2 developers on same region)')
-bob = log_activity('bob', 'src/auth.py', 'Add password strength check', 'authenticate_user')
-print(f'  Function: log_activity()')
-print(f'  Return value: ActivityEntry(developer_id={repr(bob.developer_id)}, file_path={repr(bob.file_path)})')
-
-# Step 4: Bob checks for conflicts again (lock should apply)
-print('\n[Step 4] Bob checks for conflicts again (both developers declared)')
-risk, msg = check_for_conflicts('bob', 'src/auth.py', 'Add password strength', 'authenticate_user')
-print(f'  Function: check_for_conflicts()')
-print(f'  Return value: RiskLevel={risk}, Message={repr(msg)}')
-
-# Step 5: Show activity log
-print('\n[Step 5] View activity log')
-log = read_log()
-print(f'  Function: read_log()')
-print(f'  Return value: list with {len(log)} entries')
-for i, entry in enumerate(log, 1):
-    print(f'    Entry {i}: developer_id={repr(entry.get(\"developer_id\"))}, file_path={repr(entry.get(\"file_path\"))}')
-
-print('\n' + '='*80)
-print('RESULT: Lock applied at 2 developers on overlapping region')
-print('        → Zero conflicts, automatic coordination')
-print('='*80 + '\n')
-"
-```
-
-**What you'll see**:
-- Actual `ActivityEntry` objects returned from `log_activity()`
-- Real `RiskLevel.MEDIUM` from `check_for_conflicts()`
-- Actual message: "Overlapping regions detected"
-- Real activity log entries with timestamps
+See [`docs/LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) for complete step-by-step instructions.
 
 ---
 
-### Path B: Claude Code (Two Terminals on Same Desktop)
+### Path B: Claude Code IDE Testing (MCP Server)
 
-**Best for**: Seeing Neo coordinate two AI agents in real-time, simulating multi-agent workflows
+**Best for**: Production teams, pre-generation conflict detection, IDE-native workflows, token efficiency
 
-**Prerequisites**:
-1. Clone Neo repo on your desktop
-2. Have Claude Code open (or VS Code with Claude extension)
+**Guide**: [`docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
 
-**Step 1: Verify MCP Server Setup**
+**What you'll test**:
+- ✅ MCP server in Claude Code IDE
+- ✅ Pre-generation conflict checking
+- ✅ Automatic developer context
+- ✅ 2-developer workflow with risk levels (✅/⚠️/🚫)
+- ✅ 3+ developer queue behavior
+- ✅ Context refresh with fresh developer input
+- ✅ Token savings (47-99% reduction)
 
-Create `.claude/mcp_servers.json` in your home directory:
-```json
+**Quick start**:
+```bash
+# Configure MCP server in .claude/settings.json
 {
-  "neo": {
-    "command": "python3",
-    "args": ["-m", "ide.mcp_neo_server"],
-    "cwd": "/absolute/path/to/Neo"
+  "mcp": {
+    "neo-conflict-detection": {
+      "command": "/absolute/path/to/Neo/.venv/bin/python3",
+      "args": ["-m", "ide.mcp_neo_server"],
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/Neo",
+        "NEO_MULTITENANCY": "false",
+        "CLAUDE_TENANT_ID": "default"
+      }
+    }
   }
 }
+
+# Open two Claude Code IDE instances on same project
+# In Alice's IDE: @neo check src/auth.py "Add OAuth2"
+# In Bob's IDE:  @neo check src/auth.py "Add JWT"  # Shows MEDIUM RISK
 ```
 
-Replace `/absolute/path/to/Neo` with your actual Neo directory path (e.g., `/Users/yourname/Neo`).
-
-Validate the MCP server:
-```bash
-cd /path/to/Neo
-python -m ide.mcp_neo_server --test
-# Should output: ✓ Neo MCP Server operational
-```
-
-**Step 2: Open Two Claude Code Sessions**
-
-- **Terminal 1 (Alice)**: Open Claude Code, open `/path/to/Neo` project
-- **Terminal 2 (Bob)**: Open another Claude Code window, open same `/path/to/Neo` project
-
-**Step 3: Alice's Terminal (Developer 1)**
-
-Run this prompt in Claude Code terminal 1:
-```
-@neo /claude I'm Alice, a developer working on auth.py. 
-Before I start, let me declare my intent to Neo:
-- File: src/auth.py
-- Intent: Add bcrypt password hashing
-- Function: authenticate_user
-
-Show me Neo's response when I declare this intent.
-```
-
-Claude will call `neo_log_activity` via MCP and show real output.
-
-**Step 4: Bob's Terminal (Developer 2)**
-
-Run this prompt in Claude Code terminal 2:
-```
-@neo /claude I'm Bob, also working on src/auth.py's authenticate_user function.
-Before I start, let me check for conflicts with other developers:
-- File: src/auth.py
-- Intent: Add password strength validation
-- Function: authenticate_user
-
-Show me what Neo detects.
-```
-
-Claude will call `neo_check_conflicts` via MCP and show: **"MEDIUM RISK - Overlapping regions detected"**
-
-**Step 5: Coordination Happens**
-
-Back in Alice's terminal, run:
-```
-@neo Alice here. I've finished my changes to authenticate_user.
-Let me show Neo my completed work so Bob can get fresh context.
-```
-
-Back in Bob's terminal, run:
-```
-@neo Bob here. Now let me check what Alice completed and get fresh context.
-```
-
-**What you'll see**:
-- Terminal 1: Neo accepts Alice's intent declaration (real MCP call)
-- Terminal 2: Neo detects Bob's overlapping region (real MCP call)
-- Automatic coordination without manual merge conflict resolution
+See [`docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md) for complete step-by-step instructions.
 
 ---
 
 ## Comparing the Two Paths
 
-| Aspect | Regular Terminal | Claude Code |
-|--------|------------------|-------------|
-| **Setup time** | 2 minutes | 5 minutes (MCP setup) |
-| **What you see** | Function return values (ActivityEntry, RiskLevel) | Natural language + MCP tool calls |
-| **Best for** | Understanding internals | Realistic multi-agent workflow |
-| **Print output** | Only actual function results, no narrative | Only actual tool responses |
-| **Merge conflicts** | Zero (prevented by lock) | Zero (prevented by coordination) |
+| Aspect | Terminal | Claude Code IDE |
+|--------|----------|-----------------|
+| **Setup time** | 5 min | 10 min (MCP config) |
+| **Developers** | 2-3+ with sequential workflow | 2-3+ with queue management |
+| **Conflict detection** | Post-generation (good) | **Pre-generation (excellent)** |
+| **Token savings** | 47% average | **99% peak** |
+| **Best for** | Testing, CI/CD, learning | Production, teams, efficiency |
+| **Documentation** | [`LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) | [`CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md) |
 
 ---
 
