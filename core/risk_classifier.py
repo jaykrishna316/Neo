@@ -116,6 +116,17 @@ def classify_risk(
             other_region=other_region,
         )
 
+    # If either developer has no region specified, they're editing the entire file
+    # This conflicts with any specific region or whole-file edit
+    if current_region is None or other_region is None:
+        return ConflictAssessment(
+            level=RiskLevel.MEDIUM,
+            reason="One or both developers editing entire file (no region specified)",
+            other_developer=other_developer,
+            other_intent=other_intent,
+            other_region=other_region,
+        )
+
     # Check for region overlap
     overlaps = regions_overlap(current_region, other_region)
 

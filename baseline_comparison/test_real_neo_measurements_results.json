@@ -1,54 +1,54 @@
 {
   "test_suite": "Real Neo Measurements",
-  "timestamp": "2026-09-26T01:34:02.624005",
+  "timestamp": "2026-09-28T19:22:26.728329",
   "environment": "Local Neo implementation",
   "tests": [
     {
       "test_name": "conflict_detection_real",
-      "timestamp": "2026-09-26T01:34:02.624518",
+      "timestamp": "2026-09-28T19:22:26.728573",
       "measurements": [
         {
           "scenario": "alice_starts",
           "risk_level": "LOW",
-          "latency_ms": 0.08606910705566406,
+          "latency_ms": 0.08893013000488281,
           "message": "No conflicting work detected. Safe to proceed."
         },
         {
           "scenario": "bob_same_lines",
           "risk_level": "MEDIUM",
-          "latency_ms": 0.22029876708984375,
+          "latency_ms": 0.5595684051513672,
           "message": "MEDIUM RISK: alice is Add password validation. Overlapping regions detected. Proceed with caution."
         },
         {
           "scenario": "charlie_different_lines",
           "risk_level": "LOW",
-          "latency_ms": 0.07677078247070312,
-          "message": "LOW RISK: alice is Add password validation. Different regions in same file. Safe to proceed."
+          "latency_ms": 0.09775161743164062,
+          "message": "LOW RISK: alice is Add password validation; bob is Lock acquired on region. Different regions in same file. Safe to proceed."
         }
       ],
-      "test_duration_seconds": 0.0013010501861572266
+      "test_duration_seconds": 0.001421213150024414
     },
     {
       "test_name": "activity_logging_real",
-      "timestamp": "2026-09-26T01:34:02.625441",
+      "timestamp": "2026-09-28T19:22:26.729857",
       "measurements": [
         {
           "scenario": "log_8_developers",
           "entries_written": 8,
-          "avg_write_latency_ms": 0.1539289951324463,
-          "min_write_latency_ms": 0.13685226440429688,
-          "max_write_latency_ms": 0.18095970153808594,
-          "total_write_time_ms": 1.2314319610595703
+          "avg_write_latency_ms": 0.3247559070587158,
+          "min_write_latency_ms": 0.14495849609375,
+          "max_write_latency_ms": 0.9584426879882812,
+          "total_write_time_ms": 2.5980472564697266
         },
         {
           "scenario": "read_log",
           "entries_read": 8,
-          "read_latency_ms": 0.048160552978515625
+          "read_latency_ms": 0.09989738464355469
         },
         {
           "scenario": "get_active_entries",
           "active_count": 8,
-          "query_latency_ms": 0.0514984130859375
+          "query_latency_ms": 0.1308917999267578
         },
         {
           "scenario": "token_count",
@@ -57,21 +57,21 @@
           "tokens_per_developer": 7
         }
       ],
-      "test_duration_seconds": 0.0016345977783203125
+      "test_duration_seconds": 0.003489255905151367
     },
     {
       "test_name": "lock_mechanism_simulation",
-      "timestamp": "2026-09-26T01:34:02.627065",
+      "timestamp": "2026-09-28T19:22:26.733475",
       "measurements": [
         {
           "scenario": "sequential_5_devs_same_file",
           "developers": 5,
           "lock_applied_at_developer": 1,
-          "total_sequence_time_ms": 1.0340213775634766,
-          "avg_time_per_dev_ms": 0.2068042755126953
+          "total_sequence_time_ms": 3.2341480255126953,
+          "avg_time_per_dev_ms": 0.6468296051025391
         }
       ],
-      "test_duration_seconds": 0.001194000244140625
+      "test_duration_seconds": 0.003541231155395508
     }
   ],
   "analysis": {
