@@ -1,8 +1,8 @@
 # Neo Repository - Branch Changes Log
 
 **Purpose**: Track all changes across branches with clear deltas from parent branches  
-**Last Updated**: 2026-09-18  
-**Status**: Active maintenance
+**Last Updated**: 2026-09-30  
+**Status**: Active maintenance (auto-updated via Git hook)
 
 ---
 
@@ -10,15 +10,17 @@
 
 | Branch | Parent | Commits | Files Changed | New Files | Status | Last Updated |
 |--------|--------|---------|---------------|-----------|--------|--------------|
-| `main` | (production) | 37+ | Many | Multiple | ✅ STABLE | 2026-09-18 |
-| `neo-2.0` | base | 23 | 50+ | 30+ | ✅ STABLE | 2026-09-18 |
-| `neomax/scalability` | neo-2.0 | 8 (merged) | 15 | 13 | ✅ MERGED → neo-2.0 | 2026-09-18 |
+| `main` | (production) | 80+ | 150+ | 50+ | ✅ STABLE | 2026-09-30 |
+| `neo-4.0` | main | 15+ | 40+ | 8+ | ✅ ACTIVE | 2026-09-30 |
+| `neo-2.0` | base | 23 | 50+ | 30+ | ✅ STABLE | 2026-09-22 |
+| `neomax/scalability` | neo-2.0 | 8 (merged) | 15 | 13 | ✅ MERGED | 2026-09-22 |
 
 ---
 
 ## MAIN BRANCH
 **Status**: ✅ STABLE (Production)  
-**Latest Commit**: 1e8f6f0 - "Merge mcp-enablement: Keep main README, add SaaS & deployment features"
+**Latest Commit**: 708fe78 - "Merge branch 'neo-4.0'" (2026-09-30)  
+**Commits Since Sep 22**: 40+ major commits
 
 ### Delta from Base
 **Added Since Initial Implementation**:
@@ -86,9 +88,44 @@ enterprise/mcp-multitenancy/ (NEW DIRECTORY)
 - `examples/mcp_ide_integration_demo.py`
 - Multiple test and validation scripts
 
+### Recent Changes (Sep 22 - Sep 30)
+
+#### Documentation Additions
+- ✅ **`docs/ADVANCED_WORKFLOWS_AND_STATE_TRANSITIONS.md`** (NEW - 1,304 lines)
+  - 5 complex workflow scenarios with full state transitions
+  - Complete activity log output examples at each step
+  - State machine diagrams
+  - Region-level locking examples
+  - Lock timeout & auto-promotion scenarios
+  - Overlapping regions with mixed conflicts
+  - Complete ActivityEntry schema reference
+
+#### Test Reorganization
+- ✅ **Moved simulation tests** to `simulations/` folder
+  - `simulations/real_2_developer_test.py`
+  - `simulations/test_two_developer_scenarios.py`
+  - No longer promoted in README
+
+#### README Updates
+- ✅ Removed simulation test promotion
+- ✅ Focused on 2 real test approaches only:
+  1. Terminal-based with file watchers (15 min setup)
+  2. Claude Code IDE with MCP (10 min setup)
+- ✅ Added comparison table: Terminal vs IDE approaches
+- ✅ Simplified testing section with clear quick-start commands
+
+#### Recent Commits (40+ since Sep 22)
+1. `708fe78` - Merge branch 'neo-4.0' → main (Sep 30)
+2. `a339b17` - Add advanced workflows guide (Sep 30)
+3. `53a29d6` - Reorganize README: focus only on real tests (Sep 29)
+4. `a3cb59d` - Focus README on real tests only (main) (Sep 29)
+5. `3b37555` - Rename test_two_developer_coordination.py (Sep 27)
+6. `9a42f9d` - Clarify test types (Sep 27)
+7. Multiple lock fixes and coordination improvements
+
 ---
 
-## NEO-2.0 BRANCH
+## NEO-4.0 BRANCH
 **Status**: ✅ STABLE (Core Enhancement Phase)  
 **Latest Commit**: 21e710d - "Add neomax/scalability branch documentation to README"  
 **Parent**: Base implementation  
@@ -513,6 +550,6 @@ neo-2.0 → main (PENDING)
 
 ---
 
-**Last Updated**: 2026-09-18  
+**Last Updated**: 2026-09-30  
 **Maintained By**: Claude Code  
 **Next Review**: When new branch created or merge completed
