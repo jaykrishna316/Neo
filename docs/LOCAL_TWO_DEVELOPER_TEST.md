@@ -110,7 +110,8 @@ EOF
 ### Terminal 1: Start the Neo Server
 
 ```bash
-python -m cli.neo_server --clear
+cd /home/user/Neo
+.venv/bin/python3 -m cli.neo_server --clear
 ```
 
 Output:
