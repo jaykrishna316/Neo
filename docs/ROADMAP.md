@@ -1,503 +1,332 @@
-# Neo Technical Roadmap
+# Neo: Multi-Agent Coordination - Development Roadmap
 
-**Version:** 1.0  
-**Last Updated:** 2026-09-12  
-**Status:** Production-oriented reference implementation with clear path to enterprise deployment
+> **Vision:** A pluggable coordination framework for distributed AI agents and developers working on shared codebases, preventing merge conflicts before code is written.
 
----
+## Current State (✅ Completed)
 
-## Executive Summary
-
-Neo is transitioning from a POC with line-based conflict detection to a production-ready coordination layer for autonomous agents. This roadmap outlines three critical improvements addressing the gap between "interesting architecture" and "scientifically validated system."
-
-**Key Outcomes:**
-- From spatial (line ranges) → semantic (AST/function-level) conflict detection
-- From advisory middleware → enforceable infrastructure  
-- From demo-driven → empirically benchmarked
+- **Core State Machine** (`coordination_state_machine.py`) - Event-driven coordination with ACTIVE, LOCKED, WAITING, COLLABORATE, COMPLETED states
+- **Integration Architecture** - Three deployment patterns (Git-backed, Cloud-backed, Hybrid) with event bus options
+- **Framework Guides** - Integration patterns for Claude, OpenAI, Devin, GitHub Copilot/Codex
+- **Visualization & Marketing** - POC diagrams, LinkedIn post, Medium article
+- **Checkpoint System** - Save/resume generation context when conflicts detected
 
 ---
 
-## Phase 1: Semantic Conflict Detection ⭐ (CURRENT)
+## Immediate Priorities (Foundation Layer)
 
-**Goal:** Move beyond line ranges to actual function/symbol-level conflict detection
+These enable all other work and are prerequisites for production use.
 
-### Problem with Current Approach
+### 1. Reference Coordination Service
+**Goal:** Working server implementation of the patterns documented in `INTEGRATION_ARCHITECTURE.md`
 
-```python
-# Current (fragile):
-Agent A: "lines 40-80"
-Agent B: "lines 45-75"
-Result: Overlap detected ✓
+**Scope:**
+- REST API endpoints (check-conflicts, log-intent, mark-complete, get-status)
+- WebSocket event bus for real-time notifications
+- In-memory state store (for MVP)
+- Authentication/authorization framework
+- Docker deployment
 
-# But after code changes:
-Agent A added 30 lines
-Agent B's "lines 45-75" no longer means the same thing
-Result: False positive or false negative ✗
-```
+**Tech Stack:** Python (FastAPI or Flask) + WebSockets
+**Effort:** 2-3 weeks (experienced dev)
+**Good First Issue:** Start with single REST endpoint + tests
 
-### Solution: Semantic Analysis via AST
-
-**New Module:** `semantic_conflict_detector.py`
-
-**Capabilities:**
-```python
-analyzer = SemanticAnalyzer("src/auth.py")
-
-# Extract actual symbols (not line numbers)
-symbols = analyzer.extract_symbols()
-# Returns: {Symbol(name="authenticate_user", type="function"), ...}
-
-# Compare semantic regions
-score, evidence = compare_regions(
-    file_path="src/auth.py",
-    region_a="authenticate_user",     # Function name
-    region_b="hash_password",         # Function name
-    language=Language.PYTHON
-)
-# Returns risk score with breakdown:
-#   Direct symbol overlap: 0%
-#   Dependency overlap: 15% (authenticate_user calls hash_password)
-#   Total: 15/100 (LOW risk)
-```
-
-### Evidence-Based Risk Scoring
-
-Instead of opaque thresholds, Neo now explains conflict risk:
-
-```
-ConflictScore = 0.30×file_overlap + 0.25×symbol_overlap + 0.20×dependency + 0.15×ownership + 0.10×semantic_sim
-
-Example: 82/100
-Evidence:
-├── Same function             +40 (direct overlap)
-├── Same AST nodes            +20 (high confidence)
-├── Dependency chain          +15 (transitive conflict)
-├── Ownership overlap         +7  (same codeowner)
-└── Semantic similarity       +0  (independent work)
-```
-
-### Language Support
-
-- **Built-in:** Python (full AST parsing)
-- **Regex-based:** JavaScript, Java, Go, Rust, C#, TypeScript
-- **Extensible:** Add language-specific parsers as needed
-
-### Validation
-
-Run tests:
-```bash
-python3 semantic_conflict_detector.py
-```
-
-Expected output:
-- ✅ Symbol extraction from sample code
-- ✅ Dependency analysis
-- ✅ Risk scoring with evidence breakdown
-- ✅ Cross-language fallback to regex
+**Why:** All other work depends on having a working server to test against
 
 ---
 
-## Phase 2: Empirical Validation & Benchmarking 📊 (CURRENT)
+### 2. Python Client SDK
+**Goal:** Reusable library for agents to integrate coordination
 
-**Goal:** Prove Neo prevents conflicts at scale with real-world metrics
+**Scope:**
+- `CoordinationClient` class as published package (PyPI)
+- Async/await support for event subscriptions
+- Retry logic + circuit breaker
+- Local caching layer
+- Logging/observability hooks
 
-### Problem
+**Tech Stack:** Python, async libraries
+**Effort:** 1-2 weeks
+**Good First Issue:** Package existing `CoordinationClient` code, add docstrings
 
-Current validation is scenario-based ("it prevents conflicts"). Need scientific proof:
-- *What's* the conflict prevention rate?
-- *How much* do agents save in tokens?
-- *How does* it scale with agent count?
-- *What's* the latency overhead?
-
-### Solution: Multi-Agent Simulation Framework
-
-**New Module:** `empirical_validation.py`
-
-**Benchmark Scenarios:**
-```
-LOW_CONFLICT      → Independent features
-MEDIUM_CONFLICT   → Some shared components
-HIGH_CONFLICT     → Heavy overlap
-MIXED             → Realistic workload
-FEATURE_HEAVY     → New features (less conflict)
-BUGFIX_INTENSIVE  → Bug fixes (more conflict)
-REFACTOR_FOCUSED  → Refactoring (high conflict)
-```
-
-**Agent Counts:** 2, 5, 10, 25, 50, 100+
-
-**Metrics Collected:**
-```
-• Conflicts prevented (%)
-• Tokens saved vs baseline
-• Build failures avoided
-• Agent retries reduced
-• Completion time improvement
-• Neo check latency (ms)
-• Agent idle time during coordination
-```
-
-### Running Benchmarks
-
-Full suite:
-```bash
-python3 empirical_validation.py --full
-```
-
-Single scenario:
-```bash
-python3 empirical_validation.py --agents 25 --scenario "high-conflict"
-```
-
-Expected results:
-```
-Scenario: HIGH_CONFLICT with 25 agents
-────────────────────────────────────────
-Conflicts detected:     47
-Prevented by Neo:       44 (93.6% prevention rate)
-Token savings:          18,400 tokens (22% efficiency)
-Build failures:         3 (vs 47 without Neo)
-Completion time:        8.2s (vs 12.1s baseline)
-Neo latency:            6.8ms total for all agents
-```
-
-### Output & Analysis
-
-Results saved to `.devsync/benchmark_results.json`:
-```json
-{
-  "num_agents": 25,
-  "scenario_type": "high-conflict",
-  "conflict_prevention_rate": 93.6,
-  "token_efficiency": 22.0,
-  "completion_time_seconds": 8.2,
-  "neo_check_time_ms": 6.8
-}
-```
-
-### Cross-Scenario Insights
-
-After running full suite, Neo generates:
-- Conflict prevention rate trends (vs agent count)
-- Token savings breakdown by scenario
-- Latency profile (always <10ms)
-- Scaling characteristics
+**Why:** Every agent (Claude, Devin, OpenAI) needs this to integrate
 
 ---
 
-## Phase 3: Enforcement Infrastructure (NEXT)
+### 3. Comprehensive Test Suite
+**Goal:** 80%+ coverage of state machine and core flows
 
-**Goal:** Move from advisory (agents can bypass) → enforced (system prevents bypasses)
+**Scope:**
+- Unit tests for state transitions
+- Integration tests (multi-agent scenarios)
+- Conflict detection edge cases
+- Checkpoint save/resume tests
+- Event subscription tests
 
-### Current State (Advisory)
+**Tech Stack:** pytest, pytest-asyncio
+**Effort:** 2-3 weeks (parallel with other work)
+**Good First Issue:** Unit tests for individual state transitions
 
-```
-Agent → check_conflicts_for_agent() → gets advice
-  ↓
-Agent can ignore it
-  ↓
-git push (bypass Neo entirely)
-```
-
-### Target State (Enforced)
-
-```
-Agent → Neo coordination layer
-  ↓
-Git pre-commit hook → validates against Neo
-  ↓
-GitHub branch protection → enforces Neo decisions
-  ↓
-CI/CD → rejects unauthorized conflicts
-```
-
-### Implementation Plan
-
-**Git Hooks:**
-```bash
-.git/hooks/pre-commit
-├── Queries Neo state
-├── Checks staged changes against activity log
-└── Rejects commit if HIGH_RISK conflict detected
-```
-
-**GitHub Protection:**
-```yaml
-Branch protection rules:
-├── Require Neo coordination check
-├── Require explicit approval for HIGH_RISK
-└── Block commits without coordination metadata
-```
-
-**CI/CD Integration:**
-```python
-# In your CI pipeline
-def validate_build(commit):
-    if not has_neo_coordination_metadata(commit):
-        if high_risk_conflict_detected(commit):
-            fail_build("Commit lacks Neo coordination approval")
-```
-
-### Architecture After Phase 3
-
-```
-                     Agents
-            ┌─────────┼─────────┐
-            ↓         ↓         ↓
-          Claude    Codex     Devin
-            │         │         │
-            └─────────┼─────────┘
-                      ↓
-            ┌──────────────────┐
-            │   NEO CORE       │
-            │ • Intent Log     │
-            │ • Conflict Detect│
-            │ • State Machine  │
-            │ • Events         │
-            └────────┬─────────┘
-                     ↓
-          ┌─────────────────────┐
-          │  ENFORCEMENT LAYER  │
-          ├─────────────────────┤
-          │ • Git hooks         │
-          │ • Branch protection │
-          │ • CI validation     │
-          │ • Merge gates       │
-          └────────┬────────────┘
-                   ↓
-            Repository & CI/CD
-```
+**Why:** Open source projects need confidence before contributions
 
 ---
 
-## Phase 4: Dependency Graph Analysis (BEYOND)
+### 4. Working End-to-End Example
+**Goal:** Concrete demo showing Claude + state machine + Devin in one scenario
 
-**Goal:** Enable cross-file and transitive conflict detection
+**Scope:**
+- Simple git repo (3-4 Python files)
+- Claude agent makes change to file A
+- Devin agent tries to modify overlapping region
+- Conflict detected, Devin waits, Claude completes, Devin resumes
+- Screenshot/recording of the flow
 
-### Capability
+**Tech Stack:** Python, Claude SDK, Devin SDK
+**Effort:** 1-2 weeks
+**Good First Issue:** Setup and documentation
 
-```
-Scenario: Agent A refactors UserService
-          Agent B modifies OrderService
-
-Without dependency analysis:
-  → No direct file overlap
-  → LOW risk (silent)
-  → Merge succeeds
-  → Tests fail (UserService broke OrderService)
-
-With dependency analysis:
-  → OrderService imports UserService
-  → Find transitive overlap
-  → MEDIUM risk (warn)
-  → Coordination recommended
-  → Avoid failure
-```
-
-### Implementation
-
-Build call graph:
-```python
-dependency_graph = build_dependency_graph("src/")
-# Returns: {
-#   "UserService.authenticate": ["OrderService.process_payment"],
-#   "OrderService.process_payment": ["UserService.get_user"],
-#   ...
-# }
-
-conflicts = find_transitive_conflicts(
-    agent_a_symbols={"UserService.authenticate"},
-    agent_b_symbols={"OrderService.process_payment"},
-    dependency_graph=dependency_graph
-)
-# Returns: MEDIUM risk due to transitive dependency
-```
-
-### Tools
-
-- **For Python:** AST + import analysis
-- **For JavaScript:** Dependency graphs via babel/webpack
-- **For Java:** Classpaths + maven/gradle analysis
-- **For Go:** go mod graph analysis
+**Why:** Proof that the whole system works end-to-end; unblocks early adopters
 
 ---
 
-## Phase 5: ML-Based Conflict Prediction (LONG-TERM)
+## Short-Term (Production Readiness - Next 4-8 weeks)
 
-**Goal:** Use historical data to predict conflicts before they happen
+### 5. Persistent State Backends
+**Goal:** Swap in-memory store for real databases
 
-### Capability
+**Scope:**
+- PostgreSQL adapter
+- DynamoDB adapter
+- Firebase Realtime DB adapter
+- Interface/abstraction for adding more
 
-```
-Training data (from empirical validation):
-  • When conflicts happen
-  • What developer patterns lead to conflicts
-  • Which intent categories have highest conflict rates
+**Tech Stack:** SQLAlchemy (for Postgres), boto3 (AWS), firebase-admin
+**Effort:** 2-3 weeks per backend
+**Good First Issue:** Implement schema for one database; write 3-4 integration tests
 
-Prediction:
-  Agent: "I'm going to refactor UserService"
-  Neo: Based on history, refactors in this service have:
-       • 73% chance of conflicting with payment module
-       • Average wait time: 8.5 minutes
-       → Recommend COLLABORATE or WAIT
-```
-
-### Data Collection
-
-Automatically gather:
-```python
-record_completion(
-    developer_id="alice",
-    intent_category="refactor",
-    target_module="auth",
-    duration=1800,
-    conflicts_encountered=2,
-    tokens_used=4500,
-    success=True
-)
-```
+**Why:** Enables multi-machine deployments; essential for enterprise
 
 ---
 
-## Distributed System Hardening
+### 6. Real-Time Monitoring Dashboard
+**Goal:** Web UI showing live coordination state
 
-**Critical for production deployment:**
+**Scope:**
+- Active agents, their current intents
+- Locked files, wait queues
+- Historical timeline of conflicts
+- Risk score trends
+- Estimated completion times
 
-### Concurrency & Race Conditions
-- [ ] Lock timeout handling
-- [ ] Stale lock detection and cleanup
-- [ ] Idempotent operations
-- [ ] Event delivery guarantees (at-least-once)
+**Tech Stack:** React, WebSocket client, d3.js or Recharts
+**Effort:** 3-4 weeks
+**Good First Issue:** Mock up the dashboard layout; implement one data feed
 
-### Persistence & Recovery
-- [ ] Activity log durable writes
-- [ ] Checkpoint recovery after crashes
-- [ ] Leader election for distributed Neo
-- [ ] Consensus on lock ownership
-
-### Observability
-- [ ] Comprehensive logging
-- [ ] Metrics (conflict rates, latencies)
-- [ ] Tracing for multi-agent transactions
-- [ ] Alerts for deadlocks/anomalies
-
-### Testing
-- [ ] Chaos engineering (kill random agents)
-- [ ] Network partition simulation
-- [ ] Duplicate event handling
-- [ ] Large-scale load testing (100+ agents)
+**Why:** Ops teams need visibility; helps debug issues
 
 ---
 
-## Success Metrics by Phase
+### 7. CLI Debugger Tool
+**Goal:** Command-line utility to inspect coordination logs
 
-### Phase 1: Semantic Detection ✓
-- [ ] Symbol extraction accuracy >95%
-- [ ] Dependency detection works for Python
-- [ ] Risk scoring matches manual review 90%+ of the time
-- [ ] Latency <10ms per check
+**Scope:**
+- List active agents
+- Show coordination history for a file
+- Replay events in order
+- Export logs for analysis
+- Compare two agent timelines
 
-### Phase 2: Empirical Validation ✓
-- [ ] Conflict prevention rate >70% in high-conflict scenarios
-- [ ] Token efficiency >15% across scenarios
-- [ ] Scales linearly to 50+ agents
-- [ ] No false negatives on critical conflicts
+**Tech Stack:** Python, Click (CLI framework)
+**Effort:** 1-2 weeks
+**Good First Issue:** Implement one command (list-agents, show-history)
 
-### Phase 3: Enforcement
-- [ ] Git hooks integrate seamlessly
-- [ ] Branch protection rules reject unauthorized changes
-- [ ] Zero bypasses in multi-agent test
-- [ ] <5ms overhead per commit
-
-### Phase 4: Dependency Analysis
-- [ ] Transitive conflicts detected with >80% accuracy
-- [ ] Cross-file coordination works correctly
-- [ ] Supports all major languages
-
-### Phase 5: ML Prediction
-- [ ] Conflict prediction accuracy >75%
-- [ ] Wait time estimates within ±20% of actual
-- [ ] Prevents 90%+ of conflicts through pro-active coordination
+**Why:** Developers need to debug coordination issues locally
 
 ---
 
-## Timeline
+### 8. GitHub App Integration
+**Goal:** Auto-track agent activity when agents push code
 
-| Phase | Work | Timeline | Status |
-|-------|------|----------|--------|
-| 1 | Semantic detection | **Now** | ✓ In progress |
-| 2 | Empirical validation | **Week 1-2** | ✓ In progress |
-| 3 | Enforcement infrastructure | Week 3-4 | 📋 Planned |
-| 4 | Dependency graph analysis | Month 2 | 📋 Planned |
-| 5 | ML-based prediction | Month 3+ | 🔮 Exploratory |
+**Scope:**
+- GitHub App manifest + webhook handler
+- Listen for push events
+- Log completion in coordination service
+- Post PR comments with coordination context (e.g., "Agent A waited 5m for Agent B")
 
----
+**Tech Stack:** Flask/FastAPI + GitHub API
+**Effort:** 2 weeks
+**Good First Issue:** Set up GitHub App manifest; implement one webhook
 
-## Deployment Path
-
-### Dev/POC (Current)
-- Local-only, single machine
-- JSON file persistence
-- Works with integrated agents
-
-### Staging (Phase 3-4)
-- Git hooks + CI integration
-- Multiple developers/agents
-- S3 or PostgreSQL backend option
-- Real repository testing
-
-### Production (Phase 4+)
-- Distributed Neo instances
-- Redis/Kafka for events
-- PostgreSQL for persistence
-- Multi-tenant, enterprise-ready
-- Monitoring + alerting
+**Why:** Bridges coordination state with GitHub workflow
 
 ---
 
-## FAQ
+## Extensions & Future Work (Community-Driven)
 
-**Q: Is the current implementation production-ready?**  
-A: It's production-oriented (proven architecture, good documentation), but needs scale testing. Think of it as "reference implementation" not "battle-tested system."
+These are valuable but not blockers. Ideal for community contributors.
 
-**Q: When should we enforce conflicts vs just warn?**  
-A: Phase 3 adds enforcement. Until then, Neo advises; teams still have manual override.
+### IDE Plugins
+- **VS Code Extension** - Show conflict warnings inline, coordination status in activity bar
+- **JetBrains Plugin** - Real-time decorations for locked regions
+- **Sublime Text** - Lightweight status indicator
 
-**Q: What if an agent doesn't call Neo?**  
-A: Phase 3 addresses this with Git hooks. Even bypass attempts get caught.
-
-**Q: How does Neo handle network outages?**  
-A: Stays local until Phase 3/4. Distributed coordination in Phase 4+ handles partitions via consensus.
-
-**Q: Can Neo detect all conflicts?**  
-A: No. Neo catches structural conflicts (function-level). Semantic/logic conflicts still need code review.
+**Effort:** 2-3 weeks per IDE
+**Why:** Developers spend most time in IDEs
 
 ---
 
-## Contributing
+### Notification Integrations
+- **Slack Bot** - Notify team when agent waiting/resumed, conflict detected
+- **Email Digests** - Daily summary of coordination events
+- **Discord Bot** - Same as Slack
+- **PagerDuty** - Alert on critical blockers
 
-To help with any phase:
-
-1. **Semantic Detection:** Add language support to `semantic_conflict_detector.py`
-2. **Empirical Validation:** Add new scenario types or metrics to `empirical_validation.py`
-3. **Enforcement:** Implement Git hooks in `neo_git_hooks.py` (to be created)
-4. **Dependency Analysis:** Build call graph analysis for target language
-
-See individual module docstrings for implementation details.
+**Effort:** 1 week per integration
+**Why:** Teams need async awareness of coordination state
 
 ---
 
-## References
+### CI/CD Pipeline Plugins
+- **GitHub Actions** - Workflow step to check-conflicts before merge
+- **GitLab CI** - Same for GitLab
+- **Jenkins Plugin** - For on-prem deployments
 
-- `semantic_conflict_detector.py` - Symbol-level analysis
-- `empirical_validation.py` - Multi-agent benchmarking
-- `coordination_state_machine.py` - Three-tier enforcement (Phase 1 prototype)
-- `AGENT_INTEGRATION_GUIDE.md` - Integration specifications
+**Effort:** 1-2 weeks per platform
+**Why:** Prevents bad merges from reaching main
 
 ---
 
-**Next Step:** Run empirical validation to establish baseline metrics.
+### Advanced Conflict Resolution
+- **ML-Based Risk Scoring** - Learn patterns from historical conflicts
+- **Auto-Merge Strategies** - Suggest best resolution strategy based on patterns
+- **Code Semantics** - Detect if regions actually overlap (AST-based)
+- **Function-Level Locking** - Lock at function granularity, not file
 
-```bash
-python3 empirical_validation.py --full
-```
+**Effort:** 3-4 weeks per feature
+**Why:** Smarter coordination reduces false positives
+
+---
+
+### Multi-Repo Coordination
+- **Microservices Support** - Detect conflicts across service boundaries
+- **Dependency Tracking** - Service A depends on B; coordinate changes
+- **Cross-Repo Lock Propagation** - When A is locked, lock dependent regions in B
+
+**Effort:** 4-6 weeks
+**Why:** Enables coordination for distributed systems
+
+---
+
+### Analytics & Reporting
+- **Coordination Dashboard** - Historical analysis of conflict patterns
+- **Team Productivity Metrics** - Avg wait time, conflict frequency by dev
+- **Trend Analysis** - Time-based trends (conflicts increasing? decreasing?)
+- **Export to BI Tools** - Tableau, Looker integration
+
+**Effort:** 3-4 weeks
+**Why:** Leadership/ops need visibility into coordination efficiency
+
+---
+
+### Performance Optimizations
+- **Query Caching** - Cache conflict checks for X seconds
+- **Batch Operations** - Multiple agents in one request
+- **Read Replicas** - Distribute read load across servers
+- **Connection Pooling** - Optimize database connections
+- **Index Optimization** - Speed up common queries
+
+**Effort:** 2-3 weeks
+**Why:** Scales from 5 to 500+ agents
+
+---
+
+### Security Enhancements
+- **Role-Based Access Control** - Teams, agent permissions
+- **Encryption at Rest** - AES-256 for sensitive data
+- **Audit Logging** - Tamper-proof log of all actions
+- **IP Whitelisting** - Restrict coordination service access
+- **OAuth/SAML** - Enterprise auth integration
+
+**Effort:** 3-4 weeks
+**Why:** Enterprise adoption requires compliance
+
+---
+
+### Plugin System
+- **Custom Risk Scorers** - Bring your own conflict scoring logic
+- **Custom Resolution Strategies** - Define how agents should resolve conflicts
+- **Webhook Plugins** - Trigger external systems on coordination events
+
+**Effort:** 2-3 weeks
+**Why:** Enables organizations to customize behavior without forking
+
+---
+
+## Getting Started for Contributors
+
+### For New Developers (Good First Contributions)
+1. **Tests** - Add unit tests for edge cases in state machine
+2. **Documentation** - Improve docstrings, add code examples
+3. **CLI Tool** - Implement one debugger command
+4. **Logging** - Enhance observability in core module
+
+### For Experienced Backend Devs
+1. **Coordination Service** - Build the REST API server
+2. **Database Adapters** - Implement PostgreSQL or DynamoDB backend
+3. **Performance** - Optimize queries, add caching
+
+### For Frontend/Full-Stack Devs
+1. **Monitoring Dashboard** - Build the React UI
+2. **IDE Plugins** - Create VS Code extension
+3. **Notification Integrations** - Slack/Discord bots
+
+### For DevOps/Platform Engineers
+1. **Kubernetes Deployment** - Helm charts, operators
+2. **Terraform Modules** - IaC for AWS/GCP/Azure
+3. **CI/CD Plugins** - GitHub Actions, GitLab CI
+
+---
+
+## Contribution Guidelines
+
+1. **Pick an issue** from Immediate Priorities (recommended for first-time contributors) or Extensions
+2. **Open a discussion** before starting large features
+3. **Write tests** for new functionality
+4. **Document** in docstrings and README
+5. **Follow the codebase style** (see CLAUDE.md)
+
+---
+
+## Success Metrics
+
+| Milestone | Timeline | Success Criteria |
+|-----------|----------|------------------|
+| Reference Service + SDK | 4-6 weeks | Working example with 2+ frameworks |
+| Production-Ready | 8-12 weeks | 80%+ test coverage, persistent storage, monitoring |
+| Enterprise-Ready | 4-6 months | RBAC, audit logging, performance optimizations |
+| Community Adoption | 6-12 months | 100+ stars, 10+ framework integrations, active community |
+
+---
+
+## Architecture Decision Log
+
+### Why Event-Driven Over Polling?
+Agents working on code generation can waste thousands of tokens polling for status. Event-driven eliminates this waste and enables instant reactions.
+
+### Why Checkpoint System?
+When an agent pauses on a lock, we save its entire generation context (prompt, tokens, intent). This enables seamless resume without regenerating from scratch.
+
+### Why Multiple Storage Backends?
+Different organizations have different constraints:
+- Small teams: Git-backed (version controlled, simple)
+- Growing teams: Cloud-backed (scalable, real-time)
+- Enterprises: Hybrid (fast + resilient)
+
+---
+
+## Questions?
+
+See `INTEGRATION_ARCHITECTURE.md` for deployment details and `docs/ENTERPRISE_SCALING_*.md` for framework-specific integration patterns.
+
+To contribute, start with an issue from **Immediate Priorities** or reach out to discuss your ideas.
+
+**Let's build coordinated AI together. 🧵**
