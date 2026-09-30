@@ -29,7 +29,7 @@ if not file_path:
     sys.exit(0)
 
 try:
-    risk_level, message = check_for_conflicts(
+    risk_level, message, lock_info = check_for_conflicts(
         agent_id="claude-code",
         file_path=file_path,
         intent="code generation",

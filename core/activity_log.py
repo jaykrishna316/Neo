@@ -20,7 +20,11 @@ from datetime import datetime, timedelta
 MULTITENANCY_ENABLED = os.getenv("NEO_MULTITENANCY", "false").lower() == "true"
 DEFAULT_TENANT_ID = os.getenv("CLAUDE_TENANT_ID", "default")
 
-LOG_DIR = Path(".devsync")
+# Activity log directory (supports parallel worktrees via environment variable)
+# Use NEO_ACTIVITY_LOG_DIR env var to set custom location (useful for git worktrees)
+# Defaults to .devsync/ in current directory for backward compatibility
+ACTIVITY_LOG_DIR = Path(os.getenv("NEO_ACTIVITY_LOG_DIR", ".devsync"))
+LOG_DIR = ACTIVITY_LOG_DIR
 LOG_FILE = LOG_DIR / "activity-log.json"
 
 
@@ -29,16 +33,16 @@ def get_tenant_log_path(tenant_id: Optional[str] = None) -> Path:
 
     Args:
         tenant_id: Tenant ID (company). If None, uses DEFAULT_TENANT_ID.
-                  If multitenancy is disabled, uses legacy .devsync/activity-log.json
+                  If multitenancy is disabled, uses legacy activity-log.json
 
     Returns:
         Path to tenant-specific activity-log.json
     """
     if not MULTITENANCY_ENABLED:
-        return Path(".devsync/activity-log.json")  # Legacy single-tenant
+        return ACTIVITY_LOG_DIR / "activity-log.json"  # Legacy single-tenant
 
     resolved_tenant = tenant_id or DEFAULT_TENANT_ID
-    tenant_dir = Path(f".devsync/tenants/{resolved_tenant}")
+    tenant_dir = ACTIVITY_LOG_DIR / f"tenants/{resolved_tenant}"
     tenant_dir.mkdir(parents=True, exist_ok=True)
 
     # Write tenant marker for security validation
@@ -61,7 +65,7 @@ def ensure_tenant_isolation(tenant_id: str) -> None:
     if not MULTITENANCY_ENABLED:
         return
 
-    tenant_dir = Path(f".devsync/tenants/{tenant_id}")
+    tenant_dir = ACTIVITY_LOG_DIR / f"tenants/{tenant_id}"
     marker_file = tenant_dir / ".tenant_id"
 
     if marker_file.exists():
@@ -268,7 +272,7 @@ def clear_log(tenant_id: Optional[str] = None) -> None:
 
     # Clean up empty tenant directory if multitenancy enabled
     if MULTITENANCY_ENABLED and tenant_id:
-        tenant_dir = Path(f".devsync/tenants/{tenant_id}")
+        tenant_dir = ACTIVITY_LOG_DIR / f"tenants/{tenant_id}"
         try:
             if tenant_dir.exists() and not any(tenant_dir.iterdir()):
                 tenant_dir.rmdir()
