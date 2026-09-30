@@ -87,6 +87,21 @@ def check_for_conflicts(
         lock_reason = "HIGH_CONFLICT" if highest_risk == RiskLevel.HIGH else "MEDIUM_CONFLICT"
         lock_scope = "region" if region else "file"
 
+        # First, give the lock to the EXISTING developer (who declared intent first)
+        # Then queue the NEW developer (current agent_id)
+        existing_dev = conflict_details[0]['agent'] if conflict_details else None
+
+        if existing_dev:
+            # Acquire lock for existing developer (they hold it)
+            lock_manager.acquire_lock(
+                file_path=file_path,
+                region=region,
+                developer_id=existing_dev,
+                reason=lock_reason,
+                scope=lock_scope,
+            )
+
+        # Now queue the current developer
         lock_info = lock_manager.acquire_lock(
             file_path=file_path,
             region=region,
