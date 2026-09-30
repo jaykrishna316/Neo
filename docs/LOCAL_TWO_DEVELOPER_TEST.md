@@ -143,7 +143,7 @@ First, set the developer context environment variable:
 
 ```bash
 export NEO_DEVELOPER=alice
-python -m cli.file_watcher alice --server http://localhost:8000
+.venv/bin/python3 -m cli.file_watcher alice --server http://localhost:8000
 ```
 
 Output:
@@ -180,7 +180,7 @@ Set the developer context for bob:
 
 ```bash
 export NEO_DEVELOPER=bob
-python -m cli.file_watcher bob --server http://localhost:8000
+.venv/bin/python3 -m cli.file_watcher bob --server http://localhost:8000
 ```
 
 Same setup, but with `NEO_DEVELOPER=bob` so bob's changes are tracked by bob's watcher only.
@@ -192,7 +192,7 @@ Same setup, but with `NEO_DEVELOPER=bob` so bob's changes are tracked by bob's w
 Before editing, alice must declare intent:
 
 ```bash
-python -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication" --category feature
+.venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication" --category feature
 ```
 
 Output:
@@ -309,7 +309,7 @@ If you prefer to manually declare intent instead of using watchers:
 ### Check for Conflicts
 
 ```bash
-python -m cli.neo_client check alice src/auth.py "Add OAuth2 support"
+.venv/bin/python3 -m cli.neo_client check alice src/auth.py "Add OAuth2 support"
 ```
 
 Output:
@@ -322,7 +322,7 @@ Output:
 ### Declare Intent
 
 ```bash
-python -m cli.neo_client declare alice src/auth.py "Add OAuth2 support" --category feature
+.venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add OAuth2 support" --category feature
 ```
 
 Output:
@@ -336,7 +336,7 @@ Output:
 ### View Activity Log
 
 ```bash
-python -m cli.neo_client log
+.venv/bin/python3 -m cli.neo_client log
 ```
 
 Output:
