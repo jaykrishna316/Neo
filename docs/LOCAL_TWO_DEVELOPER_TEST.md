@@ -69,9 +69,11 @@ Terminal 4+: Developers Edit Code (Vim, VS Code, etc.)
 Install dependencies:
 
 ```bash
-cd /home/user/Neo
+cd ~/Neo
 .venv/bin/pip install -r requirements.txt
 ```
+
+**Note**: `~/Neo` refers to your Neo project directory. If you cloned it elsewhere, use the correct path. On Mac it's typically `/Users/yourname/Neo` or `~/Neo`. On Linux it's typically `/home/yourname/Neo` or `~/Neo`.
 
 This installs:
 - `watchdog>=3.0` - File system monitoring
@@ -81,7 +83,7 @@ This installs:
 ### Initialize Test Repository
 
 ```bash
-cd /home/user/Neo
+cd ~/Neo
 # Create test directories if they don't exist
 mkdir -p .devsync src lib
 ```
@@ -110,7 +112,7 @@ EOF
 ### Terminal 1: Start the Neo Server
 
 ```bash
-cd /home/user/Neo
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_server --clear
 ```
 
@@ -133,7 +135,17 @@ Messages will appear below.
 The server now:
 - Manages `.devsync/activity-log.json`
 - Listens for conflict checks on port 8000
-- Prints all activity to terminal
+- Prints all activity to terminal with DEBUG information
+
+**DEBUG Output**: Each log line includes a DEBUG line (starting with `DEBUG:`) showing the calculation details. This is helpful for verification and troubleshooting:
+
+```
+DEBUG: entries=['alice'], developers_on_file={'alice'}, same_file_count=1
+```
+
+- `entries=` shows the full list of developer IDs in the activity log for that file
+- `developers_on_file=` shows the unique developers (set notation - no duplicates)
+- `same_file_count=` is the final developer count (matches the "developers on file: N" in the status)
 
 ---
 
@@ -142,6 +154,7 @@ The server now:
 First, set the developer context environment variable:
 
 ```bash
+cd ~/Neo
 export NEO_DEVELOPER=alice
 .venv/bin/python3 -m cli.file_watcher alice --server http://localhost:8000
 ```
@@ -179,6 +192,7 @@ Now, when alice edits files in `src/` or `lib/`, they'll be detected by this wat
 Set the developer context for bob:
 
 ```bash
+cd ~/Neo
 export NEO_DEVELOPER=bob
 .venv/bin/python3 -m cli.file_watcher bob --server http://localhost:8000
 ```
@@ -192,6 +206,7 @@ Same setup, but with `NEO_DEVELOPER=bob` so bob's changes are tracked by bob's w
 Before editing, alice must declare intent:
 
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication" --category feature
 ```
 
@@ -258,6 +273,7 @@ Bob is now **queued** with position 0, waiting for alice to complete.
 Alice finishes editing and marks work as complete:
 
 ```bash
+cd ~/Neo
 # First commit the changes
 git add src/auth.py
 git commit -m "Add OAuth2 authentication"
@@ -312,6 +328,7 @@ If you prefer to manually declare intent instead of using watchers:
 ### Check for Conflicts
 
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client check alice src/auth.py "Add OAuth2 support"
 ```
 
@@ -325,6 +342,7 @@ Output:
 ### Declare Intent
 
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add OAuth2 support" --category feature
 ```
 
@@ -339,6 +357,7 @@ Output:
 ### View Activity Log
 
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client log
 ```
 
@@ -355,6 +374,7 @@ Output:
 ### Check Server Status
 
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client status
 ```
 
@@ -455,6 +475,7 @@ This tests Neo's **queue promotion** mechanism - ensuring developers are notifie
 First, set developer context:
 
 ```bash
+cd ~/Neo
 export NEO_DEVELOPER=charlie
 .venv/bin/python3 -m cli.file_watcher charlie --server http://localhost:8000
 ```
@@ -492,6 +513,7 @@ Now you have:
 
 **Terminal 5 (or separate terminal)**:
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
 ```
 
@@ -511,6 +533,7 @@ Now you have:
 
 **Terminal 5**:
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client declare bob src/auth.py "Add JWT token support"
 ```
 
@@ -535,6 +558,7 @@ Now you have:
 
 **Terminal 5**:
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client declare charlie src/auth.py "Add multi-factor authentication"
 ```
 
@@ -566,6 +590,7 @@ Alice finishes OAuth2 work and completes:
 
 **Terminal 5**:
 ```bash
+cd ~/Neo
 # Alice marks work complete
 .venv/bin/python3 -m cli.neo_client log
 # View the updated activity log to confirm alice is complete
@@ -597,6 +622,7 @@ Bob should review what Alice accomplished before generating:
 
 **Terminal 5**:
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client log
 ```
 
@@ -673,6 +699,7 @@ Charlie reviews what both Alice and Bob accomplished:
 
 **Terminal 5**:
 ```bash
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client log
 ```
 
@@ -967,15 +994,19 @@ rm .devsync/activity-log.json
 
 ```bash
 # Terminal 1: Server
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_server --clear
 
 # Terminal 2: Alice watches
+cd ~/Neo
 .venv/bin/python3 -m cli.file_watcher alice
 
 # Terminal 3: Bob watches
+cd ~/Neo
 .venv/bin/python3 -m cli.file_watcher bob
 
 # Terminal 4 & 5: Ready for editing
+cd ~/Neo
 ```
 
 ### Scenario (10 minutes)
@@ -991,6 +1022,7 @@ rm .devsync/activity-log.json
 
 ```bash
 # Check final state
+cd ~/Neo
 .venv/bin/python3 -m cli.neo_client log
 ```
 
