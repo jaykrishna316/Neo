@@ -5,8 +5,6 @@
 # Shows real-time coordination workflow
 #
 
-set -e
-
 NEO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$NEO_DIR"
 
@@ -42,8 +40,8 @@ echo -e "${YELLOW}Spawning terminals for interactive demo...${NC}\n"
 tmux new-session -d -s "$SESSION_NAME" -x 200 -y 50
 sleep 1  # Wait for session to fully initialize
 
-# Kill the initial empty window
-tmux kill-window -t "$SESSION_NAME:0"
+# Kill the initial empty window (if it exists)
+tmux kill-window -t "$SESSION_NAME:0" 2>/dev/null || true
 sleep 0.5
 
 # ============================================================================
