@@ -71,6 +71,35 @@ echo -e "${GREEN}✓ Activity log cleaned${NC}\n"
 # Kill the initial empty window
 tmux kill-window -t "$SESSION_NAME:0"
 
+# Run Activity Log Viewer
+echo -e "${BLUE}Setting up Activity Log Viewer${NC}"
+tmux new-window -t "$SESSION_NAME" -n "activity-log"
+tmux send-keys -t "$SESSION_NAME:activity-log" "cd '$NEO_DIR'" Enter
+sleep 0.5
+tmux send-keys -t "$SESSION_NAME:activity-log" "
+echo '==================================================';
+echo 'ACTIVITY LOG VIEWER (Real-time monitoring)';
+echo '==================================================';
+echo '';
+while true; do
+  clear;
+  echo '[Last updated:' \$(date '+%H:%M:%S') ']';
+  echo '';
+  if [ -f .devsync/activity-log.json ]; then
+    echo '--- Raw Activity Log ---';
+    python3 -m json.tool .devsync/activity-log.json 2>/dev/null || echo 'Empty or invalid JSON';
+    echo '';
+    echo '--- Entry Count ---';
+    python3 -c \"import json; data = json.load(open('.devsync/activity-log.json')); print(f'Total entries: {len(data)}'); [print(f'{d.get(\\\"developer_id\\\")}: lock_state={d.get(\\\"lock_state\\\")}, queue_pos={d.get(\\\"queue_position\\\")}') for d in data]\" 2>/dev/null;
+  else
+    echo 'Activity log not yet created';
+  fi;
+  echo '';
+  echo 'Refreshing every 2 seconds... (Ctrl-C to stop)';
+  sleep 2;
+done
+" Enter
+
 # Run Phase 2 Unit Tests
 echo -e "${BLUE}Setting up Phase 2 Unit Tests${NC}"
 run_test "phase2-unit" \
