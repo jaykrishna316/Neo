@@ -412,18 +412,18 @@ python baseline_comparison/test_16dev_extreme_scale.py
 
 **Three ways to test Neo's multi-developer coordination:**
 
-| Test Type | Use Case | File | Time | Setup |
-|-----------|----------|------|------|-------|
-| **Unit Tests** | Comprehensive scenario validation, CI/CD | `tests/test_two_developer_scenarios.py` | 1 min | `python tests/test_two_developer_scenarios.py` |
-| **Real Sequential Test** | Simple 2-dev coordination, fast validation | `tests/real_2_developer_test.py` | 1 min | `python tests/real_2_developer_test.py` |
-| **Terminal with Server** | Full interactive test, file watchers, multitenancy | `docs/LOCAL_TWO_DEVELOPER_TEST.md` | 15 min | 4+ terminals + server |
-| **Claude Code IDE (MCP)** | Production teams, pre-generation checks | `docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md` | 10 min | IDE + MCP config |
+| Test Type | Use Case | File | Time | Setup | Watchers? | Server? |
+|-----------|----------|------|------|-------|-----------|---------|
+| **Simulated Sequential Test** | Fast validation, CI/CD | `tests/real_2_developer_test.py` | 1 min | `python ...` | ❌ No | ❌ No |
+| **Comprehensive Unit Tests** | 5-scenario validation | `tests/test_two_developer_scenarios.py` | 1 min | `python ...` | ❌ No | ❌ No |
+| **Terminal with Watchers** | Full interactive test, realistic workflow | `docs/LOCAL_TWO_DEVELOPER_TEST.md` | 15 min | 4+ terminals | ✅ Yes | ✅ Yes |
+| **Claude Code IDE (MCP)** | Production teams, pre-generation checks | `docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md` | 10 min | IDE + MCP config | N/A | N/A |
 
 ---
 
-## Quick Test: Real 2-Developer Sequential Test
+## Quick Test: Simulated 2-Developer Sequential Test
 
-**The simplest way to validate Neo coordination:**
+**Fastest way to validate Neo coordination (simulated workflow, no watchers):**
 
 ```bash
 # Single command - validates 2-dev lock, queue, and context flow
@@ -494,9 +494,11 @@ python tests/test_two_developer_scenarios.py
 
 ---
 
-## Two-Developer Coordination Test: Interactive Terminal Version
+## Real Terminal-Based 2-Developer Test (With File Watchers & Server)
 
-**See Neo prevent merge conflicts in real-time with two developers on the same file.**
+**The most realistic test: actual file watchers, running server, multiple terminals, real file editing.**
+
+See Neo prevent merge conflicts in real-time with two developers on the same file. This is the terminal-based approach that works without Claude Code IDE.
 
 Choose your testing environment and follow the **step-by-step guides** with actual functional calls:
 
