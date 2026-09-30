@@ -20,6 +20,7 @@ from datetime import datetime
 from core.activity_log import log_activity, get_active_entries, read_log, clear_log
 from core.pre_gen_check import check_for_conflicts
 from core.risk_classifier import RiskLevel
+from core.lock_manager import LockManager
 
 
 class NeoServerHandler(BaseHTTPRequestHandler):
@@ -171,7 +172,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 self._print_lock_status(agent_id, file_path, lock_state, queue_position, waiting_for, risk_level)
             else:
                 # No conflict - just log
-                self._print_activity_log(agent_id, file_path, intent, same_file_count)
+                self._print_activity_log(agent_id, file_path, intent, same_file_count, lock_holder, queue_position, waiting_for)
 
             self._send_json(200, response)
         except Exception as e:
@@ -236,7 +237,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data).encode('utf-8'))
 
-    def _print_activity_log(self, agent_id: str, file_path: str, intent: str, count: int):
+    def _print_activity_log(self, agent_id: str, file_path: str, intent: str, count: int, lock_holder: Optional[str] = None, queue_position: Optional[int] = None, waiting_for: Optional[str] = None):
         """Print activity to terminal"""
         icon = "✅" if count == 1 else "🔒"
         risk = "LOW" if count == 1 else "MEDIUM"
@@ -245,6 +246,14 @@ class NeoServerHandler(BaseHTTPRequestHandler):
         print(f"   Risk: {risk} (developers on file: {count})")
         if count > 1:
             print(f"   ⚠️  Multiple developers detected. Lock applies.")
+            if lock_holder or queue_position is not None:
+                print(f"   🔒 Lock Status:")
+                if lock_holder:
+                    print(f"      Holder: {lock_holder}")
+                if queue_position is not None:
+                    print(f"      Queue Position: {queue_position}")
+                if waiting_for:
+                    print(f"      Waiting For: {waiting_for}")
 
     def _print_conflict_check(self, agent_id: str, risk_level: RiskLevel, message: str, lock_info: Optional[Dict]):
         """Print conflict check result to terminal"""
