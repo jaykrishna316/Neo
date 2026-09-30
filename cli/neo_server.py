@@ -50,6 +50,8 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             self._handle_check_conflicts(data)
         elif parsed.path == '/api/complete-work':
             self._handle_complete_work(data)
+        elif parsed.path == '/api/reset-log':
+            self._handle_reset_log(data)
         else:
             self._send_json(404, {'error': 'Not found'})
 
@@ -263,6 +265,29 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 'lines_removed': lines_removed,
                 'lock_released': lock_released,
                 'next_developer': next_developer,
+                'timestamp': datetime.now().isoformat()
+            }
+
+            self._send_json(200, response)
+        except Exception as e:
+            self._send_json(500, {'error': str(e)})
+
+    def _handle_reset_log(self, data: Dict):
+        """POST /api/reset-log - Clear activity log for new test"""
+        try:
+            entries = get_active_entries()
+            entry_count = len(entries)
+
+            clear_log()
+
+            print(f"\n🔄 [{datetime.now().strftime('%H:%M:%S')}] Activity log reset")
+            print(f"   Cleared {entry_count} entries")
+            print(f"   Ready for new test\n")
+
+            response = {
+                'success': True,
+                'entries_cleared': entry_count,
+                'message': 'Activity log cleared',
                 'timestamp': datetime.now().isoformat()
             }
 

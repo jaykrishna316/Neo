@@ -55,6 +55,23 @@ class NeoClient:
         except Exception as e:
             return {'error': str(e)}
 
+    def reset_log(self) -> Dict:
+        """Clear the activity log (reset test)"""
+        try:
+            response = requests.post(
+                f'{self.server_url}/api/reset-log',
+                json={},
+                timeout=5
+            )
+            return response.json()
+        except requests.exceptions.ConnectionError:
+            return {
+                'error': f'Cannot connect to Neo server at {self.server_url}',
+                'hint': 'Make sure the server is running'
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
     def complete_work(
         self,
         agent_id: str,
@@ -195,6 +212,14 @@ def print_response(data: Dict, action: str):
             if data.get('lock_released'):
                 print(f"   🔓 Lock released, next developer promoted")
 
+    elif action == 'reset':
+        if data.get('error'):
+            print(f"\n❌ Error: {data['error']}")
+        else:
+            print(f"\n🔄 Activity Log Reset")
+            print(f"   ✅ Cleared {data.get('entries_cleared', 0)} entries")
+            print(f"   Ready to start new test without restarting server/watchers")
+
     elif action == 'status':
         print(f"\n✅ Neo Server Status")
         print(f"   Status: {data.get('status', 'unknown')}")
@@ -242,6 +267,9 @@ def main():
     complete_parser.add_argument('--added', type=int, default=0, help='Lines added')
     complete_parser.add_argument('--removed', type=int, default=0, help='Lines removed')
 
+    # reset command
+    reset_parser = subparsers.add_parser('reset', help='Reset activity log (clear test)')
+
     # log command
     log_parser = subparsers.add_parser('log', help='View activity log')
 
@@ -274,6 +302,10 @@ def main():
             args.removed
         )
         print_response(result, 'complete')
+
+    elif args.command == 'reset':
+        result = client.reset_log()
+        print_response(result, 'reset')
 
     elif args.command == 'check':
         result = client.check_conflicts(
