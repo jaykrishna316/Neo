@@ -201,6 +201,36 @@ Same setup, but with `NEO_DEVELOPER=bob` so bob's changes are tracked by bob's w
 
 ---
 
+### Prerequisite Check: Verify Activity Log is Empty
+
+Before starting the test, ensure the activity log is clean:
+
+```bash
+cd ~/Neo
+cat .devsync/activity-log.json
+```
+
+**Expected output:**
+```
+[]
+```
+
+If you see entries from a previous test, clear the log:
+
+```bash
+cd ~/Neo
+rm .devsync/activity-log.json
+```
+
+Then restart the server:
+```bash
+.venv/bin/python3 -m cli.neo_server --clear
+```
+
+This ensures a fresh start with no lingering entries from previous runs.
+
+---
+
 ### Terminal 4: Developer A - Declare Intent First
 
 Before editing, alice must declare intent:
