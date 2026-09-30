@@ -82,16 +82,16 @@ This installs:
 
 ### Initialize Test Repository
 
+Create test directories (if they don't exist):
+
 ```bash
 cd ~/Neo
-# Create test directories if they don't exist
 mkdir -p .devsync src lib
 ```
 
 Create sample files to edit:
 
 ```bash
-# Create initial files
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
     """Authenticate user with password."""
@@ -250,14 +250,13 @@ Output:
 
 ### Terminal 4 (continued): Developer A - Make Changes
 
-Now edit the file:
+Edit the file (Alice is adding OAuth2 support):
 
 ```bash
-# Edit src/auth.py
+cd ~/Neo
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
     """Authenticate user with bcrypt"""
-    # Alice is adding OAuth2 support here
     pass
 EOF
 ```
@@ -294,15 +293,13 @@ Notice: Now it shows **2 developers on file** (alice and bob) — the lock mecha
 
 ### Terminal 5 (continued): Developer B - Tries to Edit Same File
 
-Now bob edits the file:
+Bob now tries to edit the same file (adding JWT token support):
 
 ```bash
 cd ~/Neo
-# Bob tries to edit the same file
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
     """Authenticate user with JWT tokens"""
-    # Bob is adding JWT support here
     pass
 EOF
 ```
@@ -324,15 +321,17 @@ Bob is now **queued** with position 0, waiting for alice to complete.
 
 ### Terminal 4: Developer A - Completes Work
 
-Alice finishes editing and marks work as complete:
+Alice finishes editing. First she commits the changes:
 
 ```bash
 cd ~/Neo
-# First commit the changes
 git add src/auth.py
 git commit -m "Add OAuth2 authentication"
+```
 
-# Then mark work complete to release lock (in Terminal 4 or new terminal)
+Then she marks work complete to release the lock (in Terminal 4 or new terminal):
+
+```bash
 .venv/bin/python3 -m cli.neo_client complete alice src/auth.py --added 5 --removed 1
 ```
 
@@ -354,14 +353,12 @@ Terminal 5 (Bob's watcher) shows:
 
 ### Terminal 5: Developer B - Proceeds
 
-Bob can now edit the same file without conflict:
+Bob can now edit the same file without conflict. He continues his work, building on alice's OAuth2 implementation:
 
 ```bash
-# Bob continues his work
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
     """Authenticate user with OAuth2 + JWT"""
-    # Building on Alice's work
     pass
 EOF
 ```
@@ -444,10 +441,9 @@ Output:
 
 ### Step 6: Developer B Completes - Developer A Gets Fresh Context
 
-When bob completes work and releases the lock:
+When bob completes work and releases the lock (run this in Terminal 5 or a separate terminal):
 
 ```bash
-# Terminal 5 (or separate terminal)
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client complete bob src/auth.py --added 10 --removed 2
 ```
@@ -466,10 +462,11 @@ Terminal 4 (Alice's watcher) shows:
    bob's work is complete. Ready to proceed.
 ```
 
-**Alice should now review bob's changes before continuing:**
+**Alice should now review bob's changes before continuing (run this in Terminal 4):**
+
+Check the activity log to see what bob did:
 
 ```bash
-# Terminal 4: Check activity log to see what bob did
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client log
 ```
@@ -487,10 +484,9 @@ Output:
       (alice can now proceed with bob's context)
 ```
 
-**Then pull latest code:**
+**Then pull the latest code from git to get bob's changes:**
 
 ```bash
-# Pull bob's changes from git
 git pull origin main
 ```
 
@@ -699,14 +695,13 @@ Notice:
 
 #### Step 4: Alice Completes (Bob Promoted)
 
-Alice finishes OAuth2 work and completes:
+Alice finishes OAuth2 work and marks it complete (run in Terminal 5). First she marks work complete, then views the updated activity log to confirm:
 
 **Terminal 5**:
 ```bash
 cd ~/Neo
-# Alice marks work complete
+.venv/bin/python3 -m cli.neo_client complete alice src/auth.py --added 45 --removed 5
 .venv/bin/python3 -m cli.neo_client log
-# View the updated activity log to confirm alice is complete
 ```
 
 **Server output (Terminal 1)**:
@@ -753,12 +748,11 @@ Bob reads this context before generating JWT code.
 
 #### Step 6: Bob Edits File (Charlie Waiting)
 
-Bob makes changes to implement JWT:
+Bob makes changes to implement JWT (building on Alice's OAuth2):
 
 **Terminal 6 (editing)**:
 ```bash
 vim src/auth.py
-# Bob adds JWT implementation on top of Alice's OAuth2
 ```
 
 **Server sees**:
@@ -836,12 +830,11 @@ Charlie sees:
 
 #### Step 9: Charlie Edits File
 
-Charlie implements MFA with full context:
+Charlie implements MFA with full context (working with Alice's OAuth2 + Bob's JWT):
 
 **Terminal 6 (editing)**:
 ```bash
 vim src/auth.py
-# Charlie adds MFA that works with Alice's OAuth2 + Bob's JWT
 ```
 
 **Server output (Terminal 1)**:
@@ -1051,18 +1044,22 @@ Terminal 4 (Editing):
 
 **Causes and Solutions:**
 1. **NEO_DEVELOPER not set or mismatched**
-   ```bash
-   # Check if environment variable is set
-   echo $NEO_DEVELOPER
    
-   # Set it correctly before starting the watcher
+   Check if the environment variable is set:
+   ```bash
+   echo $NEO_DEVELOPER
+   ```
+   
+   Set it correctly before starting the watcher:
+   ```bash
    export NEO_DEVELOPER=alice
    .venv/bin/python3 -m cli.file_watcher alice --server http://localhost:8000
    ```
 
 2. **Intent not declared**
+   
+   Always declare intent before editing:
    ```bash
-   # Declare intent before editing
    .venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Your intent here"
    ```
 
@@ -1105,20 +1102,26 @@ rm .devsync/activity-log.json
 
 ### Setup (5 minutes)
 
+**Terminal 1 (Server):**
 ```bash
-# Terminal 1: Server
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_server --clear
+```
 
-# Terminal 2: Alice watches
+**Terminal 2 (Alice watcher):**
+```bash
 cd ~/Neo
 .venv/bin/python3 -m cli.file_watcher alice
+```
 
-# Terminal 3: Bob watches
+**Terminal 3 (Bob watcher):**
+```bash
 cd ~/Neo
 .venv/bin/python3 -m cli.file_watcher bob
+```
 
-# Terminal 4 & 5: Ready for editing
+**Terminal 4 & 5 (Ready for editing):**
+```bash
 cd ~/Neo
 ```
 
@@ -1133,8 +1136,9 @@ cd ~/Neo
 
 ### Verification
 
+Check the final state to verify coordination worked:
+
 ```bash
-# Check final state
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client log
 ```
