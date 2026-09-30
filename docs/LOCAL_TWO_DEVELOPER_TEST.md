@@ -442,6 +442,65 @@ Output:
 
 ---
 
+### Step 6: Developer B Completes - Developer A Gets Fresh Context
+
+When bob completes work and releases the lock:
+
+```bash
+# Terminal 5 (or separate terminal)
+cd ~/Neo
+.venv/bin/python3 -m cli.neo_client complete bob src/auth.py --added 10 --removed 2
+```
+
+Server output (Terminal 1):
+```
+✅ [10:20:45] bob completed: +10 lines, -2 lines
+   File: src/auth.py
+   🔓 Lock released, promoting next developer
+```
+
+Terminal 4 (Alice's watcher) shows:
+```
+✅ [10:20:45] alice - Lock Released!
+   You are now ACTIVE on src/auth.py
+   bob's work is complete. Ready to proceed.
+```
+
+**Alice should now review bob's changes before continuing:**
+
+```bash
+# Terminal 4: Check activity log to see what bob did
+cd ~/Neo
+.venv/bin/python3 -m cli.neo_client log
+```
+
+Output:
+```
+📝 Activity Log (entries with bob's work)
+   [2026-09-27T10:04:35] alice → src/auth.py
+      Add OAuth2 authentication
+   [2026-09-27T10:04:56] bob → src/auth.py
+      Add JWT token support
+   [2026-09-27T10:13:28] bob completed: +10 lines, -2 lines
+      JWT implementation complete
+   [2026-09-27T10:20:45] alice → src/auth.py
+      (alice can now proceed with bob's context)
+```
+
+**Then pull latest code:**
+
+```bash
+# Pull bob's changes from git
+git pull origin main
+```
+
+This ensures alice has:
+- ✅ Bob's code changes
+- ✅ Bob's context (activity log showing what he did)
+- ✅ Fresh lock state (she now holds the lock)
+
+---
+
 ## How It Works: The Coordination Flow
 
 ### Without NEO_DEVELOPER & Intent Declaration (Broken)
