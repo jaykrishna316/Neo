@@ -408,7 +408,93 @@ python baseline_comparison/test_16dev_extreme_scale.py
 
 ---
 
-## Two-Developer Coordination Test
+## Neo 2-Developer Tests
+
+**Three ways to test Neo's multi-developer coordination:**
+
+| Test Type | Use Case | File | Time | Setup |
+|-----------|----------|------|------|-------|
+| **Unit Tests** | Comprehensive scenario validation, CI/CD | `tests/test_two_developer_scenarios.py` | 1 min | `python tests/test_two_developer_scenarios.py` |
+| **Real Sequential Test** | Simple 2-dev coordination, fast validation | `tests/real_2_developer_test.py` | 1 min | `python tests/real_2_developer_test.py` |
+| **Terminal with Server** | Full interactive test, file watchers, multitenancy | `docs/LOCAL_TWO_DEVELOPER_TEST.md` | 15 min | 4+ terminals + server |
+| **Claude Code IDE (MCP)** | Production teams, pre-generation checks | `docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md` | 10 min | IDE + MCP config |
+
+---
+
+## Quick Test: Real 2-Developer Sequential Test
+
+**The simplest way to validate Neo coordination:**
+
+```bash
+# Single command - validates 2-dev lock, queue, and context flow
+python tests/real_2_developer_test.py
+```
+
+**What it validates**:
+- ✅ Alice declares intent (no lock, only 1 dev)
+- ✅ Bob declares same file (MEDIUM risk, lock applies to Alice)
+- ✅ Alice completes work (metadata logged)
+- ✅ Bob gets fresh context (sees Alice's changes)
+- ✅ Bob completes work (zero conflicts)
+- ✅ Result: 0 conflicts, automatic coordination
+
+**Expected Output**:
+```
+============================================================
+Neo 4.0: 2-Developer Coordination Test
+============================================================
+
+[1] Alice declares intent on auth.py
+    ✓ Alice's intent logged
+
+[2] Bob checks for conflicts on same file
+    Risk Level: MEDIUM
+    Message: MEDIUM RISK: alice is Add bcrypt password hashing...
+    ✓ Lock holder: alice
+    ✓ Bob waiting for alice
+
+[3] Alice completes work and commits
+    ✓ Alice's work logged with delta: +5 lines, -1 line
+
+[4] Bob refreshes context and sees Alice's changes
+    ✓ Context from Alice: {'status': 'completed', 'lines_added': 5, ...}
+
+[5] Bob generates code with Alice's context and completes
+    ✓ Bob's work logged: +4 lines
+
+[6] Verification
+    Alice completed: ✓
+    Bob completed: ✓
+    Conflicts detected: 0 ✓
+    Manual resolution needed: NO ✓
+
+============================================================
+✅ TEST PASSED: 2-Developer Coordination Works
+============================================================
+```
+
+---
+
+## Comprehensive Unit Tests: 5-Scenario Validation
+
+**Validates Neo across multiple real-world scenarios:**
+
+```bash
+python tests/test_two_developer_scenarios.py
+```
+
+**5 Scenarios Tested**:
+1. **Low Conflict (Different Regions)** - No lock, safe parallel work
+2. **High Conflict (Same Lines)** - Lock applies, sequential workflow
+3. **Different Files** - Parallel work enabled (no conflict)
+4. **Rapid Declarations** - Lock assigned to first declarer
+5. **3-Developer Queue** - Scaling validation with queue management
+
+**Expected Result**: ✅ All 5/5 scenarios pass
+
+---
+
+## Two-Developer Coordination Test: Interactive Terminal Version
 
 **See Neo prevent merge conflicts in real-time with two developers on the same file.**
 
@@ -552,4 +638,8 @@ MIT — See [LICENSE](LICENSE)
 
 **The core value**: Eliminate Git merge conflicts by moving conflict resolution one layer below Git through intelligent semantic coordination.
 
-**Next**: Run `python tests/test_optimization_1_delta_refresh.py` to see Neo in action, or run all 5 with `python tests/test_optimization_*.py`
+**Quick Start**:
+- ✅ **Real 2-Dev Test** (recommended first): `python tests/real_2_developer_test.py`
+- ✅ **Comprehensive 5-Scenario Test**: `python tests/test_two_developer_scenarios.py`
+- ✅ **Run optimization tests**: `python tests/test_optimization_*.py`
+- ✅ **Interactive terminal test**: See `docs/LOCAL_TWO_DEVELOPER_TEST.md`
