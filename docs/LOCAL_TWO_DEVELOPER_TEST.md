@@ -82,16 +82,16 @@ This installs:
 
 ### Initialize Test Repository
 
-Create test directories (if they don't exist):
-
 ```bash
 cd ~/Neo
+# Create test directories if they don't exist
 mkdir -p .devsync src lib
 ```
 
 Create sample files to edit:
 
 ```bash
+# Create initial files
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
     """Authenticate user with password."""
@@ -250,13 +250,14 @@ Output:
 
 ### Terminal 4 (continued): Developer A - Make Changes
 
-Edit the file (Alice is adding OAuth2 support):
+Now edit the file:
 
 ```bash
-cd ~/Neo
+# Edit src/auth.py
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
     """Authenticate user with bcrypt"""
+    # Alice is adding OAuth2 support here
     pass
 EOF
 ```
@@ -293,13 +294,15 @@ Notice: Now it shows **2 developers on file** (alice and bob) — the lock mecha
 
 ### Terminal 5 (continued): Developer B - Tries to Edit Same File
 
-Bob now tries to edit the same file (adding JWT token support):
+Now bob edits the file:
 
 ```bash
 cd ~/Neo
+# Bob tries to edit the same file
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
     """Authenticate user with JWT tokens"""
+    # Bob is adding JWT support here
     pass
 EOF
 ```
@@ -321,17 +324,15 @@ Bob is now **queued** with position 0, waiting for alice to complete.
 
 ### Terminal 4: Developer A - Completes Work
 
-Alice finishes editing. First she commits the changes:
+Alice finishes editing and marks work as complete:
 
 ```bash
 cd ~/Neo
+# First commit the changes
 git add src/auth.py
 git commit -m "Add OAuth2 authentication"
-```
 
-Then she marks work complete to release the lock (in Terminal 4 or new terminal):
-
-```bash
+# Then mark work complete to release lock (in Terminal 4 or new terminal)
 .venv/bin/python3 -m cli.neo_client complete alice src/auth.py --added 5 --removed 1
 ```
 
@@ -353,12 +354,14 @@ Terminal 5 (Bob's watcher) shows:
 
 ### Terminal 5: Developer B - Proceeds
 
-Bob can now edit the same file without conflict. He continues his work, building on alice's OAuth2 implementation:
+Bob can now edit the same file without conflict:
 
 ```bash
+# Bob continues his work
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
     """Authenticate user with OAuth2 + JWT"""
+    # Building on Alice's work
     pass
 EOF
 ```
@@ -441,9 +444,10 @@ Output:
 
 ### Step 6: Developer B Completes - Developer A Gets Fresh Context
 
-When bob completes work and releases the lock (run this in Terminal 5 or a separate terminal):
+When bob completes work and releases the lock:
 
 ```bash
+# Terminal 5 (or separate terminal)
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client complete bob src/auth.py --added 10 --removed 2
 ```
@@ -462,11 +466,10 @@ Terminal 4 (Alice's watcher) shows:
    bob's work is complete. Ready to proceed.
 ```
 
-**Alice should now review bob's changes before continuing (run this in Terminal 4):**
-
-Check the activity log to see what bob did:
+**Alice should now review bob's changes before continuing:**
 
 ```bash
+# Terminal 4: Check activity log to see what bob did
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client log
 ```
