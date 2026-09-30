@@ -40,9 +40,11 @@ echo -e "${YELLOW}Spawning terminals for interactive demo...${NC}\n"
 
 # Create main session
 tmux new-session -d -s "$SESSION_NAME" -x 200 -y 50
+sleep 1  # Wait for session to fully initialize
 
 # Kill the initial empty window
 tmux kill-window -t "$SESSION_NAME:0"
+sleep 0.5
 
 # ============================================================================
 # WINDOW 1: Activity Log Viewer (Center stage)
