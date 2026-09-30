@@ -487,10 +487,9 @@ Output:
       (alice can now proceed with bob's context)
 ```
 
-**Then pull latest code:**
+**Then pull the latest code from git to get bob's changes:**
 
 ```bash
-# Pull bob's changes from git
 git pull origin main
 ```
 
@@ -699,14 +698,13 @@ Notice:
 
 #### Step 4: Alice Completes (Bob Promoted)
 
-Alice finishes OAuth2 work and completes:
+Alice finishes OAuth2 work and marks it complete (run in Terminal 5). First she marks work complete, then views the updated activity log to confirm:
 
 **Terminal 5**:
 ```bash
 cd ~/Neo
-# Alice marks work complete
+.venv/bin/python3 -m cli.neo_client complete alice src/auth.py --added 45 --removed 5
 .venv/bin/python3 -m cli.neo_client log
-# View the updated activity log to confirm alice is complete
 ```
 
 **Server output (Terminal 1)**:
@@ -753,12 +751,11 @@ Bob reads this context before generating JWT code.
 
 #### Step 6: Bob Edits File (Charlie Waiting)
 
-Bob makes changes to implement JWT:
+Bob makes changes to implement JWT (building on Alice's OAuth2):
 
 **Terminal 6 (editing)**:
 ```bash
 vim src/auth.py
-# Bob adds JWT implementation on top of Alice's OAuth2
 ```
 
 **Server sees**:
@@ -836,12 +833,11 @@ Charlie sees:
 
 #### Step 9: Charlie Edits File
 
-Charlie implements MFA with full context:
+Charlie implements MFA with full context (working with Alice's OAuth2 + Bob's JWT):
 
 **Terminal 6 (editing)**:
 ```bash
 vim src/auth.py
-# Charlie adds MFA that works with Alice's OAuth2 + Bob's JWT
 ```
 
 **Server output (Terminal 1)**:
@@ -1051,18 +1047,22 @@ Terminal 4 (Editing):
 
 **Causes and Solutions:**
 1. **NEO_DEVELOPER not set or mismatched**
-   ```bash
-   # Check if environment variable is set
-   echo $NEO_DEVELOPER
    
-   # Set it correctly before starting the watcher
+   Check if the environment variable is set:
+   ```bash
+   echo $NEO_DEVELOPER
+   ```
+   
+   Set it correctly before starting the watcher:
+   ```bash
    export NEO_DEVELOPER=alice
    .venv/bin/python3 -m cli.file_watcher alice --server http://localhost:8000
    ```
 
 2. **Intent not declared**
+   
+   Always declare intent before editing:
    ```bash
-   # Declare intent before editing
    .venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Your intent here"
    ```
 
@@ -1105,20 +1105,26 @@ rm .devsync/activity-log.json
 
 ### Setup (5 minutes)
 
+**Terminal 1 (Server):**
 ```bash
-# Terminal 1: Server
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_server --clear
+```
 
-# Terminal 2: Alice watches
+**Terminal 2 (Alice watcher):**
+```bash
 cd ~/Neo
 .venv/bin/python3 -m cli.file_watcher alice
+```
 
-# Terminal 3: Bob watches
+**Terminal 3 (Bob watcher):**
+```bash
 cd ~/Neo
 .venv/bin/python3 -m cli.file_watcher bob
+```
 
-# Terminal 4 & 5: Ready for editing
+**Terminal 4 & 5 (Ready for editing):**
+```bash
 cd ~/Neo
 ```
 
@@ -1133,8 +1139,9 @@ cd ~/Neo
 
 ### Verification
 
+Check the final state to verify coordination worked:
+
 ```bash
-# Check final state
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client log
 ```
