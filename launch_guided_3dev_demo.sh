@@ -43,7 +43,7 @@ echo "[]" > .devsync/activity-log.json
 echo -e "${YELLOW}Opening 7 numbered Terminal windows...${NC}\n"
 sleep 1
 
-# Function to open terminal with title using AppleScript
+# Function to open terminal with title (cross-platform)
 open_terminal_with_title() {
     local num=$1
     local title=$2
@@ -51,8 +51,9 @@ open_terminal_with_title() {
 
     echo -e "${BLUE}[${num}/7]${NC} Opening: ${title}"
 
-    # Use AppleScript to open Terminal and run script with custom window title
-    osascript <<EOF
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: Use AppleScript
+        osascript <<EOF
 tell application "Terminal"
     activate
     set newWindow to (create new window with default settings)
@@ -62,6 +63,17 @@ tell application "Terminal"
     end tell
 end tell
 EOF
+    else
+        # Linux: Use gnome-terminal or xterm
+        if command -v gnome-terminal &> /dev/null; then
+            gnome-terminal --title="${title}" -- bash -c "cd '$NEO_DIR' && bash '${script}'; bash" &
+        elif command -v xterm &> /dev/null; then
+            xterm -title "${title}" -e "bash -c 'cd $NEO_DIR && bash $script; bash'" &
+        else
+            echo -e "${RED}ERROR: No terminal found. Install gnome-terminal or xterm.${NC}"
+            return 1
+        fi
+    fi
     sleep 0.8
 }
 
