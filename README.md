@@ -3,701 +3,304 @@
 > **Eliminates Git merge conflicts by coordinating developers at the semantic layer — preventing conflicts BEFORE they reach Git**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![5 Phases Validated](https://img.shields.io/badge/phases-5/5_validated-brightgreen)](#neo-5-phases-the-complete-stack)
+[![5 Phases Validated](https://img.shields.io/badge/phases-5/5_validated-brightgreen)](#why-neo-matters)
 [![Empirically Tested](https://img.shields.io/badge/tests-world--class-brightgreen)](#empirical-proof)
 [![98-99% Token Savings](https://img.shields.io/badge/tokens-98--99%_savings-brightgreen)](#empirical-proof)
-[![Zero Conflicts Guaranteed](https://img.shields.io/badge/conflicts-0_guaranteed-brightgreen)](#empirical-proof)
-
-**The Problem:** Traditional Git makes developers work in parallel on stale code. Result: merge conflicts, manual resolution, context re-reads, and massive token waste (re-reading entire files = 500+ tokens per developer).
-
-**The Solution:** Neo detects conflicts at the semantic layer AND prevents context staleness through intelligent delta refresh (40 tokens vs 500). Routes developers sequentially with fresh context. Result: **zero conflicts + 98-99% token savings + automatic coordination**.
+[![Zero Conflicts Guaranteed](https://img.shields.io/badge/conflicts-0_guaranteed-brightgreen)](#why-neo-matters)
 
 ---
 
-## Neo 5 Phases: The Complete Stack
+## The Problem & Solution
 
-| Phase | Name | What It Does | Key Code |
-|-------|------|-------------|----------|
-| **1** | **Lock-Only-When-Needed** | Applies sequential lock when 2+ devs declare intent on same file | [`.claude/workflow_state_machine.py`](core/workflow_state_machine.py) |
-| **2** | **Temporal Handoff** | Auto-queues next developer, tracks completion state, creates handoff records | [`.claude/temporal_handoff_engine.py`](core/temporal_handoff_engine.py) |
-| **3** | **Context Invalidation** | Detects staleness (>300ms), triggers auto-refresh with delta (40 tokens vs 500) | [`.claude/context_invalidation_engine.py`](core/context_invalidation_engine.py) |
-| **4** | **Reviewer Provenance** | Routes conflicts to developer with deepest expertise in that module | [`.claude/reviewer_provenance_engine.py`](core/reviewer_provenance_engine.py) |
-| **5** | **Agent Autonomy** | Enables multi-agent workflows (Claude + other agents) with semantic coordination | [`.claude/agent_autonomy_engine.py`](core/agent_autonomy_engine.py) |
+**Traditional Git**: Developers work in parallel on stale code → merge conflicts → manual resolution → massive token waste (re-reading entire files = 500+ tokens per developer)
+
+**Neo**: Detects conflicts at semantic layer → prevents context staleness through delta refresh → routes developers sequentially with fresh context
+
+**Result**: ✅ Zero conflicts + 98-99% token savings + automatic coordination
 
 ---
 
-## 🔑 Phase 3: The Real Value Driver — Context Expiry & Delta Refresh
+## Choose Your Path
 
-**The breakthrough**: Traditional workflows re-read entire files when context gets stale. Neo detects staleness and refreshes only the DELTA.
+**👀 New to Neo?** (5 minutes)
+- Run: `./scripts/launch_2dev_demo.sh` (see it work in 3 minutes)
+- Read: [Why Neo Matters](#why-neo-matters)
+- Learn: [DEMO_GUIDE.md](DEMO_GUIDE.md)
 
-### The Problem Without Phase 3
-```
-Developer B waits for Developer A (500ms staleness):
-  - Re-reads entire file: 500 tokens
-  - Re-understands conflict markers: 300+ tokens
-  - Manually merges: 200+ tokens
-  TOTAL: ~1,000 tokens wasted per developer
-```
+**👨‍💻 Developer?** (15 minutes - Run tests locally)
+- **2-Developer Local Test**: `python tests/test_two_developer_coordination.py` (1 min)
+- **3-Developer Local Test**: `python tests/test_three_developer_coordination.py` (2 min)
+- **MCP Server Test**: `python tests/test_explicit_locks.py` (< 1 min)
+- Compare: [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md)
 
-### Neo's Solution (Phase 3)
-```
-Developer B waits for Developer A (500ms staleness):
-  - Detects staleness > 300ms threshold ✓
-  - Triggers auto-refresh with DELTA ONLY ✓
-  - Delta: Alice's +20 lines, -5 lines = 40 tokens
-  - Bob proceeds with fresh context: 40 tokens
-  SAVINGS: 1,000 → 40 tokens (96% reduction per refresh)
-```
+**🚀 Production Teams?** (10 minutes - IDE integration)
+- Setup: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
+- MCP Server: See [CLAUDE.md](CLAUDE.md)
+- Deploy: Neo works in Claude Code IDE pre-generation checks
 
-**Why this matters**: 
-- Without Phase 3: Multi-dev workflows waste 6,000+ tokens on stale context re-reads
-- With Phase 3: Same 3-dev workflow uses only 39 tokens total
-- **Real-world impact**: 98-99% token savings across all scenarios
-
-See: [`context_invalidation_engine.py`](core/context_invalidation_engine.py) | Tests: [`context_staleness_test.py`](baseline_comparison/context_staleness_test.py)
+**🏢 Enterprise?** (20 minutes - Scale validation)
+- Validated: 98.94% savings at 16 developers
+- See: [#empirical-proof](#empirical-proof)
+- Read: [baseline_comparison/](baseline_comparison/)
 
 ---
 
-## Empirical Proof: All 5 Phases Validated
+## Quick Start (Choose One)
 
-### 🔴 Real Measurements (Option A - 2026-09-26)
-
-**Major Update**: All simulation estimates **replaced with real measurements** from Neo's actual implementation.
-
-**Real Performance Characteristics** (measured from actual code):
+### 🚀 Fastest: Automatic Demo (3 minutes)
+```bash
+./scripts/launch_2dev_demo.sh      # 5 terminals open automatically
+./scripts/launch_3dev_demo.sh      # 7 terminals for 3-dev scenario
 ```
-Conflict Detection Latency:   0.08-0.22ms (sub-millisecond)
-Activity Log Write:           0.15ms per entry (negligible)
-Activity Log Read:            0.05ms for 8 entries (efficient)
-Lock Detection:               Instant via risk classification
-Per-Developer Tokens:         ~7 actual (vs 18-30 estimated)
-```
-
-**Key Finding**: Neo is MORE efficient than simulations estimated.
-
-See: [`REAL_MEASUREMENTS_SUMMARY.md`](baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md) | [`OPTION_A_FINDINGS_AND_OPTIMIZATIONS.md`](baseline_comparison/OPTION_A_FINDINGS_AND_OPTIMIZATIONS.md)
+**See**: Real terminals, activity log, lock states, fresh context flowing
 
 ---
 
-### Baseline Comparison Tests — Real Git operations, real measurements:
-
-### 8-Developer Test Results (Different Regions)
+### 📖 Learn: Guided Demo (10 minutes)
+```bash
+./scripts/launch_guided_2dev_demo.sh    # Step-by-step, press Enter to advance
+./scripts/launch_guided_3dev_demo.md    # See 3-dev queue progression
 ```
-Traditional Git (parallel edits):
-  - Conflicts detected: 2
-  - Manual resolution needed: YES
-  - Tokens wasted: 10,774
-
-Neo Coordination (sequential):
-  - Conflicts prevented: 2
-  - Manual resolution: NONE
-  - Tokens used: 112 (real measurement)
-  
-✅ 98.96% token savings | 100% conflict prevention
-```
-See: [`test_8dev_baseline.py`](baseline_comparison/test_8dev_baseline.py)
-
-### 8-Developer Test Results (Same Lines - Worst Case)
-```
-Traditional Git (8 devs on lines 100-150):
-  - Merge conflicts: 0 (Git's smart merge)
-  - Tokens wasted: 16,090 (re-reading entire file)
-  
-Neo Coordination (sequential lock):
-  - Conflicts prevented: All
-  - Manual resolution: NONE
-  - Tokens used: 70 (real measurement)
-  
-✅ 99.57% token savings | Automatic coordination
-```
-See: [`test_8dev_high_conflict.py`](baseline_comparison/test_8dev_high_conflict.py)
-
-### 16-Developer Extreme Scale Test (Same 20 Lines)
-```
-Traditional Git (16 devs on lines 100-120):
-  - Developers: 16
-  - Tokens wasted: 21,136
-  - Per developer: 1,321 tokens
-  
-Neo Coordination (sequential):
-  - Lock applies at dev #2
-  - Tokens used: 224 (real measurement)
-  - Per developer: 14 tokens
-  
-✅ 98.94% token savings | Scaling validated
-```
-See: [`test_16dev_extreme_scale.py`](baseline_comparison/test_16dev_extreme_scale.py)
-
-### Phase 3 Validation: Context Staleness + Delta Refresh
-```
-Real measurement from Activity Log:
-
-Developer A (alice):
-  - Declares intent: 28 chars = 7 tokens
-  - Completes work: +20 lines = 7 tokens
-  - Publishes delta: 40 tokens (not 500)
-
-Developer B (bob) waiting:
-  - Staleness detected at 500ms
-  - Auto-refresh with delta: 7 tokens
-  - Fresh context: Immediate, cost-effective
-
-Result: Zero staleness overhead, 96% token reduction per refresh
-```
-See: [`context_staleness_test.py`](baseline_comparison/context_staleness_test.py)
-
-### Real Token Efficiency (From Actual Measurements)
-| Scenario | Traditional | Neo | Savings | Based On |
-|----------|-------------|-----|---------|----------|
-| 8 devs (different) | 10,774 tok | **112 tok** | **98.96%** | Real measurements |
-| 8 devs (same lines) | 16,090 tok | **70 tok** | **99.57%** | Real measurements |
-| 16 devs (extreme) | 21,136 tok | **224 tok** | **98.94%** | Real measurements |
-| **Average** | | | **98.82%** | ✅ Exceeds 98-99% claim |
-
-✅ **All claims validated by real implementation code, not simulations**
-
-📊 Complete results in [`baseline_comparison/`](baseline_comparison/) — See REAL_MEASUREMENTS_SUMMARY.md
+**See**: Each step explained, "what to look for", key insights
 
 ---
 
-## ✅ Production Readiness: Validated by Real Measurements
-
-All performance characteristics validated by calling actual Neo functions (not simulations):
-
-| Characteristic | Measurement | Status |
-|---|---|---|
-| **Conflict Detection Latency** | 0.08-0.22ms | ✅ Sub-millisecond |
-| **Activity Log Throughput** | 6,600+ writes/sec | ✅ Production-ready |
-| **Scaling Linearity** | O(n) to 16 developers | ✅ Validated at scale |
-| **Lock Mechanism** | Risk classification instant | ✅ No explicit lock overhead |
-| **Token Efficiency** | 98.82% average | ✅ Exceeds 98-99% claim |
-| **Data Integrity** | File-based, reproducible | ✅ Fully deterministic |
-
-**Capacity**: 1,000 developers = 370ms total overhead (0.37ms per developer). Safe for enterprise teams.
-
-See: [`OPTION_A_FINDINGS_AND_OPTIMIZATIONS.md`](baseline_comparison/OPTION_A_FINDINGS_AND_OPTIMIZATIONS.md)
-
----
-
-## State Machine: File Evolution History
-
-Every file has a complete version history with semantic tracking:
-
-```
-[v1.0] AVAILABLE (initial state)
-    ↓ Developer declares intent
-[v2.0] EDITING (Alice: "Refactor password validation to bcrypt")
-    ├─ Lock applies (if 2+ developers)
-    ├─ Context snapshot created
-    ├─ Conflict risk: 18/100 (LOW)
-    └─ Phase 1 active
-    
-    ↓ Developer finishes, publishes changes
-[v3.0] PUBLISHED (+20 lines, -5 lines)
-    ├─ Delta: 47 tokens
-    ├─ Phase 2: Handoff created for Bob
-    └─ Notification sent to all developers
-    
-    ↓ Next developer notified, context may be stale
-[v4.0] CONTEXT_REFRESH (staleness detected > 300ms)
-    ├─ Phase 3: Auto-refresh triggered
-    ├─ Delta fetched: 40 tokens (vs 500 for full re-read)
-    └─ Bob now has fresh context
-    
-    ↓ Next developer starts editing with fresh context
-[v5.0] EDITING (Bob: "Add password strength requirements")
-    └─ Built on Alice's work, no stale code
-```
-
-**Key insight**: Complete history eliminates context re-reads. Each developer gets only what changed (delta = 40 tokens vs full file = 500 tokens).
-
-See: [`.claude/workflow_state_machine.py`](core/workflow_state_machine.py)
-
----
-
-## Phase 1.0: Explicit Lock Mechanism (Neo 4.0)
-
-**The Evolution**: Neo 4.0 enhances Phase 1 with explicit lock tracking, making lock state visible, auditable, and queryable.
-
-### What Changed
-
-**Implicit Lock (Before)**:
-- Lock state was encoded in `RiskLevel` enum (LOW/MEDIUM/HIGH)
-- Lock holder, queue position, expiration invisible
-- No audit trail of lock operations
-
-**Explicit Lock (Neo 4.0)**:
-- Dedicated lock fields in `ActivityEntry` dataclass
-- Lock state, holder, acquisition time, expiration, reason, scope all tracked
-- Queue position and wait-for relationships visible
-- Complete audit trail in activity log
-
-### Lock Fields (New)
-
-```python
-@dataclass
-class ActivityEntry:
-    # ... existing fields ...
-    lock_state: Optional[str]          # "ACQUIRED", "WAITING", "RELEASED"
-    lock_holder: Optional[str]         # developer_id who holds lock
-    lock_acquired_at: Optional[float]  # Unix timestamp (lock acquisition)
-    lock_expires_at: Optional[float]   # Unix timestamp (lock expiration)
-    lock_timeout_seconds: int          # default 30 minutes
-    lock_reason: Optional[str]         # "MEDIUM_CONFLICT", "HIGH_CONFLICT"
-    lock_scope: Optional[str]          # "file" or "region"
-    queue_position: Optional[int]      # Position if waiting (0=next)
-    waiting_for: Optional[str]         # developer_id this one is waiting for
-```
-
-### Lock Lifecycle
-
-```
-1. Developer A declares intent on auth.py::validate_password
-   → log_activity() creates entry with lock_state=None (no lock yet)
-
-2. Developer B declares intent on SAME region
-   → LockManager.acquire_lock() called automatically
-   → Lock holder: A, Lock state: ACQUIRED
-   → B's entry: lock_state=WAITING, queue_position=0, waiting_for=A
-
-3. Developer A completes work
-   → LockManager.release_lock() called
-   → A's lock marked: lock_state=RELEASED
-   → B promoted automatically: lock_state=ACQUIRED, queue_position=None
-
-4. Developer B completes, Developer C promoted
-   → Sequential execution guaranteed
-   → Zero conflicts, zero manual merges
-```
-
-### Lock Manager API
-
-**File**: [`core/lock_manager.py`](core/lock_manager.py)
-
-```python
-manager = LockManager(tenant_id="default")
-
-# Acquire lock (or queue if held)
-result = manager.acquire_lock(
-    file_path="auth.py",
-    region="validate_password",
-    developer_id="bob",
-    reason="MEDIUM_CONFLICT",
-    scope="region"
-)
-# Returns: {success: bool, lock_holder: str, queue_position: int, ...}
-
-# Release lock (auto-promotes next developer)
-result = manager.release_lock(
-    file_path="auth.py",
-    region="validate_password",
-    developer_id="alice"
-)
-
-# Check lock state
-state = manager.get_lock_state("auth.py", "validate_password")
-# Returns: {locked: bool, lock_holder: str, queue_size: int, queue_list: [...]}
-
-# Check if lock expired
-expired = manager.check_expired("auth.py", "validate_password")
-
-# Auto-cleanup expired locks
-cleaned = manager.cleanup_expired()
-```
-
-### Integration with Risk Classification
-
-**Before**: RiskLevel returned lock "signal" (MEDIUM/HIGH)
-**After**: LockManager creates explicit lock entry + RiskLevel still returned
-
-```python
-# In pre_gen_check.py
-risk_level, msg, lock_info = check_for_conflicts(
-    agent_id="bob",
-    file_path="auth.py",
-    intent="Refactor validation",
-    region="validate_password"
-)
-
-# RiskLevel.MEDIUM detected → LockManager.acquire_lock() called automatically
-# lock_info contains explicit lock state: {success, lock_holder, queue_position, ...}
-```
-
-### Backward Compatibility
-
-✅ **Fully backward compatible**:
-- All lock fields are optional (None by default)
-- Existing `RiskLevel` classification unchanged
-- Existing tests still pass
-- Old activity log entries still readable (lock fields absent)
-
-### Testing Phase 1.0
+### 💻 Developer: Run Local Tests (15 minutes total)
 
 ```bash
-# Run explicit lock tests (9 tests, all passing)
+# Test 1: 2-developer coordination (1 min)
+python tests/test_two_developer_coordination.py
+# Expected: PASSED, 0 conflicts, context flows alice→bob
+
+# Test 2: 3-developer coordination (2 min)
+python tests/test_three_developer_coordination.py
+# Expected: PASSED, 0 conflicts, dependency chain alice→bob→charlie
+
+# Test 3: Explicit lock mechanism (< 1 min)
 python tests/test_explicit_locks.py
+# Expected: 9/9 tests passed, lock queue behavior validated
 
-# Tests cover:
-# ✓ Lock acquisition when free
-# ✓ Lock blocking when held
-# ✓ Queue tracking with 3+ developers
-# ✓ Auto-promotion on release
-# ✓ Lock expiration after timeout
-# ✓ Backward compatibility with RiskLevel
-# ✓ 2-dev workflow with explicit locks
-# ✓ 3-dev workflow with queue
-# ✓ Lock state persisted in activity log
+# Test 4: Edge cases (4 min)
+python tests/test_edge_cases.py
+# Expected: PASSED, rapid declarations, staleness detection, merge aggregation
 ```
 
-See: [`tests/test_explicit_locks.py`](tests/test_explicit_locks.py)
+**What you're testing:**
+- ✅ Lock applies at 2+ developers (no lock at 1)
+- ✅ Fresh context flows automatically
+- ✅ Zero conflicts detected
+- ✅ Sequential workflow (alice → bob → charlie)
+- ✅ Queue positions tracked correctly
+
+**Results**: All tests pass = Neo coordination works ✅
 
 ---
 
-## Quick Start
-
-### Run Neo Tests (Proves Real Implementation)
-
-**Baseline Tests — Validate All 5 Optimizations** (recommended for new developers):
+### 🏢 Production: Terminal-Based Test (20 minutes)
 ```bash
-# Optimization 1: Delta Refresh (85% token savings)
-python tests/test_optimization_1_delta_refresh.py
-
-# Optimization 2: Lock Simplification (implicit lock via RiskLevel)
-python tests/test_optimization_2_lock_simplification.py
-
-# Optimization 3: Token Counting Formula (7 + 14×(N-1))
-python tests/test_optimization_3_token_counting.py
-
-# Optimization 4: File-Based Caching (442x speedup)
-python tests/test_optimization_4_file_cache.py
-
-# Optimization 5: Staleness Threshold (1000ms detection)
-python tests/test_optimization_5_staleness_threshold.py
-
-# Run all 5 at once
-python tests/test_optimization_*.py
-```
-
-**Advanced Tests — Real Measurements & Baseline Comparisons** (for deeper validation):
-```bash
-# Real latency measurements from actual Neo implementation
-python baseline_comparison/test_real_neo_measurements.py
-
-# 8-developer test (different regions)
-python baseline_comparison/test_8dev_baseline.py
-
-# 8-developer test (worst case: same lines)
-python baseline_comparison/test_8dev_high_conflict.py
-
-# 16-developer extreme scale test
-python baseline_comparison/test_16dev_extreme_scale.py
-```
-
-**Expected Results**:
-- ✅ All 31 optimization tests passing (100% pass rate)
-- ✅ Conflict detection: 0.08-0.22ms (sub-millisecond)
-- ✅ Activity logging: 0.15ms per entry (negligible overhead)
-- ✅ Token savings: 98-99% (real measurements, not estimates)
-- ✅ Scaling validated to 16 developers (linear O(n) growth)
-
-### Understanding the Value
-- **Without Neo**: 8 developers = 10,774 tokens wasted, conflicts, manual resolution
-- **With Neo**: 8 developers = 112 tokens, 0 conflicts, automatic coordination  
-- **Real benefit**: 98.96% token savings + zero conflicts + automatic handoff
-- **At 16 developers**: 21,136 tokens → 224 tokens (98.94% savings)
-
----
-
-## Test Neo in Action
-
-**Three ways to test Neo's real multi-developer coordination:**
-
-| Approach | Best For | Setup Time | Automation | Watchers |
-|----------|----------|------------|-----------|----------|
-| **Automated Multi-Terminal Demo** | Quick demo, visual proof | 1 min | ✅ YES | ✅ Real terminals |
-| **Terminal with File Watchers** | Learning, CI/CD, no IDE | 15 min | Manual | ✅ YES |
-| **Claude Code IDE + MCP** | Production teams, token efficiency | 10 min | N/A | N/A |
-
----
-
-## Real Test #0: Automated Multi-Terminal Demo (Fastest)
-
-**The simplest way to see Neo in action: One command, multiple Terminal windows open automatically.**
-
-**Best for**: Demos, quick verification, understanding the workflow, onboarding
-
-**Guide**: [`DEMO_GUIDE.md`](DEMO_GUIDE.md)
-
-**What you'll see**:
-- ✅ 5 or 7 actual Terminal windows open automatically
-- ✅ Real-time activity log monitoring with lock states
-- ✅ Developers declaring intent sequentially
-- ✅ Conflict detection preventing wasted code generation
-- ✅ Queue positions showing who's waiting
-- ✅ Watchers monitoring lock state transitions
-- ✅ Fresh context available when locks release
-
-**Quick start**:
-```bash
-# 2-Developer Demo (5 terminals)
-./launch_2dev_demo.sh
-
-# 3-Developer Demo (7 terminals)
-./launch_3dev_demo.sh
-```
-
-**What happens**:
-- Terminal 1: Activity log viewer (refreshes every 2 seconds)
-- Terminal 2+: Developers declaring intent, checking conflicts, generating code
-- Terminal N-1, N: Watchers monitoring queue positions and lock states
-
-**Timeline for 2-dev demo**:
-- T+0s: Alice declares intent → Risk: LOW (no conflict)
-- T+1s: Bob declares intent → Risk: MEDIUM (gets queued)
-- T+4s: Alice publishes code
-- T+5s: Bob gets fresh context
-- T+7s: Bob publishes code
-
-**Expected output**:
-```
-👤 DEVELOPER: ALICE
-Risk Level: LOW ✅
-✏️  Generated: password_hash() function
-✅ Code published to repository
-
-👤 DEVELOPER: BOB
-Risk Level: MEDIUM ⚠️
-🔒 Queue Position: 1
-⏳ Waiting for: alice
-[... waits 4 seconds ...]
-✅ Found 2 entries from Alice
-📖 Merging Alice's changes into context...
-✏️  Generated: JWT token creation
-✅ Code published to repository
-```
-
-**Files created**:
-- `launch_2dev_demo.sh` - Launcher for 2-developer demo
-- `launch_3dev_demo.sh` - Launcher for 3-developer demo
-- `bin/activity_log_viewer.sh` - Real-time activity log monitor
-- `bin/developer_*.sh` - Developer workflow scripts
-- `bin/watcher_*.sh` - Conflict monitoring watchers
-
-See [`DEMO_GUIDE.md`](DEMO_GUIDE.md) for complete guide, customization options, and troubleshooting.
-
----
-
-## Real Test #1: Terminal-Based 2-Developer Test (With File Watchers & Server)
-
-**The realistic test: actual file watchers, running server, multiple terminals, real file editing.**
-
-See Neo prevent merge conflicts in real-time with two developers on the same file. This is the terminal-based approach that works without Claude Code IDE.
-
-Follow the **step-by-step guide** with actual functional calls:
-
-### Setup & Run Terminal Test
-
-**Best for**: Understanding how Neo works, testing without Claude Code IDE, CI/CD integration
-
-**Guide**: [`docs/LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md)
-
-**What you'll test**:
-- ✅ Local Neo server coordination
-- ✅ File watcher detection (NEO_DEVELOPER environment variable)
-- ✅ Intent declaration requirement
-- ✅ 2-developer workflow with locks
-- ✅ 3-developer workflow with queue management
-- ✅ Sequential promotion (alice → bob → charlie)
-- ✅ Context aggregation between developers
-
-**Quick start**:
-```bash
-# Terminal 1: Start Neo server
+# Terminal 1: Neo server
 python -m cli.neo_server --clear
 
-# Terminal 2: Start alice's watcher
-export NEO_DEVELOPER=alice
-python -m cli.file_watcher alice
+# Terminal 2: Alice watcher
+export NEO_DEVELOPER=alice && python -m cli.file_watcher alice
 
-# Terminal 3: Start bob's watcher
-export NEO_DEVELOPER=bob
-python -m cli.file_watcher bob
+# Terminal 3: Bob watcher
+export NEO_DEVELOPER=bob && python -m cli.file_watcher bob
 
-# Terminal 4+: Declare intent and edit files
+# Terminal 4: Declare intent and edit
 python -m cli.neo_client declare alice src/auth.py "Add OAuth2"
-vim src/auth.py  # Make changes, watcher detects
+vim src/auth.py  # Edit, watcher detects automatically
 ```
 
-See [`docs/LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) for complete step-by-step instructions.
+See full guide: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
 
 ---
 
-## Real Test #2: Claude Code IDE Testing (MCP Server)
-
-**Best for**: Production teams, pre-generation conflict detection, IDE-native workflows, token efficiency
-
-**Guide**: [`docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
-
-**What you'll test**:
-- ✅ MCP server in Claude Code IDE
-- ✅ Pre-generation conflict checking
-- ✅ Automatic developer context
-- ✅ 2-developer workflow with risk levels (✅/⚠️/🚫)
-- ✅ 3+ developer queue behavior
-- ✅ Context refresh with fresh developer input
-- ✅ Token savings (47-99% reduction)
-
-**Quick start**:
+### 🧠 IDE: Claude Code + MCP Server (10 minutes)
 ```bash
-# Configure MCP server in .claude/settings.json
-{
-  "mcp": {
-    "neo-conflict-detection": {
-      "command": "/absolute/path/to/Neo/.venv/bin/python3",
-      "args": ["-m", "ide.mcp_neo_server"],
-      "env": {
-        "PYTHONPATH": "/absolute/path/to/Neo",
-        "NEO_MULTITENANCY": "false",
-        "CLAUDE_TENANT_ID": "default"
-      }
-    }
-  }
-}
+# Configure in .claude/settings.json
+# See: CLAUDE.md for MCP server configuration
 
-# Open two Claude Code IDE instances on same project
-# In Alice's IDE: @neo check src/auth.py "Add OAuth2"
-# In Bob's IDE:  @neo check src/auth.py "Add JWT"  # Shows MEDIUM RISK
+# Then open 2 Claude Code IDE instances:
+# IDE 1 (Alice): Generate code with Neo conflict check
+# IDE 2 (Bob): See conflict detection before generation
 ```
 
-See [`docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md) for complete step-by-step instructions.
+See full guide: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
 
 ---
 
-## 🎬 Neo Demonstrations
+## Empirical Proof
 
-Three demo approaches to see Neo in action — choose the one that matches your learning style:
+### Real Measurements (Actual Implementation, Not Simulation)
 
-### 1. 🚀 Automatic Demo (Fastest - 2-3 minutes)
-
-Multi-terminal demo that runs on a fixed timeline. Perfect for quick verification and CI/CD automation.
-
-```bash
-./launch_2dev_demo.sh      # 5 terminals, 2-developer scenario
-./launch_3dev_demo.sh      # 7 terminals, 3-developer scenario
+**Performance Characteristics**:
+```
+Conflict Detection:      0.08-0.22ms (sub-millisecond)
+Activity Log Write:      0.15ms per entry (negligible)
+Per-Developer Tokens:    ~7 actual
+Lock Mechanism:          Instant via risk classification
 ```
 
-**What you get:**
-- Terminals open automatically
-- Developers run on fixed timeline (T+0s, T+1s, T+4s, etc.)
-- Activity log updates in real-time
-- All terminals run in parallel
-- See full workflow end-to-end
+### Real Results from Baseline Tests
 
-See: [`DEMO_GUIDE.md`](DEMO_GUIDE.md)
-
-### 2. 📖 Guided Interactive Demo (Ideal for Learning - 10-15 minutes)
-
-Step-by-step guided demo with numbered terminals and explanations at each stage. User presses Enter to advance.
-
-```bash
-./launch_guided_2dev_demo.sh      # 5 terminals, step-by-step with guidance
-./launch_guided_3dev_demo.sh      # 7 terminals, step-by-step with queue progression
+**8-Developer Test (Different Regions)**:
+```
+Traditional Git:  10,774 tokens wasted, 2 conflicts, manual resolution
+Neo Coordination: 112 tokens, 0 conflicts, automatic
+Savings: 98.96%
 ```
 
-**What you get:**
-- Numbered terminals for easy reference
-- Main guidance terminal explains each step
-- "What's happening" → "What to look for" → "Key insights" at each stage
-- Press Enter to control pacing
-- Learn why Neo does what it does
-- Understand queue progression and lock behavior
-
-See: [`GUIDED_DEMO_README.md`](GUIDED_DEMO_README.md)
-
-### 3. 🛠️ Manual Terminal Test (Most Thorough - 20-30 minutes)
-
-Full Neo server running with real file watchers. Test at your own pace with real editing.
-
-```bash
-# See docs/LOCAL_TWO_DEVELOPER_TEST.md for complete instructions
+**8-Developer Test (Same Lines - Worst Case)**:
+```
+Traditional Git:  16,090 tokens wasted
+Neo Coordination: 70 tokens
+Savings: 99.57%
 ```
 
-**What you get:**
-- Real Neo server running
-- File watcher detection
-- Real editing with vim/nano/VS Code
-- Can pause and inspect at any point
-- Can modify workflow mid-test
-- Production-readiness validation
+**16-Developer Extreme Scale**:
+```
+Traditional Git:  21,136 tokens (1,321 per developer)
+Neo Coordination: 224 tokens (14 per developer)
+Savings: 98.94%
+```
 
-See: [`docs/LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) | [`docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
+**Average**: 98.82% token savings across all scenarios ✅
 
-### Quick Comparison
-
-| Feature | Automatic | Guided | Manual |
-|---------|-----------|--------|--------|
-| **Setup Time** | 1 min | 1 min | 5-10 min |
-| **Run Time** | 2-3 min | 10-15 min | 20-30 min |
-| **Terminals** | Auto-open | Auto-open with numbering | Manual |
-| **Pacing** | Fixed timeline | User-controlled | Full control |
-| **Guidance** | Self-guided | Step-by-step | Documentation |
-| **Activity Log** | Real-time | Real-time | Real file ops |
-| **Best For** | Quick demo | Learning | Deep testing |
-
-**Recommended:** Start with **Guided 2-Dev Demo** to understand Neo, then explore **Automatic Demo** for quick verification.
-
-See: [`DEMO_COMPARISON.md`](DEMO_COMPARISON.md) for detailed comparison.
-
----
-
-## Comparing Terminal vs IDE Approaches
-
-| Aspect | Terminal + Watchers | Claude Code IDE + MCP |
-|--------|----------|-----------------|
-| **Setup time** | 15 min (4+ terminals) | 10 min (MCP config) |
-| **Workflow** | File watchers + server | IDE-native with @neo commands |
-| **Conflict detection** | Post-generation (good) | **Pre-generation (excellent)** |
-| **Token savings** | 47% average | **99% peak** |
-| **Best for** | Learning, CI/CD, servers | Production teams, efficiency |
-| **File editing** | Any editor (vim, VS Code) | Claude Code IDE only |
-| **Guide** | [`LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) | [`CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md) |
+See: [baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md)
 
 ---
 
 ## Why Neo Matters
 
-**Without Neo (Traditional Git):**
-```
-3 developers on same file → 2 merge conflicts → Manual resolution needed
-Tokens wasted: 6,000+ (re-reading files, understanding conflicts, merging)
-Efficiency: 11% (89% wasted on stale context)
-Time: 2-3 hours on conflict resolution
-```
+**Without Neo (Traditional Git)**:
+- 3 developers on same file → 2 merge conflicts
+- Tokens wasted: 6,000+ (re-reading files, understanding conflicts, merging)
+- Time: 2-3 hours on conflict resolution
+- Manual merge needed: YES
 
-**With Neo (Semantic Coordination):**
-```
-3 developers on same file → 0 merge conflicts → Automatic coordination
-Tokens used: 279 (context snapshots + deltas)
-Efficiency: 99.3% (98.7% of tokens on useful work)
-Time: Developers work sequentially, each sees fresh context
-```
+**With Neo (Semantic Coordination)**:
+- 3 developers on same file → 0 merge conflicts
+- Tokens used: 279 (context snapshots + deltas)
+- Automatic coordination: YES
+- Manual merge needed: NO
 
 **The Win**: 98-99% token savings + 100% conflict prevention + automatic coordination
 
 ---
 
-## Core Files & Architecture
+## How It Works (5 Phases)
 
-| File | Purpose | Provides |
-|------|---------|----------|
-| [`.claude/workflow_state_machine.py`](core/workflow_state_machine.py) | Phase 1: Lock logic | `WorkflowStateMachine.start_editing()` |
-| [`.claude/temporal_handoff_engine.py`](core/temporal_handoff_engine.py) | Phase 2: Queue + handoff | `create_handoff()`, `acknowledge_handoff()` |
-| [`.claude/context_invalidation_engine.py`](core/context_invalidation_engine.py) | Phase 3: Staleness detection | `refresh_context()` at 300ms threshold |
-| [`.claude/reviewer_provenance_engine.py`](core/reviewer_provenance_engine.py) | Phase 4: Expertise routing | `get_reviewer_provenance()` |
-| [`.claude/agent_autonomy_engine.py`](core/agent_autonomy_engine.py) | Phase 5: Multi-agent workflows | `execute_full_workflow_orchestration()` |
-| [`core/activity_log.py`](core/activity_log.py) | File-based coordination | `log_activity()`, `check_for_conflicts()` |
+| Phase | What | Benefit |
+|-------|------|---------|
+| **1: Lock-Only-When-Needed** | Applies sequential lock at 2+ developers | Prevents simultaneous edits |
+| **2: Temporal Handoff** | Auto-queues next developer on same file | Fair, sequential workflow |
+| **3: Context Invalidation** | Detects staleness >300ms, auto-refreshes delta | 96% token reduction per refresh |
+| **4: Reviewer Provenance** | Routes to developer with deepest expertise | Better conflict resolution |
+| **5: Agent Autonomy** | Multi-agent coordination (Claude + others) | Scalable to any team |
 
-**Key insight**: All operations are local (`.devsync/activity-log.json`) — no network calls for core coordination.
+**Key Insight**: All operations are **local** (`.devsync/activity-log.json`) — no network calls, no external dependencies.
+
+---
+
+## Demo Approaches Comparison
+
+| Feature | Automatic | Guided | Manual |
+|---------|-----------|--------|--------|
+| **Time** | 2-3 min | 10-15 min | 20-30 min |
+| **Setup** | 1 click | 1 click | 5 min |
+| **Learning** | Quick view | Step-by-step | Deep test |
+| **Best for** | Demos | Learning | Production |
+
+See: [DEMO_COMPARISON.md](DEMO_COMPARISON.md) for detailed comparison
+
+---
+
+## Core Architecture
+
+**Key Files**:
+- [`core/coordination_machine.py`](core/coordination_machine.py) - Lock & queue logic
+- [`core/lock_manager.py`](core/lock_manager.py) - Explicit lock tracking
+- [`core/activity_log.py`](core/activity_log.py) - File-based coordination
+- [`core/risk_classifier.py`](core/risk_classifier.py) - Conflict detection
+- [`tests/test_two_developer_coordination.py`](tests/test_two_developer_coordination.py) - 2-dev validation
+- [`tests/test_three_developer_coordination.py`](tests/test_three_developer_coordination.py) - 3-dev scaling
+
+**Activity Log** (`.devsync/activity-log.json`):
+- Records developer intent
+- Tracks lock state transitions
+- Shows fresh context available
+- Logs completion with delta
+- NO database required (file-based)
+
+---
+
+## Phase 1.0: Explicit Lock Mechanism (Neo 4.0)
+
+**What Changed**: Locks now have visible state (ACQUIRED/WAITING/RELEASED) with queue tracking.
+
+**Lock States**:
+```
+Developer A declares → lock_state: "ACQUIRED", lock_holder: "alice"
+Developer B declares → lock_state: "WAITING", queue_position: 0, waiting_for: "alice"
+Developer A completes → lock_state: "RELEASED"
+Developer B promoted → lock_state: "ACQUIRED" (auto-promotion)
+```
+
+**Backward Compatible**: All lock fields optional, RiskLevel unchanged, existing tests pass.
+
+See: [tests/test_explicit_locks.py](tests/test_explicit_locks.py)
+
+---
+
+## Production Readiness
+
+✅ **Validated**:
+- Conflict detection: 0.08-0.22ms (sub-millisecond)
+- Activity log: 6,600+ writes/sec (production-ready)
+- Scaling: O(n) linearity to 16 developers
+- Token efficiency: 98.82% average
+- Data integrity: Fully deterministic
+
+✅ **Capacity**: 1,000 developers = 370ms total overhead (0.37ms per developer)
+
+---
+
+## Getting Started Next
+
+1. **Try it now** (3 min):
+   ```bash
+   ./scripts/launch_2dev_demo.sh
+   ```
+
+2. **Understand it** (5 min):
+   - Read: [Why Neo Matters](#why-neo-matters)
+   - Watch: Activity log changing in real-time
+   - See: Lock transitions and fresh context flowing
+
+3. **Test it** (15 min):
+   ```bash
+   python tests/test_two_developer_coordination.py
+   python tests/test_three_developer_coordination.py
+   python tests/test_explicit_locks.py
+   ```
+
+4. **Deploy it** (10 min):
+   - See: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
+   - Configure MCP server in IDE
+
+---
+
+## Documentation
+
+- [DEMO_GUIDE.md](DEMO_GUIDE.md) - All demo approaches
+- [DEMO_COMPARISON.md](DEMO_COMPARISON.md) - Demo comparison table
+- [GUIDED_DEMO_README.md](GUIDED_DEMO_README.md) - Step-by-step walkthrough
+- [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md) - Comprehensive testing guide
+- [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) - Terminal-based test
+- [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md) - IDE integration
+- [baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md) - Performance data
+- [CLAUDE.md](CLAUDE.md) - Project configuration & MCP server setup
 
 ---
 
@@ -707,12 +310,15 @@ MIT — See [LICENSE](LICENSE)
 
 ---
 
-**Status**: ✅ Production-Ready | ⚡ Automatic conflict resolution at semantic layer | 🔒 Zero Git merge conflicts guaranteed
+**Status**: ✅ Production-Ready | ⚡ Automatic conflict resolution | 🔒 Zero merge conflicts guaranteed
 
 **The core value**: Eliminate Git merge conflicts by moving conflict resolution one layer below Git through intelligent semantic coordination.
 
-**Run Real Tests**:
-1. **Terminal Test with Watchers**: See `docs/LOCAL_TWO_DEVELOPER_TEST.md`
-2. **Claude Code IDE with MCP**: See `docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`
+**Start now**: 
+```bash
+./scripts/launch_2dev_demo.sh
+```
 
-*Note: Simulation tests have been moved to `simulations/` folder for reference only.*
+---
+
+*Note: Full technical details (Phase 3 deep dive, empirical methodology, advanced configuration) moved to `docs/` and `baseline_comparison/` folders for clarity. See [DEMO_GUIDE.md](DEMO_GUIDE.md) for all documentation links.*
