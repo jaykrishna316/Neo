@@ -161,6 +161,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             # Count UNIQUE developers on this file (not entries)
             developers_on_file = set([e.get('developer_id') for e in entries if e.get('file_path') == file_path])
             same_file_count = len(developers_on_file)
+            print(f"DEBUG: entries={[e.get('developer_id') for e in entries if e.get('file_path') == file_path]}, developers_on_file={developers_on_file}, same_file_count={same_file_count}")
 
             # Build response
             response = {
