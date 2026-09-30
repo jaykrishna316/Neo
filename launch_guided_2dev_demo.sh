@@ -40,7 +40,7 @@ echo "[]" > .devsync/activity-log.json
 echo -e "${YELLOW}Opening 5 numbered Terminal windows...${NC}\n"
 sleep 1
 
-# Function to open terminal with title
+# Function to open terminal with title using AppleScript
 open_terminal_with_title() {
     local num=$1
     local title=$2
@@ -48,18 +48,17 @@ open_terminal_with_title() {
 
     echo -e "${BLUE}[${num}/5]${NC} Opening: ${title}"
 
-    # Create a wrapper script that sets terminal title
-    cat > /tmp/neo_demo_$num.sh << 'WRAPPER'
-#!/bin/bash
-SCRIPT_PATH="$1"
-TITLE="$2"
-# Set terminal title
-echo -ne "\033]0;${TITLE}\007"
-# Run the script
-bash "$SCRIPT_PATH"
-WRAPPER
-    chmod +x /tmp/neo_demo_$num.sh
-    open -a Terminal /tmp/neo_demo_$num.sh "$script" "$title"
+    # Use AppleScript to open Terminal and run script with custom window title
+    osascript <<EOF
+tell application "Terminal"
+    activate
+    set newWindow to (create new window with default settings)
+    tell newWindow
+        set name to "${title}"
+        do script "cd '$NEO_DIR' && bash '${script}' && exit" in (first tab of it)
+    end tell
+end tell
+EOF
     sleep 0.8
 }
 
