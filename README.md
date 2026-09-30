@@ -410,12 +410,80 @@ python baseline_comparison/test_16dev_extreme_scale.py
 
 ## Test Neo in Action
 
-**Two ways to test Neo's real multi-developer coordination:**
+**Three ways to test Neo's real multi-developer coordination:**
 
-| Approach | Best For | Setup Time | Watchers | Server |
-|----------|----------|------------|----------|--------|
-| **Terminal with File Watchers** | Learning, CI/CD, no IDE | 15 min | ✅ YES | ✅ YES |
+| Approach | Best For | Setup Time | Automation | Watchers |
+|----------|----------|------------|-----------|----------|
+| **Automated Multi-Terminal Demo** | Quick demo, visual proof | 1 min | ✅ YES | ✅ Real terminals |
+| **Terminal with File Watchers** | Learning, CI/CD, no IDE | 15 min | Manual | ✅ YES |
 | **Claude Code IDE + MCP** | Production teams, token efficiency | 10 min | N/A | N/A |
+
+---
+
+## Real Test #0: Automated Multi-Terminal Demo (Fastest)
+
+**The simplest way to see Neo in action: One command, multiple Terminal windows open automatically.**
+
+**Best for**: Demos, quick verification, understanding the workflow, onboarding
+
+**Guide**: [`DEMO_GUIDE.md`](DEMO_GUIDE.md)
+
+**What you'll see**:
+- ✅ 5 or 7 actual Terminal windows open automatically
+- ✅ Real-time activity log monitoring with lock states
+- ✅ Developers declaring intent sequentially
+- ✅ Conflict detection preventing wasted code generation
+- ✅ Queue positions showing who's waiting
+- ✅ Watchers monitoring lock state transitions
+- ✅ Fresh context available when locks release
+
+**Quick start**:
+```bash
+# 2-Developer Demo (5 terminals)
+./launch_2dev_demo.sh
+
+# 3-Developer Demo (7 terminals)
+./launch_3dev_demo.sh
+```
+
+**What happens**:
+- Terminal 1: Activity log viewer (refreshes every 2 seconds)
+- Terminal 2+: Developers declaring intent, checking conflicts, generating code
+- Terminal N-1, N: Watchers monitoring queue positions and lock states
+
+**Timeline for 2-dev demo**:
+- T+0s: Alice declares intent → Risk: LOW (no conflict)
+- T+1s: Bob declares intent → Risk: MEDIUM (gets queued)
+- T+4s: Alice publishes code
+- T+5s: Bob gets fresh context
+- T+7s: Bob publishes code
+
+**Expected output**:
+```
+👤 DEVELOPER: ALICE
+Risk Level: LOW ✅
+✏️  Generated: password_hash() function
+✅ Code published to repository
+
+👤 DEVELOPER: BOB
+Risk Level: MEDIUM ⚠️
+🔒 Queue Position: 1
+⏳ Waiting for: alice
+[... waits 4 seconds ...]
+✅ Found 2 entries from Alice
+📖 Merging Alice's changes into context...
+✏️  Generated: JWT token creation
+✅ Code published to repository
+```
+
+**Files created**:
+- `launch_2dev_demo.sh` - Launcher for 2-developer demo
+- `launch_3dev_demo.sh` - Launcher for 3-developer demo
+- `bin/activity_log_viewer.sh` - Real-time activity log monitor
+- `bin/developer_*.sh` - Developer workflow scripts
+- `bin/watcher_*.sh` - Conflict monitoring watchers
+
+See [`DEMO_GUIDE.md`](DEMO_GUIDE.md) for complete guide, customization options, and troubleshooting.
 
 ---
 
