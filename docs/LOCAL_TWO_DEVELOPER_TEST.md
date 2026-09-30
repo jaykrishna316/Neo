@@ -69,8 +69,8 @@ Terminal 4+: Developers Edit Code (Vim, VS Code, etc.)
 Install dependencies:
 
 ```bash
-cd /path/to/Neo
-pip install -r requirements.txt
+cd /home/user/Neo
+.venv/bin/pip install -r requirements.txt
 ```
 
 This installs:
@@ -81,7 +81,7 @@ This installs:
 ### Initialize Test Repository
 
 ```bash
-cd /path/to/Neo
+cd /home/user/Neo
 # Create test directories if they don't exist
 mkdir -p .devsync src lib
 ```
@@ -352,7 +352,7 @@ Output:
 ### Check Server Status
 
 ```bash
-python -m cli.neo_client status
+.venv/bin/python3 -m cli.neo_client status
 ```
 
 Output:
@@ -453,7 +453,7 @@ First, set developer context:
 
 ```bash
 export NEO_DEVELOPER=charlie
-python -m cli.file_watcher charlie --server http://localhost:8000
+.venv/bin/python3 -m cli.file_watcher charlie --server http://localhost:8000
 ```
 
 Output:
@@ -489,7 +489,7 @@ Now you have:
 
 **Terminal 5 (or separate terminal)**:
 ```bash
-python -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
+.venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
 ```
 
 **Server output (Terminal 1)**:
@@ -508,7 +508,7 @@ python -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
 
 **Terminal 5**:
 ```bash
-python -m cli.neo_client declare bob src/auth.py "Add JWT token support"
+.venv/bin/python3 -m cli.neo_client declare bob src/auth.py "Add JWT token support"
 ```
 
 **Server output (Terminal 1)**:
@@ -532,7 +532,7 @@ python -m cli.neo_client declare bob src/auth.py "Add JWT token support"
 
 **Terminal 5**:
 ```bash
-python -m cli.neo_client declare charlie src/auth.py "Add multi-factor authentication"
+.venv/bin/python3 -m cli.neo_client declare charlie src/auth.py "Add multi-factor authentication"
 ```
 
 **Server output (Terminal 1)**:
@@ -564,7 +564,7 @@ Alice finishes OAuth2 work and completes:
 **Terminal 5**:
 ```bash
 # Alice marks work complete
-python -m cli.neo_client log
+.venv/bin/python3 -m cli.neo_client log
 # View the updated activity log to confirm alice is complete
 ```
 
@@ -594,7 +594,7 @@ Bob should review what Alice accomplished before generating:
 
 **Terminal 5**:
 ```bash
-python -m cli.neo_client log
+.venv/bin/python3 -m cli.neo_client log
 ```
 
 Output shows:
@@ -641,7 +641,7 @@ Bob finishes JWT implementation:
 
 **Terminal 5**:
 ```bash
-python -m cli.neo_client log
+.venv/bin/python3 -m cli.neo_client log
 ```
 
 **Server output (Terminal 1)**:
@@ -670,7 +670,7 @@ Charlie reviews what both Alice and Bob accomplished:
 
 **Terminal 5**:
 ```bash
-python -m cli.neo_client log
+.venv/bin/python3 -m cli.neo_client log
 ```
 
 Output shows full history:
@@ -714,7 +714,7 @@ vim src/auth.py
 
 **Terminal 5**:
 ```bash
-python -m cli.neo_client log
+.venv/bin/python3 -m cli.neo_client log
 ```
 
 **Server output (Terminal 1)**:
@@ -847,7 +847,7 @@ Neo solves this with two mechanisms working together:
 **1. NEO_DEVELOPER Environment Variable**
 ```bash
 export NEO_DEVELOPER=alice
-python -m cli.file_watcher alice --server http://localhost:8000
+.venv/bin/python3 -m cli.file_watcher alice --server http://localhost:8000
 ```
 
 - Each watcher checks if `NEO_DEVELOPER` matches its own `agent_id`
@@ -857,7 +857,7 @@ python -m cli.file_watcher alice --server http://localhost:8000
 
 **2. Intent Declaration Before Editing**
 ```bash
-python -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
+.venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
 ```
 
 - Before a file can be logged, the developer must declare intent
@@ -870,16 +870,16 @@ python -m cli.neo_client declare alice src/auth.py "Add OAuth2 authentication"
 ```
 Terminal 2 (Alice's watcher):
   $ export NEO_DEVELOPER=alice
-  $ python -m cli.file_watcher alice --server http://localhost:8000
+  $ .venv/bin/python3 -m cli.file_watcher alice --server http://localhost:8000
   ✅ Developer context: NEO_DEVELOPER=alice
 
 Terminal 3 (Bob's watcher):
   $ export NEO_DEVELOPER=bob
-  $ python -m cli.file_watcher bob --server http://localhost:8000
+  $ .venv/bin/python3 -m cli.file_watcher bob --server http://localhost:8000
   ✅ Developer context: NEO_DEVELOPER=bob
 
 Terminal 4 (Editing):
-  $ python -m cli.neo_client declare alice src/auth.py "Add OAuth2"
+  $ .venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add OAuth2"
   ✅ Intent Declared
   
   $ vim src/auth.py  # Make changes
@@ -899,7 +899,7 @@ Terminal 4 (Editing):
 
 **Solution:** Make sure the server is running in Terminal 1:
 ```bash
-python -m cli.neo_server --clear
+.venv/bin/python3 -m cli.neo_server --clear
 ```
 
 ### File Watcher Not Detecting Changes
@@ -914,13 +914,13 @@ python -m cli.neo_server --clear
    
    # Set it correctly before starting the watcher
    export NEO_DEVELOPER=alice
-   python -m cli.file_watcher alice --server http://localhost:8000
+   .venv/bin/python3 -m cli.file_watcher alice --server http://localhost:8000
    ```
 
 2. **Intent not declared**
    ```bash
    # Declare intent before editing
-   python -m cli.neo_client declare alice src/auth.py "Your intent here"
+   .venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Your intent here"
    ```
 
 3. **Files not in watched directories**
@@ -937,7 +937,7 @@ python -m cli.neo_server --clear
 
 **Solution:** Declare intent before editing:
 ```bash
-python -m cli.neo_client declare alice src/auth.py "Your intent here"
+.venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Your intent here"
 ```
 
 This prevents accidental logging and ensures explicit developer intent.
@@ -948,7 +948,7 @@ This prevents accidental logging and ensures explicit developer intent.
 
 **Solution:** Clear on server startup:
 ```bash
-python -m cli.neo_server --clear
+.venv/bin/python3 -m cli.neo_server --clear
 ```
 
 Or manually:
@@ -964,13 +964,13 @@ rm .devsync/activity-log.json
 
 ```bash
 # Terminal 1: Server
-python -m cli.neo_server --clear
+.venv/bin/python3 -m cli.neo_server --clear
 
 # Terminal 2: Alice watches
-python -m cli.file_watcher alice
+.venv/bin/python3 -m cli.file_watcher alice
 
 # Terminal 3: Bob watches
-python -m cli.file_watcher bob
+.venv/bin/python3 -m cli.file_watcher bob
 
 # Terminal 4 & 5: Ready for editing
 ```
@@ -988,7 +988,7 @@ python -m cli.file_watcher bob
 
 ```bash
 # Check final state
-python -m cli.neo_client log
+.venv/bin/python3 -m cli.neo_client log
 ```
 
 Should show:
