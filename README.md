@@ -408,9 +408,62 @@ python baseline_comparison/test_16dev_extreme_scale.py
 
 ---
 
-## Two-Developer Coordination Test
+## Neo 2-Developer Tests
 
-**See Neo prevent merge conflicts in real-time with two developers on the same file.**
+**Three ways to test Neo's multi-developer coordination:**
+
+| Test | File | Watchers? | Server? | Real? |
+|------|------|-----------|---------|-------|
+| **Simulated Sequential** | `tests/real_2_developer_test.py` | ❌ No | ❌ No | Simulated (programmatic) |
+| **Unit Tests (5 Scenarios)** | `tests/test_two_developer_scenarios.py` | ❌ No | ❌ No | Simulated (programmatic) |
+| **Terminal with Watchers** | `docs/LOCAL_TWO_DEVELOPER_TEST.md` | ✅ YES | ✅ YES | ✅ REAL (actual workflow) |
+| **Claude Code IDE** | `docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md` | N/A | N/A | IDE-based |
+
+---
+
+## Quick Test: Simulated 2-Developer Sequential Test
+
+**Fastest way to validate Neo coordination (simulated workflow, no watchers):**
+
+```bash
+# Single command - validates 2-dev lock, queue, and context flow
+python tests/real_2_developer_test.py
+```
+
+**What it validates**:
+- ✅ Alice declares intent (no lock, only 1 dev)
+- ✅ Bob declares same file (MEDIUM risk, lock applies to Alice)
+- ✅ Alice completes work (metadata logged)
+- ✅ Bob gets fresh context (sees Alice's changes)
+- ✅ Bob completes work (zero conflicts)
+- ✅ Result: 0 conflicts, automatic coordination
+
+---
+
+## Comprehensive Unit Tests: 5-Scenario Validation
+
+**Validates Neo across multiple real-world scenarios:**
+
+```bash
+python tests/test_two_developer_scenarios.py
+```
+
+**5 Scenarios Tested**:
+1. **Low Conflict (Different Regions)** - No lock, safe parallel work
+2. **High Conflict (Same Lines)** - Lock applies, sequential workflow
+3. **Different Files** - Parallel work enabled (no conflict)
+4. **Rapid Declarations** - Lock assigned to first declarer
+5. **3-Developer Queue** - Scaling validation with queue management
+
+**Expected Result**: ✅ All 5/5 scenarios pass
+
+---
+
+## Real Terminal-Based 2-Developer Test (With File Watchers & Server)
+
+**The most realistic test: actual file watchers, running server, multiple terminals, real file editing.**
+
+See Neo prevent merge conflicts in real-time with two developers on the same file. This is the terminal-based approach that works without Claude Code IDE.
 
 Choose your testing environment and follow the **step-by-step guides** with actual functional calls:
 
@@ -552,4 +605,8 @@ MIT — See [LICENSE](LICENSE)
 
 **The core value**: Eliminate Git merge conflicts by moving conflict resolution one layer below Git through intelligent semantic coordination.
 
-**Next**: Run `python tests/test_optimization_1_delta_refresh.py` to see Neo in action, or run all 5 with `python tests/test_optimization_*.py`
+**Quick Start**:
+- ✅ **Simulated 2-Dev Test** (recommended first): `python tests/real_2_developer_test.py`
+- ✅ **Comprehensive 5-Scenario Test**: `python tests/test_two_developer_scenarios.py`
+- ✅ **Run optimization tests**: `python tests/test_optimization_*.py`
+- ✅ **Interactive terminal test**: See `docs/LOCAL_TWO_DEVELOPER_TEST.md`
