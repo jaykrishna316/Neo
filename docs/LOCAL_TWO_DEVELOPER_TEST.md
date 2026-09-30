@@ -255,19 +255,22 @@ Bob is now **queued** with position 0, waiting for alice to complete.
 
 ### Terminal 4: Developer A - Completes Work
 
-Alice finishes and commits:
+Alice finishes editing and marks work as complete:
 
 ```bash
+# First commit the changes
 git add src/auth.py
 git commit -m "Add OAuth2 authentication"
-```
 
-When alice's file watcher stops or the developer marks completion, bob is **promoted**.
+# Then mark work complete to release lock (in Terminal 4 or new terminal)
+.venv/bin/python3 -m cli.neo_client complete alice src/auth.py --added 5 --removed 1
+```
 
 Terminal 1 (Server) shows:
 ```
-✅ [10:17:15] alice completed: +20 lines, -5 lines
-🔓 Lock released, promoting bob
+✅ [10:17:15] alice completed: +5 lines, -1 lines
+   File: src/auth.py
+   🔓 Lock released, promoting next developer
 ```
 
 Terminal 5 (Bob's watcher) shows:
