@@ -408,66 +408,26 @@ python baseline_comparison/test_16dev_extreme_scale.py
 
 ---
 
-## Neo 2-Developer Tests
+## Test Neo in Action
 
-**Three ways to test Neo's multi-developer coordination:**
+**Two ways to test Neo's real multi-developer coordination:**
 
-| Test | File | Watchers? | Server? | Real? |
-|------|------|-----------|---------|-------|
-| **Simulated Sequential** | `tests/real_2_developer_test.py` | ❌ No | ❌ No | Simulated (programmatic) |
-| **Unit Tests (5 Scenarios)** | `tests/test_two_developer_scenarios.py` | ❌ No | ❌ No | Simulated (programmatic) |
-| **Terminal with Watchers** | `docs/LOCAL_TWO_DEVELOPER_TEST.md` | ✅ YES | ✅ YES | ✅ REAL (actual workflow) |
-| **Claude Code IDE** | `docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md` | N/A | N/A | IDE-based |
+| Approach | Best For | Setup Time | Watchers | Server |
+|----------|----------|------------|----------|--------|
+| **Terminal with File Watchers** | Learning, CI/CD, no IDE | 15 min | ✅ YES | ✅ YES |
+| **Claude Code IDE + MCP** | Production teams, token efficiency | 10 min | N/A | N/A |
 
 ---
 
-## Quick Test: Simulated 2-Developer Sequential Test
+## Real Test #1: Terminal-Based 2-Developer Test (With File Watchers & Server)
 
-**Fastest way to validate Neo coordination (simulated workflow, no watchers):**
-
-```bash
-# Single command - validates 2-dev lock, queue, and context flow
-python tests/real_2_developer_test.py
-```
-
-**What it validates**:
-- ✅ Alice declares intent (no lock, only 1 dev)
-- ✅ Bob declares same file (MEDIUM risk, lock applies to Alice)
-- ✅ Alice completes work (metadata logged)
-- ✅ Bob gets fresh context (sees Alice's changes)
-- ✅ Bob completes work (zero conflicts)
-- ✅ Result: 0 conflicts, automatic coordination
-
----
-
-## Comprehensive Unit Tests: 5-Scenario Validation
-
-**Validates Neo across multiple real-world scenarios:**
-
-```bash
-python tests/test_two_developer_scenarios.py
-```
-
-**5 Scenarios Tested**:
-1. **Low Conflict (Different Regions)** - No lock, safe parallel work
-2. **High Conflict (Same Lines)** - Lock applies, sequential workflow
-3. **Different Files** - Parallel work enabled (no conflict)
-4. **Rapid Declarations** - Lock assigned to first declarer
-5. **3-Developer Queue** - Scaling validation with queue management
-
-**Expected Result**: ✅ All 5/5 scenarios pass
-
----
-
-## Real Terminal-Based 2-Developer Test (With File Watchers & Server)
-
-**The most realistic test: actual file watchers, running server, multiple terminals, real file editing.**
+**The realistic test: actual file watchers, running server, multiple terminals, real file editing.**
 
 See Neo prevent merge conflicts in real-time with two developers on the same file. This is the terminal-based approach that works without Claude Code IDE.
 
-Choose your testing environment and follow the **step-by-step guides** with actual functional calls:
+Follow the **step-by-step guide** with actual functional calls:
 
-### Path A: Terminal-Based Testing (Local Server, No IDE)
+### Setup & Run Terminal Test
 
 **Best for**: Understanding how Neo works, testing without Claude Code IDE, CI/CD integration
 
@@ -504,7 +464,7 @@ See [`docs/LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) for c
 
 ---
 
-### Path B: Claude Code IDE Testing (MCP Server)
+## Real Test #2: Claude Code IDE Testing (MCP Server)
 
 **Best for**: Production teams, pre-generation conflict detection, IDE-native workflows, token efficiency
 
@@ -545,16 +505,17 @@ See [`docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TE
 
 ---
 
-## Comparing the Two Paths
+## Comparing Terminal vs IDE Approaches
 
-| Aspect | Terminal | Claude Code IDE |
+| Aspect | Terminal + Watchers | Claude Code IDE + MCP |
 |--------|----------|-----------------|
-| **Setup time** | 5 min | 10 min (MCP config) |
-| **Developers** | 2-3+ with sequential workflow | 2-3+ with queue management |
+| **Setup time** | 15 min (4+ terminals) | 10 min (MCP config) |
+| **Workflow** | File watchers + server | IDE-native with @neo commands |
 | **Conflict detection** | Post-generation (good) | **Pre-generation (excellent)** |
 | **Token savings** | 47% average | **99% peak** |
-| **Best for** | Testing, CI/CD, learning | Production, teams, efficiency |
-| **Documentation** | [`LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) | [`CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md) |
+| **Best for** | Learning, CI/CD, servers | Production teams, efficiency |
+| **File editing** | Any editor (vim, VS Code) | Claude Code IDE only |
+| **Guide** | [`LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) | [`CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md) |
 
 ---
 
@@ -605,8 +566,8 @@ MIT — See [LICENSE](LICENSE)
 
 **The core value**: Eliminate Git merge conflicts by moving conflict resolution one layer below Git through intelligent semantic coordination.
 
-**Quick Start**:
-- ✅ **Simulated 2-Dev Test** (recommended first): `python tests/real_2_developer_test.py`
-- ✅ **Comprehensive 5-Scenario Test**: `python tests/test_two_developer_scenarios.py`
-- ✅ **Run optimization tests**: `python tests/test_optimization_*.py`
-- ✅ **Interactive terminal test**: See `docs/LOCAL_TWO_DEVELOPER_TEST.md`
+**Run Real Tests**:
+1. **Terminal Test with Watchers**: See `docs/LOCAL_TWO_DEVELOPER_TEST.md`
+2. **Claude Code IDE with MCP**: See `docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`
+
+*Note: Simulation tests have been moved to `simulations/` folder for reference only.*
