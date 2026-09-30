@@ -241,9 +241,33 @@ Terminal 1 (Server) shows:
 
 ---
 
-### Terminal 5: Developer B - Tries to Edit Same File
+### Terminal 5: Developer B - Declare Intent First
+
+**IMPORTANT**: Bob must declare intent BEFORE editing, just like alice did:
 
 ```bash
+cd ~/Neo
+.venv/bin/python3 -m cli.neo_client declare bob src/auth.py "Add JWT token support" --category feature
+```
+
+Output:
+```
+✅ Intent Declared
+   Developer: bob
+   File: src/auth.py
+   Developers on file: 2
+```
+
+Notice: Now it shows **2 developers on file** (alice and bob) — the lock mechanism will activate!
+
+---
+
+### Terminal 5 (continued): Developer B - Tries to Edit Same File
+
+Now bob edits the file:
+
+```bash
+cd ~/Neo
 # Bob tries to edit the same file
 cat > src/auth.py << 'EOF'
 def authenticate_user(username, password):
