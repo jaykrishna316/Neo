@@ -92,14 +92,20 @@ def check_for_conflicts(
         existing_dev = conflict_details[0]['agent'] if conflict_details else None
 
         if existing_dev:
-            # Acquire lock for existing developer (they hold it)
-            lock_manager.acquire_lock(
-                file_path=file_path,
-                region=region,
-                developer_id=existing_dev,
-                reason=lock_reason,
-                scope=lock_scope,
+            # Check if existing developer already holds the lock
+            existing_lock = lock_manager._get_current_lock(
+                lock_manager._make_lock_key(file_path, region, lock_scope)
             )
+
+            # Only acquire lock if existing dev doesn't already hold it
+            if not existing_lock or existing_lock.get('lock_holder') != existing_dev:
+                lock_manager.acquire_lock(
+                    file_path=file_path,
+                    region=region,
+                    developer_id=existing_dev,
+                    reason=lock_reason,
+                    scope=lock_scope,
+                )
 
         # Now queue the current developer
         lock_info = lock_manager.acquire_lock(
