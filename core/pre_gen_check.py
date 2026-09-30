@@ -36,10 +36,31 @@ def check_for_conflicts(
     active_entries = get_active_entries(tenant_id=resolved_tenant)
 
     # Filter entries for the same file from other agents (same tenant only)
-    same_file_entries = [
-        entry for entry in active_entries
-        if entry.get('file_path') == file_path and entry.get('developer_id') != agent_id
-    ]
+    # Keep only the LATEST entry per developer (handles duplicate log entries)
+    same_file_entries_by_dev = {}
+    for entry in active_entries:
+        if entry.get('file_path') == file_path and entry.get('developer_id') != agent_id:
+            dev_id = entry.get('developer_id')
+            # Keep latest (highest timestamp) for this developer
+            if dev_id not in same_file_entries_by_dev or entry.get('timestamp', 0) > same_file_entries_by_dev[dev_id].get('timestamp', 0):
+                same_file_entries_by_dev[dev_id] = entry
+
+    same_file_entries = list(same_file_entries_by_dev.values())
+
+    # Optimization: If current developer holds the lock, exclude waiting developers from conflicts
+    # Lock holders shouldn't see waiting developers as conflicts - they're already queued properly
+    if same_file_entries:
+        lock_manager = LockManager(tenant_id=resolved_tenant)
+        lock_scope = "region" if region else "file"
+        lock_key = lock_manager._make_lock_key(file_path, region, lock_scope)
+        current_lock = lock_manager._get_current_lock(lock_key)
+
+        if current_lock and current_lock.get('lock_holder') == agent_id:
+            # Current developer holds the lock - exclude waiting developers
+            same_file_entries = [
+                entry for entry in same_file_entries
+                if entry.get('lock_state') != 'WAITING'
+            ]
 
     if not same_file_entries:
         return (RiskLevel.LOW, "No conflicting work detected. Safe to proceed.", None)
