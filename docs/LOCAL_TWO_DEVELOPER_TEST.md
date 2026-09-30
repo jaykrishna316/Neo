@@ -1159,8 +1159,28 @@ Do you have Claude Code IDE?
 ### Documentation References
 
 - `CLAUDE_CODE_TWO_DEVELOPER_TEST.md` - IDE-based testing (recommended for teams)
+- `ADVANCED_WORKFLOWS_AND_STATE_TRANSITIONS.md` - ⭐ Complex workflows, state transitions, activity log analysis (recommended for deeper understanding)
 - `NEO_4.0_OPENAPI_SPECIFICATION.md` - Technical specification
 - `CLAUDE.md` - Project overview and MCP configuration
+
+---
+
+## Advanced Workflows: State Transitions & Activity Log Analysis
+
+**Want to see complex scenarios with full state machine transitions and annotated activity log output?**
+
+See: **[`ADVANCED_WORKFLOWS_AND_STATE_TRANSITIONS.md`](ADVANCED_WORKFLOWS_AND_STATE_TRANSITIONS.md)**
+
+Covers:
+- ✅ Three-developer queue with context staleness (Phase 3 auto-refresh)
+- ✅ Region-level locking (precise coordination at function level)  
+- ✅ Rapid declarations (sub-millisecond conflict detection)
+- ✅ Lock timeout & auto-promotion (30-min timeout, disconnection recovery)
+- ✅ Overlapping regions with mixed conflicts (risk calculation)
+- ✅ Complete activity log reference with real examples
+- ✅ Full state machine transitions (v1.0 → v2.0 → v3.0 → v4.0)
+
+Best for: Understanding Neo's complete lock mechanism, queue behavior, and seeing real `.devsync/activity-log.json` output at each state transition.
 
 ---
 
