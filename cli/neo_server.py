@@ -79,15 +79,15 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {'error': 'Missing required fields'})
                 return
 
-            # Check for conflicts BEFORE logging
-            risk_level, conflict_msg, _ = check_for_conflicts(
+            # Check for conflicts BEFORE logging (also acquires locks if needed)
+            risk_level, conflict_msg, lock_info = check_for_conflicts(
                 agent_id=agent_id,
                 file_path=file_path,
                 intent=intent,
                 region=region
             )
 
-            # Initialize lock state for this developer
+            # Extract lock state from check_for_conflicts result
             lock_state = None
             lock_holder = None
             lock_acquired_at = None
@@ -97,48 +97,12 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             queue_position = None
             waiting_for = None
 
-            # If conflict detected, apply lock retroactively to FIRST developer
-            if risk_level in (RiskLevel.MEDIUM, RiskLevel.HIGH):
-                lock_manager = LockManager()
-                lock_reason = "HIGH_CONFLICT" if risk_level == RiskLevel.HIGH else "MEDIUM_CONFLICT"
-                lock_scope = "region" if region else "file"
-
-                # Find first developer on this file
-                existing_entries = [
-                    e for e in get_active_entries()
-                    if e.get('file_path') == file_path
-                ]
-
-                if existing_entries:
-                    # Sort by timestamp to find first developer
-                    first_entry = sorted(existing_entries, key=lambda x: x.get('timestamp', 0))[0]
-                    first_developer = first_entry['developer_id']
-
-                    # Acquire lock for FIRST developer (retroactively)
-                    if first_developer != agent_id:
-                        first_lock_info = lock_manager.acquire_lock(
-                            file_path=file_path,
-                            region=region,
-                            developer_id=first_developer,
-                            reason=lock_reason,
-                            scope=lock_scope,
-                        )
-
-                        # Then queue current developer
-                        current_lock_info = lock_manager.acquire_lock(
-                            file_path=file_path,
-                            region=region,
-                            developer_id=agent_id,
-                            reason=lock_reason,
-                            scope=lock_scope,
-                        )
-
-                        # Current developer gets WAITING state (determine from lock_holder)
-                        lock_holder = current_lock_info.get('lock_holder')
-                        queue_position = current_lock_info.get('queue_position')
-                        waiting_for = current_lock_info.get('waiting_for')
-                        # Determine lock_state: if we're the holder, ACQUIRED; otherwise WAITING
-                        lock_state = "ACQUIRED" if lock_holder == agent_id else "WAITING"
+            # Use lock info from check_for_conflicts (locks already acquired there)
+            if lock_info:
+                lock_holder = lock_info.get('lock_holder')
+                queue_position = lock_info.get('queue_position')
+                waiting_for = lock_info.get('waiting_for')
+                lock_state = "ACQUIRED" if lock_holder == agent_id else "WAITING"
 
             # Log activity with lock state
             log_activity(
@@ -177,9 +141,10 @@ class NeoServerHandler(BaseHTTPRequestHandler):
 
             # Show appropriate status message
             if risk_level in (RiskLevel.MEDIUM, RiskLevel.HIGH):
-                self._print_lock_status(agent_id, file_path, lock_state, queue_position, waiting_for, risk_level)
+                # Print full conflict check message with lock status
+                self._print_conflict_check(agent_id, risk_level, conflict_msg, lock_info)
             else:
-                # No conflict - just log
+                # No conflict - just log activity
                 self._print_activity_log(agent_id, file_path, intent, same_file_count, lock_holder, queue_position, waiting_for)
 
             self._send_json(200, response)
