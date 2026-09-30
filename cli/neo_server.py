@@ -158,7 +158,9 @@ class NeoServerHandler(BaseHTTPRequestHandler):
 
             # Get current state to show user
             entries = get_active_entries()
-            same_file_count = len([e for e in entries if e.get('file_path') == file_path])
+            # Count UNIQUE developers on this file (not entries)
+            developers_on_file = set([e.get('developer_id') for e in entries if e.get('file_path') == file_path])
+            same_file_count = len(developers_on_file)
 
             # Build response
             response = {
