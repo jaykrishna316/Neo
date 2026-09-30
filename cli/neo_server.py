@@ -152,7 +152,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             self._send_json(500, {'error': str(e)})
 
     def _handle_check_conflicts(self, data: Dict):
-        """POST /api/check-conflicts - Check for conflicts"""
+        """POST /api/check-conflicts - Check for conflicts (no lock acquisition here)"""
         try:
             agent_id = data.get('agent_id')
             file_path = data.get('file_path')
@@ -163,13 +163,23 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {'error': 'Missing required fields'})
                 return
 
-            # Check for conflicts
-            risk_level, message, lock_info = check_for_conflicts(
-                agent_id=agent_id,
-                file_path=file_path,
-                intent=intent,
-                region=region
-            )
+            # Get active entries for this file
+            active_entries = get_active_entries()
+            same_file_entries = [
+                e for e in active_entries
+                if e.get('file_path') == file_path and e.get('developer_id') != agent_id
+            ]
+
+            # Simple risk assessment (without lock acquisition)
+            if not same_file_entries:
+                risk_level = RiskLevel.LOW
+                message = "No conflicting work detected. Safe to proceed."
+                lock_info = None
+            else:
+                risk_level = RiskLevel.MEDIUM
+                other_devs = [e.get('developer_id') for e in same_file_entries]
+                message = f"MEDIUM RISK: {', '.join(other_devs)} working on {file_path}. Overlapping regions detected. Proceed with caution."
+                lock_info = None
 
             response = {
                 'success': True,
