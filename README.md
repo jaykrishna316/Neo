@@ -573,6 +573,83 @@ See [`docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TE
 
 ---
 
+## 🎬 Neo Demonstrations
+
+Three demo approaches to see Neo in action — choose the one that matches your learning style:
+
+### 1. 🚀 Automatic Demo (Fastest - 2-3 minutes)
+
+Multi-terminal demo that runs on a fixed timeline. Perfect for quick verification and CI/CD automation.
+
+```bash
+./launch_2dev_demo.sh      # 5 terminals, 2-developer scenario
+./launch_3dev_demo.sh      # 7 terminals, 3-developer scenario
+```
+
+**What you get:**
+- Terminals open automatically
+- Developers run on fixed timeline (T+0s, T+1s, T+4s, etc.)
+- Activity log updates in real-time
+- All terminals run in parallel
+- See full workflow end-to-end
+
+See: [`DEMO_GUIDE.md`](DEMO_GUIDE.md)
+
+### 2. 📖 Guided Interactive Demo (Ideal for Learning - 10-15 minutes)
+
+Step-by-step guided demo with numbered terminals and explanations at each stage. User presses Enter to advance.
+
+```bash
+./launch_guided_2dev_demo.sh      # 5 terminals, step-by-step with guidance
+./launch_guided_3dev_demo.sh      # 7 terminals, step-by-step with queue progression
+```
+
+**What you get:**
+- Numbered terminals for easy reference
+- Main guidance terminal explains each step
+- "What's happening" → "What to look for" → "Key insights" at each stage
+- Press Enter to control pacing
+- Learn why Neo does what it does
+- Understand queue progression and lock behavior
+
+See: [`GUIDED_DEMO_README.md`](GUIDED_DEMO_README.md)
+
+### 3. 🛠️ Manual Terminal Test (Most Thorough - 20-30 minutes)
+
+Full Neo server running with real file watchers. Test at your own pace with real editing.
+
+```bash
+# See docs/LOCAL_TWO_DEVELOPER_TEST.md for complete instructions
+```
+
+**What you get:**
+- Real Neo server running
+- File watcher detection
+- Real editing with vim/nano/VS Code
+- Can pause and inspect at any point
+- Can modify workflow mid-test
+- Production-readiness validation
+
+See: [`docs/LOCAL_TWO_DEVELOPER_TEST.md`](docs/LOCAL_TWO_DEVELOPER_TEST.md) | [`docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md`](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
+
+### Quick Comparison
+
+| Feature | Automatic | Guided | Manual |
+|---------|-----------|--------|--------|
+| **Setup Time** | 1 min | 1 min | 5-10 min |
+| **Run Time** | 2-3 min | 10-15 min | 20-30 min |
+| **Terminals** | Auto-open | Auto-open with numbering | Manual |
+| **Pacing** | Fixed timeline | User-controlled | Full control |
+| **Guidance** | Self-guided | Step-by-step | Documentation |
+| **Activity Log** | Real-time | Real-time | Real file ops |
+| **Best For** | Quick demo | Learning | Deep testing |
+
+**Recommended:** Start with **Guided 2-Dev Demo** to understand Neo, then explore **Automatic Demo** for quick verification.
+
+See: [`DEMO_COMPARISON.md`](DEMO_COMPARISON.md) for detailed comparison.
+
+---
+
 ## Comparing Terminal vs IDE Approaches
 
 | Aspect | Terminal + Watchers | Claude Code IDE + MCP |
