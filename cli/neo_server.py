@@ -133,11 +133,12 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                             scope=lock_scope,
                         )
 
-                        # Current developer gets WAITING state
-                        lock_state = current_lock_info.get('lock_state')
+                        # Current developer gets WAITING state (determine from lock_holder)
                         lock_holder = current_lock_info.get('lock_holder')
                         queue_position = current_lock_info.get('queue_position')
                         waiting_for = current_lock_info.get('waiting_for')
+                        # Determine lock_state: if we're the holder, ACQUIRED; otherwise WAITING
+                        lock_state = "ACQUIRED" if lock_holder == agent_id else "WAITING"
 
             # Log activity with lock state
             log_activity(
