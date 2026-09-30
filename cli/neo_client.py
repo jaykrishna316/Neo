@@ -55,6 +55,36 @@ class NeoClient:
         except Exception as e:
             return {'error': str(e)}
 
+    def complete_work(
+        self,
+        agent_id: str,
+        file_path: str,
+        lines_added: int = 0,
+        lines_removed: int = 0
+    ) -> Dict:
+        """Mark work as complete and release lock"""
+        payload = {
+            'agent_id': agent_id,
+            'file_path': file_path,
+            'lines_added': lines_added,
+            'lines_removed': lines_removed
+        }
+
+        try:
+            response = requests.post(
+                f'{self.server_url}/api/complete-work',
+                json=payload,
+                timeout=5
+            )
+            return response.json()
+        except requests.exceptions.ConnectionError:
+            return {
+                'error': f'Cannot connect to Neo server at {self.server_url}',
+                'hint': 'Make sure the server is running'
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
     def check_conflicts(
         self,
         agent_id: str,
@@ -154,6 +184,17 @@ def print_response(data: Dict, action: str):
             print(f"      Queue Position: {lock.get('queue_position', 'N/A')}")
             print(f"      Waiting For: {lock.get('waiting_for', 'N/A')}")
 
+    elif action == 'complete':
+        if data.get('error'):
+            print(f"\n❌ Error: {data['error']}")
+        else:
+            print(f"\n✅ Work Completed")
+            print(f"   Developer: {data.get('agent_id', 'unknown')}")
+            print(f"   File: {data.get('file_path', 'unknown')}")
+            print(f"   Changes: +{data.get('lines_added', 0)} lines, -{data.get('lines_removed', 0)} lines")
+            if data.get('lock_released'):
+                print(f"   🔓 Lock released, next developer promoted")
+
     elif action == 'status':
         print(f"\n✅ Neo Server Status")
         print(f"   Status: {data.get('status', 'unknown')}")
@@ -194,6 +235,13 @@ def main():
     check_parser.add_argument('intent', help='What you intend to do')
     check_parser.add_argument('--region', help='Specific region (optional)')
 
+    # complete command
+    complete_parser = subparsers.add_parser('complete', help='Mark work as complete')
+    complete_parser.add_argument('agent_id', help='Developer ID')
+    complete_parser.add_argument('file_path', help='File path')
+    complete_parser.add_argument('--added', type=int, default=0, help='Lines added')
+    complete_parser.add_argument('--removed', type=int, default=0, help='Lines removed')
+
     # log command
     log_parser = subparsers.add_parser('log', help='View activity log')
 
@@ -217,6 +265,15 @@ def main():
             args.category
         )
         print_response(result, 'declare')
+
+    elif args.command == 'complete':
+        result = client.complete_work(
+            args.agent_id,
+            args.file_path,
+            args.added,
+            args.removed
+        )
+        print_response(result, 'complete')
 
     elif args.command == 'check':
         result = client.check_conflicts(

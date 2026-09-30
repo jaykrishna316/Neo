@@ -48,6 +48,8 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             self._handle_log_activity(data)
         elif parsed.path == '/api/check-conflicts':
             self._handle_check_conflicts(data)
+        elif parsed.path == '/api/complete-work':
+            self._handle_complete_work(data)
         else:
             self._send_json(404, {'error': 'Not found'})
 
@@ -216,6 +218,58 @@ class NeoServerHandler(BaseHTTPRequestHandler):
         except Exception as e:
             self._send_json(500, {'error': str(e)})
 
+    def _handle_complete_work(self, data: Dict):
+        """POST /api/complete-work - Mark work as complete and release lock"""
+        try:
+            agent_id = data.get('agent_id')
+            file_path = data.get('file_path')
+            lines_added = data.get('lines_added', 0)
+            lines_removed = data.get('lines_removed', 0)
+
+            if not all([agent_id, file_path]):
+                self._send_json(400, {'error': 'Missing required fields'})
+                return
+
+            # Find active entry for this developer
+            entries = get_active_entries()
+            agent_entry = None
+            for entry in entries:
+                if entry.get('developer_id') == agent_id and entry.get('file_path') == file_path:
+                    agent_entry = entry
+                    break
+
+            lock_released = False
+            next_developer = None
+
+            if agent_entry:
+                # Mark work as complete
+                lock_manager = LockManager()
+                lock_manager.release_lock(file_path, None, agent_id)
+                lock_released = True
+
+                # Show completion message
+                self._print_completion(agent_id, file_path, lines_added, lines_removed)
+
+                # Promote next developer from queue
+                lock_state = lock_manager.get_lock_state(file_path, None)
+                if lock_state.get('queue_size', 0) > 0:
+                    next_developer = lock_state.get('queue', [{}])[0].get('developer_id')
+
+            response = {
+                'success': True,
+                'agent_id': agent_id,
+                'file_path': file_path,
+                'lines_added': lines_added,
+                'lines_removed': lines_removed,
+                'lock_released': lock_released,
+                'next_developer': next_developer,
+                'timestamp': datetime.now().isoformat()
+            }
+
+            self._send_json(200, response)
+        except Exception as e:
+            self._send_json(500, {'error': str(e)})
+
     def _handle_get_activity(self):
         """GET /api/activity - Get all activity"""
         try:
@@ -292,6 +346,12 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 print(f"      Queue Position: {queue_position}")
             if waiting_for:
                 print(f"      Waiting for: {waiting_for}")
+
+    def _print_completion(self, agent_id: str, file_path: str, lines_added: int, lines_removed: int):
+        """Print completion message"""
+        print(f"\n✅ [{datetime.now().strftime('%H:%M:%S')}] {agent_id} completed: +{lines_added} lines, -{lines_removed} lines")
+        print(f"   File: {file_path}")
+        print(f"   🔓 Lock released, promoting next developer")
 
     def log_message(self, format, *args):
         """Suppress default logging"""
