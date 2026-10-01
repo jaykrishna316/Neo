@@ -23,25 +23,24 @@
 ## Choose Your Path
 
 **👀 New to Neo?** (5 minutes)
-- Run: `./scripts/launch_2dev_demo.sh` (see it work in 3 minutes)
-- Read: [Why Neo Matters](#why-neo-matters)
-- Learn: [DEMO_GUIDE.md](DEMO_GUIDE.md)
+- Run: `./scripts/launch_2dev_demo.sh` (automated 2-dev demo, 3 minutes)
+- Watch: Real terminals, activity log, lock state changes
+- Learn: [DEMO_GUIDE.md](DEMO_GUIDE.md) for guided walkthrough
 
-**👨‍💻 Developer?** (15 minutes - Run tests locally)
-- **2-Developer Local Test**: `python tests/test_two_developer_coordination.py` (1 min)
-- **3-Developer Local Test**: `python tests/test_three_developer_coordination.py` (2 min)
-- **MCP Server Test**: `python tests/test_explicit_locks.py` (< 1 min)
-- Compare: [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md)
+**👨‍💻 Developer?** (Choose one: 1 min to 20 min)
+- **Quick**: `python tests/test_explicit_locks.py` (MCP server, < 1 min)
+- **Visual**: `./scripts/launch_2dev_demo.sh` (automated demo, 3 min)
+- **Hands-on**: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) (manual with watchers, 20 min)
 
 **🚀 Production Teams?** (10 minutes - IDE integration)
 - Setup: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
-- MCP Server: See [CLAUDE.md](CLAUDE.md)
-- Deploy: Neo works in Claude Code IDE pre-generation checks
+- MCP Server: See [CLAUDE.md](CLAUDE.md) for configuration
+- Deploy: Pre-generation conflict checking in Claude Code
 
 **🏢 Enterprise?** (20 minutes - Scale validation)
-- Validated: 98.94% savings at 16 developers
+- Validated: 98.94% token savings at 16 developers
 - See: [#empirical-proof](#empirical-proof)
-- Read: [baseline_comparison/](baseline_comparison/)
+- Baseline tests: [baseline_comparison/](baseline_comparison/)
 
 ---
 
@@ -65,54 +64,53 @@
 
 ---
 
-### 💻 Developer: Run Local Tests (15 minutes total)
+### 💻 Developer: Manual Test with Watchers (20 minutes)
 
 ```bash
-# Test 1: 2-developer coordination (1 min)
-python tests/test_two_developer_coordination.py
-# Expected: PASSED, 0 conflicts, context flows alice→bob
+# Terminal 1: Start Neo server
+python -m cli.neo_server --clear
 
-# Test 2: 3-developer coordination (2 min)
-python tests/test_three_developer_coordination.py
-# Expected: PASSED, 0 conflicts, dependency chain alice→bob→charlie
+# Terminal 2: Alice's file watcher
+export NEO_DEVELOPER=alice && python -m cli.file_watcher alice
 
-# Test 3: Explicit lock mechanism (< 1 min)
-python tests/test_explicit_locks.py
-# Expected: 9/9 tests passed, lock queue behavior validated
+# Terminal 3: Bob's file watcher  
+export NEO_DEVELOPER=bob && python -m cli.file_watcher bob
 
-# Test 4: Edge cases (4 min)
-python tests/test_edge_cases.py
-# Expected: PASSED, rapid declarations, staleness detection, merge aggregation
+# Terminal 4: Declare intent and make changes
+python -m cli.neo_client declare alice src/auth.py "Add OAuth2"
+vim src/auth.py  # Edit - watcher detects changes automatically
+
+# Then declare and edit for bob:
+python -m cli.neo_client declare bob src/auth.py "Add password hashing"
+vim src/auth.py  # Edit - watcher logs automatically
 ```
 
 **What you're testing:**
-- ✅ Lock applies at 2+ developers (no lock at 1)
-- ✅ Fresh context flows automatically
-- ✅ Zero conflicts detected
-- ✅ Sequential workflow (alice → bob → charlie)
-- ✅ Queue positions tracked correctly
+- ✅ File watcher detects changes automatically (no print statements)
+- ✅ Lock applies when second developer declares intent
+- ✅ Activity log tracks who's working on what
+- ✅ Fresh context flows to next developer
+- ✅ Zero conflicts in multi-developer workflow
 
-**Results**: All tests pass = Neo coordination works ✅
+See full guide: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
 
 ---
 
-### 🏢 Production: Terminal-Based Test (20 minutes)
+### 🔧 MCP Server Test (< 1 minute)
+
 ```bash
-# Terminal 1: Neo server
-python -m cli.neo_server --clear
+# Test Neo's MCP server implementation
+python tests/test_explicit_locks.py
 
-# Terminal 2: Alice watcher
-export NEO_DEVELOPER=alice && python -m cli.file_watcher alice
-
-# Terminal 3: Bob watcher
-export NEO_DEVELOPER=bob && python -m cli.file_watcher bob
-
-# Terminal 4: Declare intent and edit
-python -m cli.neo_client declare alice src/auth.py "Add OAuth2"
-vim src/auth.py  # Edit, watcher detects automatically
+# Expected output:
+# ✅ test_lock_acquisition_when_free
+# ✅ test_lock_blocking_when_held
+# ✅ test_queue_tracking
+# ✅ test_auto_promotion_on_release
+# 9/9 tests passed
 ```
 
-See full guide: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
+Validates lock queue behavior and explicit lock state tracking.
 
 ---
 
