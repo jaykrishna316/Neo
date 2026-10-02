@@ -22,15 +22,13 @@
 
 ## Choose Your Path
 
-**👀 New to Neo?** (5 minutes)
-- Run: `./scripts/simple_demo.sh` (automated 2-dev demo, 3 minutes)
-- Watch: Real terminals, activity log, lock state changes
-- Learn: [DEMO_GUIDE.md](DEMO_GUIDE.md) for guided walkthrough
+**👀 New to Neo?** (< 1 minute)
+- Run: `python tests/test_explicit_locks.py` (MCP server test)
+- See: Lock mechanism working with real output
 
-**👨‍💻 Developer?** (Choose one: 1 min to 20 min)
-- **Quick**: `python tests/test_explicit_locks.py` (MCP server, < 1 min)
-- **Visual**: `./scripts/simple_demo.sh` (automated demo, 3 min)
-- **Hands-on**: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) (manual with watchers, 20 min)
+**👨‍💻 Developer?** (20 minutes - Deep understanding)
+- Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) (manual with watchers)
+- See: Real coordination in action with alice and bob developers
 
 **🚀 Production Teams?** (10 minutes - IDE integration)
 - Setup: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
@@ -46,13 +44,19 @@
 
 ## Quick Start (Choose One)
 
-### 🚀 Fastest: Automatic Demo (3 minutes)
+### 🚀 Fastest: MCP Server Test (< 1 minute)
 ```bash
-./scripts/simple_demo.sh            # Demo in tmux windows
+python tests/test_explicit_locks.py
 ```
-**Prerequisites**: `tmux` (usually pre-installed; on macOS run `brew install tmux`)
 
-**See**: Real terminals, activity log, lock states, fresh context flowing
+**Expected output**:
+```
+✅ test_lock_acquisition_when_free
+✅ test_lock_blocking_when_held
+✅ test_queue_tracking
+✅ test_auto_promotion_on_release
+9/9 tests passed
+```
 
 ---
 
@@ -241,22 +245,18 @@ See: [tests/test_explicit_locks.py](tests/test_explicit_locks.py)
 
 ## Getting Started Next
 
-1. **Try it now** (3 min):
+1. **Try it now** (< 1 min):
    ```bash
-   ./scripts/launch_2dev_demo.sh
+   python tests/test_explicit_locks.py
    ```
 
 2. **Understand it** (5 min):
    - Read: [Why Neo Matters](#why-neo-matters)
-   - Watch: Activity log changing in real-time
-   - See: Lock transitions and fresh context flowing
+   - See lock mechanism working with explicit state tracking
 
-3. **Test it** (15 min):
-   ```bash
-   python tests/test_two_developer_coordination.py
-   python tests/test_three_developer_coordination.py
-   python tests/test_explicit_locks.py
-   ```
+3. **Test it hands-on** (20 min):
+   - Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
+   - See real 2-developer coordination with watchers
 
 4. **Deploy it** (10 min):
    - See: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
@@ -289,7 +289,7 @@ MIT — See [LICENSE](LICENSE)
 
 **Start now**: 
 ```bash
-./scripts/launch_2dev_demo.sh
+python tests/test_explicit_locks.py
 ```
 
 ---
