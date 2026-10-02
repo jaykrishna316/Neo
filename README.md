@@ -153,8 +153,6 @@ See: [baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL
 - [`core/lock_manager.py`](core/lock_manager.py) - Explicit lock tracking
 - [`core/activity_log.py`](core/activity_log.py) - File-based coordination
 - [`core/risk_classifier.py`](core/risk_classifier.py) - Conflict detection
-- [`tests/test_two_developer_coordination.py`](tests/test_two_developer_coordination.py) - 2-dev validation
-- [`tests/test_three_developer_coordination.py`](tests/test_three_developer_coordination.py) - 3-dev scaling
 
 **Activity Log** (`.devsync/activity-log.json`):
 - Records developer intent
