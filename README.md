@@ -253,11 +253,7 @@ See: [tests/test_explicit_locks.py](tests/test_explicit_locks.py)
 
 ## Documentation
 
-- [DEMO_GUIDE.md](DEMO_GUIDE.md) - All demo approaches
-- [DEMO_COMPARISON.md](DEMO_COMPARISON.md) - Demo comparison table
-- [GUIDED_DEMO_README.md](GUIDED_DEMO_README.md) - Step-by-step walkthrough
-- [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md) - Comprehensive testing guide
-- [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) - Terminal-based test
+- [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) - Manual test with watchers
 - [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md) - IDE integration
 - [baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md) - Performance data
 - [CLAUDE.md](CLAUDE.md) - Project configuration & MCP server setup
@@ -281,4 +277,4 @@ python tests/test_explicit_locks.py
 
 ---
 
-*Note: Full technical details (Phase 3 deep dive, empirical methodology, advanced configuration) moved to `docs/` and `baseline_comparison/` folders for clarity. See [DEMO_GUIDE.md](DEMO_GUIDE.md) for all documentation links.*
+*Note: Full technical details (Phase 3 deep dive, empirical methodology, advanced configuration) moved to `docs/` and `baseline_comparison/` folders for clarity.*
