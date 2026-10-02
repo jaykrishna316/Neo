@@ -216,22 +216,6 @@ Developer B promoted → lock_state: "ACQUIRED" (auto-promotion)
 
 ---
 
-## Getting Started Next
-
-1. **Understand it** (5 min):
-   - Read: [Why Neo Matters](#why-neo-matters)
-   - Understand the coordination model and phases
-
-2. **Test it hands-on** (20 min):
-   - Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
-   - See real 2-developer coordination with watchers and activity log
-
-3. **Deploy it** (10 min):
-   - See: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
-   - Configure MCP server in Claude Code IDE
-
----
-
 ## Documentation
 
 - [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) - Manual test with watchers
