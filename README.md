@@ -23,13 +23,13 @@
 ## Choose Your Path
 
 **👀 New to Neo?** (5 minutes)
-- Run: `./scripts/launch_2dev_demo.sh` (automated 2-dev demo, 3 minutes)
+- Run: `./scripts/simple_demo.sh` (automated 2-dev demo, 3 minutes)
 - Watch: Real terminals, activity log, lock state changes
 - Learn: [DEMO_GUIDE.md](DEMO_GUIDE.md) for guided walkthrough
 
 **👨‍💻 Developer?** (Choose one: 1 min to 20 min)
 - **Quick**: `python tests/test_explicit_locks.py` (MCP server, < 1 min)
-- **Visual**: `./scripts/launch_2dev_demo.sh` (automated demo, 3 min)
+- **Visual**: `./scripts/simple_demo.sh` (automated demo, 3 min)
 - **Hands-on**: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) (manual with watchers, 20 min)
 
 **🚀 Production Teams?** (10 minutes - IDE integration)
@@ -48,51 +48,26 @@
 
 ### 🚀 Fastest: Automatic Demo (3 minutes)
 ```bash
-./scripts/launch_2dev_demo.sh      # 5 terminals open automatically
-./scripts/launch_3dev_demo.sh      # 7 terminals for 3-dev scenario
+./scripts/simple_demo.sh            # Demo in tmux windows
 ```
+**Prerequisites**: `tmux` (usually pre-installed; on macOS run `brew install tmux`)
+
 **See**: Real terminals, activity log, lock states, fresh context flowing
-
----
-
-### 📖 Learn: Guided Demo (10 minutes)
-```bash
-./scripts/launch_guided_2dev_demo.sh    # Step-by-step, press Enter to advance
-./scripts/launch_guided_3dev_demo.md    # See 3-dev queue progression
-```
-**See**: Each step explained, "what to look for", key insights
 
 ---
 
 ### 💻 Developer: Manual Test with Watchers (20 minutes)
 
-```bash
-# Terminal 1: Start Neo server
-python -m cli.neo_server --clear
+This hands-on test uses real terminals and activity log monitoring to verify Neo's coordination works:
 
-# Terminal 2: Alice's file watcher
-export NEO_DEVELOPER=alice && python -m cli.file_watcher alice
+**Setup**: Open 4 terminals and follow [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
 
-# Terminal 3: Bob's file watcher  
-export NEO_DEVELOPER=bob && python -m cli.file_watcher bob
-
-# Terminal 4: Declare intent and make changes
-python -m cli.neo_client declare alice src/auth.py "Add OAuth2"
-vim src/auth.py  # Edit - watcher detects changes automatically
-
-# Then declare and edit for bob:
-python -m cli.neo_client declare bob src/auth.py "Add password hashing"
-vim src/auth.py  # Edit - watcher logs automatically
-```
-
-**What you're testing:**
-- ✅ File watcher detects changes automatically (no print statements)
+**What you'll see:**
+- ✅ File watcher detects changes automatically
 - ✅ Lock applies when second developer declares intent
-- ✅ Activity log tracks who's working on what
+- ✅ Activity log tracks who's working on what with explicit lock states
 - ✅ Fresh context flows to next developer
-- ✅ Zero conflicts in multi-developer workflow
-
-See full guide: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
+- ✅ Zero conflicts in real multi-developer workflow
 
 ---
 
