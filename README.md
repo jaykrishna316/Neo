@@ -52,28 +52,6 @@
 
 ---
 
-## How to Test Neo
-
-**🎬 Terminal Animated Demo** (3 minutes - Automatic, colored output)
-- Run: `./run_demo.sh` (interactive demo with 2 or 3 developer scenarios)
-- See: Real-time coordination with colored output, progress bars, live activity log
-
-**👨‍💻 Manual Test** (20 minutes - Real terminals, watchers)
-- Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
-- See: Real coordination in action — watch the activity log, lock states, queue positions
-
-**🚀 Production Teams?** (10 minutes - IDE integration)
-- Setup: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
-- MCP Server: See [CLAUDE.md](CLAUDE.md) for configuration
-- Deploy: Pre-generation conflict checking in Claude Code
-
-**🏢 Enterprise?** (20 minutes - Scale validation)
-- Validated: 98.94% token savings at 16 developers
-- See: [#empirical-proof](#empirical-proof)
-- Baseline tests: [baseline_comparison/](baseline_comparison/)
-
----
-
 ## Quick Start
 
 ### 🎬 Terminal Demo (3 minutes)
