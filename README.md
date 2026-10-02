@@ -180,17 +180,111 @@ See: context_staleness_test.py
 
 ## Phase 1.0: Explicit Lock Mechanism (Neo 4.0)
 
-**What Changed**: Locks now have visible state (ACQUIRED/WAITING/RELEASED) with queue tracking.
+The Evolution: Neo 4.0 enhances Phase 1 with explicit lock tracking, making lock state visible, auditable, and queryable.
 
-**Lock States**:
-```
-Developer A declares → lock_state: "ACQUIRED", lock_holder: "alice"
-Developer B declares → lock_state: "WAITING", queue_position: 0, waiting_for: "alice"
-Developer A completes → lock_state: "RELEASED"
-Developer B promoted → lock_state: "ACQUIRED" (auto-promotion)
+### What Changed
+
+**Implicit Lock (Before)**:
+- Lock state was encoded in `RiskLevel` enum (LOW/MEDIUM/HIGH)
+- Lock holder, queue position, expiration invisible
+- No audit trail of lock operations
+
+**Explicit Lock (Neo 4.0)**:
+- Dedicated lock fields in `ActivityEntry` dataclass
+- Lock state, holder, acquisition time, expiration, reason, scope all tracked
+- Queue position and wait-for relationships visible
+- Complete audit trail in activity log
+
+### Lock Fields (New)
+
+```python
+@dataclass
+class ActivityEntry:
+    # ... existing fields ...
+    lock_state: Optional[str]          # "ACQUIRED", "WAITING", "RELEASED"
+    lock_holder: Optional[str]         # developer_id who holds lock
+    lock_acquired_at: Optional[float]  # Unix timestamp (lock acquisition)
+    lock_expires_at: Optional[float]   # Unix timestamp (lock expiration)
+    lock_timeout_seconds: int          # default 30 minutes
+    lock_reason: Optional[str]         # "MEDIUM_CONFLICT", "HIGH_CONFLICT"
+    lock_scope: Optional[str]          # "file" or "region"
+    queue_position: Optional[int]      # Position if waiting (0=next)
+    waiting_for: Optional[str]         # developer_id this one is waiting for
 ```
 
-**Backward Compatible**: All lock fields optional, RiskLevel unchanged, existing tests pass.
+### Lock Lifecycle
+
+```
+1. Developer A declares intent on auth.py::validate_password
+   → log_activity() creates entry with lock_state=None (no lock yet)
+
+2. Developer B declares intent on SAME region
+   → LockManager.acquire_lock() called automatically
+   → Lock holder: A, Lock state: ACQUIRED
+   → B's entry: lock_state=WAITING, queue_position=0, waiting_for=A
+
+3. Developer A completes work
+   → LockManager.release_lock() called
+   → A's lock marked: lock_state=RELEASED
+   → B promoted automatically: lock_state=ACQUIRED, queue_position=None
+
+4. Developer B completes, Developer C promoted
+   → Sequential execution guaranteed
+   → Zero conflicts, zero manual merges
+```
+
+### Lock Manager API
+
+File: `core/lock_manager.py`
+
+```python
+manager = LockManager(tenant_id="default")
+
+# Acquire lock (or queue if held)
+result = manager.acquire_lock(
+    file_path="auth.py",
+    region="validate_password",
+    developer_id="bob",
+    reason="MEDIUM_CONFLICT",
+    scope="region"
+)
+# Returns: {success: bool, lock_holder: str, queue_position: int, ...}
+
+# Release lock (auto-promotes next developer)
+result = manager.release_lock(
+    file_path="auth.py",
+    region="validate_password",
+    developer_id="alice"
+)
+
+# Check lock state
+state = manager.get_lock_state("auth.py", "validate_password")
+# Returns: {locked: bool, lock_holder: str, queue_size: int, queue_list: [...]}
+
+# Check if lock expired
+expired = manager.check_expired("auth.py", "validate_password")
+
+# Auto-cleanup expired locks
+cleaned = manager.cleanup_expired()
+```
+
+### Integration with Risk Classification
+
+Before: RiskLevel returned lock "signal" (MEDIUM/HIGH)  
+After: LockManager creates explicit lock entry + RiskLevel still returned
+
+```python
+# In pre_gen_check.py
+risk_level, msg, lock_info = check_for_conflicts(
+    agent_id="bob",
+    file_path="auth.py",
+    intent="Refactor validation",
+    region="validate_password"
+)
+
+# RiskLevel.MEDIUM detected → LockManager.acquire_lock() called automatically
+# lock_info contains explicit lock state: {success, lock_holder, queue_position, ...}
+```
 
 ---
 
@@ -243,6 +337,40 @@ All performance characteristics validated by calling actual Neo functions (not s
 **Capacity**: 1,000 developers = 370ms total overhead (0.37ms per developer). Safe for enterprise teams.
 
 See: [FINDINGS_AND_OPTIMIZATIONS.md](baseline_comparison/FINDINGS_AND_OPTIMIZATIONS.md)
+
+---
+
+## State Machine: File Evolution History
+
+Every file has a complete version history with semantic tracking:
+
+```
+[v1.0] AVAILABLE (initial state)
+    ↓ Developer declares intent
+[v2.0] EDITING (Alice: "Refactor password validation to bcrypt")
+    ├─ Lock applies (if 2+ developers)
+    ├─ Context snapshot created
+    ├─ Conflict risk: 18/100 (LOW)
+    └─ Phase 1 active
+    
+    ↓ Developer finishes, publishes changes
+[v3.0] PUBLISHED (+20 lines, -5 lines)
+    ├─ Delta: 47 tokens
+    ├─ Phase 2: Handoff created for Bob
+    └─ Notification sent to all developers
+    
+    ↓ Next developer notified, context may be stale
+[v4.0] CONTEXT_REFRESH (staleness detected > 300ms)
+    ├─ Phase 3: Auto-refresh triggered
+    ├─ Delta fetched: 40 tokens (vs 500 for full re-read)
+    └─ Bob now has fresh context
+    
+    ↓ Next developer starts editing with fresh context
+[v5.0] EDITING (Bob: "Add password strength requirements")
+    └─ Built on Alice's work, no stale code
+```
+
+**Key insight**: Complete history eliminates context re-reads. Each developer gets only what changed (delta = 40 tokens vs full file = 500 tokens).
 
 ---
 
