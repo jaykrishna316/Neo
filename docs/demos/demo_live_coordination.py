@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Any
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core.activity_log import log_activity, read_log, clear_log
 from core.pre_gen_check import check_for_conflicts
