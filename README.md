@@ -180,19 +180,6 @@ See: [baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL
 
 ---
 
-## Demo Approaches Comparison
-
-| Feature | Automatic | Guided | Manual |
-|---------|-----------|--------|--------|
-| **Time** | 2-3 min | 10-15 min | 20-30 min |
-| **Setup** | 1 click | 1 click | 5 min |
-| **Learning** | Quick view | Step-by-step | Deep test |
-| **Best for** | Demos | Learning | Production |
-
-See: [DEMO_COMPARISON.md](DEMO_COMPARISON.md) for detailed comparison
-
----
-
 ## Core Architecture
 
 **Key Files**:
