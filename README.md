@@ -20,15 +20,11 @@
 
 ---
 
-## Choose Your Path
+## How to Test Neo
 
-**👀 New to Neo?** (< 1 minute)
-- Run: `python tests/test_explicit_locks.py` (MCP server test)
-- See: Lock mechanism working with real output
-
-**👨‍💻 Developer?** (20 minutes - Deep understanding)
-- Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) (manual with watchers)
-- See: Real coordination in action with alice and bob developers
+**👨‍💻 See It Work** (20 minutes - Real demonstration)
+- Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
+- See: Real coordination in action — watch the activity log, lock states, queue positions
 
 **🚀 Production Teams?** (10 minutes - IDE integration)
 - Setup: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
@@ -42,25 +38,9 @@
 
 ---
 
-## Quick Start (Choose One)
+## Quick Start
 
-### 🚀 Fastest: MCP Server Test (< 1 minute)
-```bash
-python tests/test_explicit_locks.py
-```
-
-**Expected output**:
-```
-✅ test_lock_acquisition_when_free
-✅ test_lock_blocking_when_held
-✅ test_queue_tracking
-✅ test_auto_promotion_on_release
-9/9 tests passed
-```
-
----
-
-### 💻 Developer: Manual Test with Watchers (20 minutes)
+### 💻 See Neo in Action (20 minutes)
 
 This hands-on test uses real terminals and activity log monitoring to verify Neo's coordination works:
 
@@ -72,24 +52,6 @@ This hands-on test uses real terminals and activity log monitoring to verify Neo
 - ✅ Activity log tracks who's working on what with explicit lock states
 - ✅ Fresh context flows to next developer
 - ✅ Zero conflicts in real multi-developer workflow
-
----
-
-### 🔧 MCP Server Test (< 1 minute)
-
-```bash
-# Test Neo's MCP server implementation
-python tests/test_explicit_locks.py
-
-# Expected output:
-# ✅ test_lock_acquisition_when_free
-# ✅ test_lock_blocking_when_held
-# ✅ test_queue_tracking
-# ✅ test_auto_promotion_on_release
-# 9/9 tests passed
-```
-
-Validates lock queue behavior and explicit lock state tracking.
 
 ---
 
@@ -213,8 +175,6 @@ Developer B promoted → lock_state: "ACQUIRED" (auto-promotion)
 
 **Backward Compatible**: All lock fields optional, RiskLevel unchanged, existing tests pass.
 
-See: [tests/test_explicit_locks.py](tests/test_explicit_locks.py)
-
 ---
 
 ## Production Readiness
@@ -232,20 +192,15 @@ See: [tests/test_explicit_locks.py](tests/test_explicit_locks.py)
 
 ## Getting Started Next
 
-1. **Try it now** (< 1 min):
-   ```bash
-   python tests/test_explicit_locks.py
-   ```
-
-2. **Understand it** (5 min):
+1. **Understand it** (5 min):
    - Read: [Why Neo Matters](#why-neo-matters)
-   - See lock mechanism working with explicit state tracking
+   - Understand the coordination model
 
-3. **Test it hands-on** (20 min):
+2. **Test it hands-on** (20 min):
    - Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
    - See real 2-developer coordination with watchers
 
-4. **Deploy it** (10 min):
+3. **Deploy it** (10 min):
    - See: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
    - Configure MCP server in IDE
 
@@ -270,10 +225,7 @@ MIT — See [LICENSE](LICENSE)
 
 **The core value**: Eliminate Git merge conflicts by moving conflict resolution one layer below Git through intelligent semantic coordination.
 
-**Start now**: 
-```bash
-python tests/test_explicit_locks.py
-```
+**Start now**: Follow [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) to see Neo in action
 
 ---
 
