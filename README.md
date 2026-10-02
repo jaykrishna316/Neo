@@ -22,7 +22,13 @@
 
 ## How to Test Neo
 
-**🎬 Quick Animated Demo** (3 minutes - Automatic, no setup)
+**🌟 BEST: Interactive Visual Demo** (2 minutes - No setup, instant)
+- Open: [Neo Interactive Demo](https://claude.ai/artifact/TvnG4R3SvQCErn3fqtfaXB)
+- Click: "2-Developer Coordination" or "3-Developer Scaling"
+- Watch: Real-time animated coordination with lock states, queue positions, activity log
+- **Recommended for**: Getting the clearest, most visual understanding
+
+**🎬 Terminal Animated Demo** (3 minutes - Automatic, colored output)
 - Run: `./run_demo.sh` (interactive demo with 2 or 3 developer scenarios)
 - See: Real-time coordination with colored output, progress bars, live activity log
 
@@ -44,7 +50,28 @@
 
 ## Quick Start
 
-### 🎬 Fastest: Animated Demo (3 minutes)
+### 🌟 Best Way to See Neo in Action: Interactive Demo
+
+**Click to open the interactive demo:**
+→ [Neo Coordination Demo (Interactive)](https://claude.ai/artifact/TvnG4R3SvQCErn3fqtfaXB)
+
+Choose between:
+- **🎬 2-Developer Coordination** - Watch alice and bob coordinating with live lock states
+- **🎬 3-Developer Scaling** - See 3 developers with queue auto-promotion
+
+**What you'll see in real-time:**
+- ✅ Timeline of steps (developer declarations, lock changes, completions)
+- ✅ Developer status cards (lock state, queue position)
+- ✅ Activity log updating live
+- ✅ Metrics: conflicts prevented, token savings (97-98%), developers coordinated
+
+No installation needed. Animations show the exact flow of Neo's coordination.
+
+---
+
+### 🎬 Alternative: Terminal Demo (3 minutes)
+
+If you prefer a terminal-based demo:
 
 ```bash
 ./run_demo.sh
@@ -216,9 +243,9 @@ Developer B promoted → lock_state: "ACQUIRED" (auto-promotion)
 
 ## Getting Started Next
 
-1. **See it work** (3 min):
-   - Run: `./run_demo.sh`
-   - Watch real-time coordination with animated output
+1. **See it work visually** (2 min):
+   - Open: [Neo Interactive Demo](https://claude.ai/artifact/TvnG4R3SvQCErn3fqtfaXB)
+   - Click a demo button and watch coordination happen in real-time
 
 2. **Understand it** (5 min):
    - Read: [Why Neo Matters](#why-neo-matters)
@@ -226,11 +253,11 @@ Developer B promoted → lock_state: "ACQUIRED" (auto-promotion)
 
 3. **Test it hands-on** (20 min):
    - Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
-   - See real 2-developer coordination with watchers
+   - See real 2-developer coordination with watchers and activity log
 
 4. **Deploy it** (10 min):
    - See: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
-   - Configure MCP server in IDE
+   - Configure MCP server in Claude Code IDE
 
 ---
 
@@ -254,10 +281,12 @@ MIT — See [LICENSE](LICENSE)
 **The core value**: Eliminate Git merge conflicts by moving conflict resolution one layer below Git through intelligent semantic coordination.
 
 **Start now**: 
+→ [Open the Interactive Demo](https://claude.ai/artifact/TvnG4R3SvQCErn3fqtfaXB) (instant, no setup)
+
+Or try the terminal demo:
 ```bash
 ./run_demo.sh
 ```
-or follow [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) for manual testing
 
 ---
 
