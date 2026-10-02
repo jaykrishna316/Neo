@@ -20,6 +20,38 @@
 
 ---
 
+## Why Neo Matters
+
+**Without Neo (Traditional Git)**:
+- 3 developers on same file → 2 merge conflicts
+- Tokens wasted: 6,000+ (re-reading files, understanding conflicts, merging)
+- Time: 2-3 hours on conflict resolution
+- Manual merge needed: YES
+
+**With Neo (Semantic Coordination)**:
+- 3 developers on same file → 0 merge conflicts
+- Tokens used: 279 (context snapshots + deltas)
+- Automatic coordination: YES
+- Manual merge needed: NO
+
+**The Win**: 98-99% token savings + 100% conflict prevention + automatic coordination
+
+---
+
+## How It Works (5 Phases)
+
+| Phase | What | Benefit |
+|-------|------|---------|
+| **1: Lock-Only-When-Needed** | Applies sequential lock at 2+ developers | Prevents simultaneous edits |
+| **2: Temporal Handoff** | Auto-queues next developer on same file | Fair, sequential workflow |
+| **3: Context Invalidation** | Detects staleness >300ms, auto-refreshes delta | 96% token reduction per refresh |
+| **4: Reviewer Provenance** | Routes to developer with deepest expertise | Better conflict resolution |
+| **5: Agent Autonomy** | Multi-agent coordination (Claude + others) | Scalable to any team |
+
+**Key Insight**: All operations are **local** (`.devsync/activity-log.json`) — no network calls, no external dependencies.
+
+---
+
 ## How to Test Neo
 
 **🎬 Terminal Animated Demo** (3 minutes - Automatic, colored output)
@@ -133,38 +165,6 @@ Savings: 98.94%
 **Average**: 98.82% token savings across all scenarios ✅
 
 See: [baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md)
-
----
-
-## Why Neo Matters
-
-**Without Neo (Traditional Git)**:
-- 3 developers on same file → 2 merge conflicts
-- Tokens wasted: 6,000+ (re-reading files, understanding conflicts, merging)
-- Time: 2-3 hours on conflict resolution
-- Manual merge needed: YES
-
-**With Neo (Semantic Coordination)**:
-- 3 developers on same file → 0 merge conflicts
-- Tokens used: 279 (context snapshots + deltas)
-- Automatic coordination: YES
-- Manual merge needed: NO
-
-**The Win**: 98-99% token savings + 100% conflict prevention + automatic coordination
-
----
-
-## How It Works (5 Phases)
-
-| Phase | What | Benefit |
-|-------|------|---------|
-| **1: Lock-Only-When-Needed** | Applies sequential lock at 2+ developers | Prevents simultaneous edits |
-| **2: Temporal Handoff** | Auto-queues next developer on same file | Fair, sequential workflow |
-| **3: Context Invalidation** | Detects staleness >300ms, auto-refreshes delta | 96% token reduction per refresh |
-| **4: Reviewer Provenance** | Routes to developer with deepest expertise | Better conflict resolution |
-| **5: Agent Autonomy** | Multi-agent coordination (Claude + others) | Scalable to any team |
-
-**Key Insight**: All operations are **local** (`.devsync/activity-log.json`) — no network calls, no external dependencies.
 
 ---
 
