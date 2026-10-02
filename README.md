@@ -146,23 +146,6 @@ See: [baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL
 
 ---
 
-## Core Architecture
-
-**Key Files**:
-- [`core/coordination_machine.py`](core/coordination_machine.py) - Lock & queue logic
-- [`core/lock_manager.py`](core/lock_manager.py) - Explicit lock tracking
-- [`core/activity_log.py`](core/activity_log.py) - File-based coordination
-- [`core/risk_classifier.py`](core/risk_classifier.py) - Conflict detection
-
-**Activity Log** (`.devsync/activity-log.json`):
-- Records developer intent
-- Tracks lock state transitions
-- Shows fresh context available
-- Logs completion with delta
-- NO database required (file-based)
-
----
-
 ## Phase 1.0: Explicit Lock Mechanism (Neo 4.0)
 
 **What Changed**: Locks now have visible state (ACQUIRED/WAITING/RELEASED) with queue tracking.
@@ -222,6 +205,23 @@ Developer B waits for Developer A (500ms staleness):
 - Data integrity: Fully deterministic
 
 ✅ **Capacity**: 1,000 developers = 370ms total overhead (0.37ms per developer)
+
+---
+
+## Core Architecture
+
+**Key Files**:
+- [`core/coordination_machine.py`](core/coordination_machine.py) - Lock & queue logic
+- [`core/lock_manager.py`](core/lock_manager.py) - Explicit lock tracking
+- [`core/activity_log.py`](core/activity_log.py) - File-based coordination
+- [`core/risk_classifier.py`](core/risk_classifier.py) - Conflict detection
+
+**Activity Log** (`.devsync/activity-log.json`):
+- Records developer intent
+- Tracks lock state transitions
+- Shows fresh context available
+- Logs completion with delta
+- NO database required (file-based)
 
 ---
 
