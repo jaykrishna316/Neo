@@ -59,7 +59,7 @@
 If you prefer a terminal-based demo:
 
 ```bash
-./run_demo.sh
+./docs/demos/run_demo.sh
 ```
 
 Choose between:
@@ -142,7 +142,7 @@ Savings: 98.94%
 
 **Average**: 98.82% token savings across all scenarios ✅
 
-See: [baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md)
+See: [docs/measurements/REAL_MEASUREMENTS_SUMMARY.md](docs/measurements/REAL_MEASUREMENTS_SUMMARY.md)
 
 ### Phase 3 Validation: Context Staleness + Delta Refresh
 
@@ -174,7 +174,7 @@ See: context_staleness_test.py
 
 ✅ All claims validated by real implementation code, not simulations
 
-📊 Complete results in `baseline_comparison/` — See [REAL_MEASUREMENTS_SUMMARY.md](baseline_comparison/REAL_MEASUREMENTS_SUMMARY.md)
+📊 Complete results in `docs/measurements/` — See [REAL_MEASUREMENTS_SUMMARY.md](docs/measurements/REAL_MEASUREMENTS_SUMMARY.md)
 
 ---
 
@@ -336,7 +336,7 @@ All performance characteristics validated by calling actual Neo functions (not s
 
 **Capacity**: 1,000 developers = 370ms total overhead (0.37ms per developer). Safe for enterprise teams.
 
-See: [FINDINGS_AND_OPTIMIZATIONS.md](baseline_comparison/FINDINGS_AND_OPTIMIZATIONS.md)
+See: [FINDINGS_AND_OPTIMIZATIONS.md](docs/measurements/FINDINGS_AND_OPTIMIZATIONS.md)
 
 ---
 
@@ -412,7 +412,7 @@ MIT — See [LICENSE](LICENSE)
 
 **Start now**: Try the terminal demo:
 ```bash
-./run_demo.sh
+./docs/demos/run_demo.sh
 ```
 
 ---
