@@ -22,7 +22,11 @@
 
 ## How to Test Neo
 
-**👨‍💻 See It Work** (20 minutes - Real demonstration)
+**🎬 Quick Animated Demo** (3 minutes - Automatic, no setup)
+- Run: `./run_demo.sh` (interactive demo with 2 or 3 developer scenarios)
+- See: Real-time coordination with colored output, progress bars, live activity log
+
+**👨‍💻 Manual Test** (20 minutes - Real terminals, watchers)
 - Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
 - See: Real coordination in action — watch the activity log, lock states, queue positions
 
@@ -40,9 +44,29 @@
 
 ## Quick Start
 
-### 💻 See Neo in Action (20 minutes)
+### 🎬 Fastest: Animated Demo (3 minutes)
 
-This hands-on test uses real terminals and activity log monitoring to verify Neo's coordination works:
+```bash
+./run_demo.sh
+```
+
+Choose between:
+- **2-Developer Coordination**: See alice and bob with lock behavior
+- **3-Developer Scaling**: See queue auto-promotion across 3 developers
+
+**What you'll see:**
+- ✅ Real-time coordination with colored output
+- ✅ Lock state changes (ACQUIRED → WAITING → RELEASED)
+- ✅ Queue positions tracking
+- ✅ Fresh context flowing between developers
+- ✅ Zero conflicts, automatic coordination
+- ✅ Token savings: 97% reduction
+
+---
+
+### 💻 Manual Test (20 minutes)
+
+For a deeper hands-on experience with real terminals:
 
 **Setup**: Open 4 terminals and follow [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
 
@@ -192,15 +216,19 @@ Developer B promoted → lock_state: "ACQUIRED" (auto-promotion)
 
 ## Getting Started Next
 
-1. **Understand it** (5 min):
-   - Read: [Why Neo Matters](#why-neo-matters)
-   - Understand the coordination model
+1. **See it work** (3 min):
+   - Run: `./run_demo.sh`
+   - Watch real-time coordination with animated output
 
-2. **Test it hands-on** (20 min):
+2. **Understand it** (5 min):
+   - Read: [Why Neo Matters](#why-neo-matters)
+   - Understand the coordination model and phases
+
+3. **Test it hands-on** (20 min):
    - Follow: [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
    - See real 2-developer coordination with watchers
 
-3. **Deploy it** (10 min):
+4. **Deploy it** (10 min):
    - See: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
    - Configure MCP server in IDE
 
@@ -225,7 +253,11 @@ MIT — See [LICENSE](LICENSE)
 
 **The core value**: Eliminate Git merge conflicts by moving conflict resolution one layer below Git through intelligent semantic coordination.
 
-**Start now**: Follow [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) to see Neo in action
+**Start now**: 
+```bash
+./run_demo.sh
+```
+or follow [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md) for manual testing
 
 ---
 
