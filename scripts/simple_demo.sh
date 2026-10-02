@@ -4,7 +4,7 @@
 # Spawns windows for developers, watchers, and activity log
 #
 
-NEO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NEO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$NEO_DIR"
 
 # Colors
@@ -71,7 +71,7 @@ EOF" Enter
 # ============================================================================
 echo -e "${BLUE}[1/5] Activity Log Viewer${NC}"
 tmux new-window -t "$SESSION_NAME" -n "alice"
-tmux send-keys -t "$SESSION_NAME:alice" "cd '$NEO_DIR' && python3 simulate_2dev_workflow.py 2>&1 | head -40" Enter
+tmux send-keys -t "$SESSION_NAME:alice" "cd '$NEO_DIR' && python3 scripts/simulate_2dev_workflow.py 2>&1 | head -40" Enter
 
 # ============================================================================
 # Window 3: Watcher Alice
