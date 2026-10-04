@@ -1,10 +1,95 @@
 #!/usr/bin/env python3
 """Pre-generation conflict checking API for Neo coordination layer (tenant-isolated)."""
 
+import time
 from typing import Tuple, Optional, Dict, Any
-from core.activity_log import get_active_entries, DEFAULT_TENANT_ID, log_activity
+from core.activity_log import get_active_entries, DEFAULT_TENANT_ID, log_activity, read_log
 from core.risk_classifier import RiskLevel, classify_risk
 from core.lock_manager import LockManager
+
+# Staleness detection constants
+STALE_THRESHOLD_SECONDS = 0.3  # 300ms - context older than this is considered stale
+MAX_REFRESH_ATTEMPTS = 2  # Retry up to 2 times when stale
+
+
+def _detect_and_refresh_stale_entries(entries: list, tenant_id: str) -> Tuple[list, Dict[str, Any]]:
+    """
+    Detect stale entries and automatically refresh them.
+
+    When an entry is older than STALE_THRESHOLD_SECONDS, re-fetch it from the activity log.
+    This ensures we have the latest state (e.g., "completed" status) even if the entry
+    was logged a while ago.
+
+    Args:
+        entries: List of entries from get_active_entries()
+        tenant_id: Tenant context for refresh
+
+    Returns:
+        Tuple of (refreshed_entries, staleness_report) where staleness_report is a dict
+        with keys: stale_count, refresh_count, details
+    """
+    staleness_report = {
+        'stale_count': 0,
+        'refresh_count': 0,
+        'refreshed_entries': {},
+        'details': []
+    }
+
+    if not entries:
+        return entries, staleness_report
+
+    current_time = time.time()
+    refreshed_entries = {}
+
+    for entry in entries:
+        entry_id = entry.get('developer_id')
+        entry_age = current_time - entry.get('timestamp', current_time)
+
+        # Check if entry is stale
+        if entry_age > STALE_THRESHOLD_SECONDS:
+            staleness_report['stale_count'] += 1
+
+            # Try to refresh from activity log
+            for attempt in range(MAX_REFRESH_ATTEMPTS):
+                try:
+                    all_entries = read_log(tenant_id=tenant_id)
+                    for fresh_entry in all_entries:
+                        if fresh_entry and fresh_entry.get('developer_id') == entry_id:
+                            refreshed_entries[entry_id] = fresh_entry
+                            staleness_report['refresh_count'] += 1
+
+                            old_status = (entry.get('agent_metadata') or {}).get('status', 'unknown')
+                            new_status = (fresh_entry.get('agent_metadata') or {}).get('status', 'unknown')
+
+                            staleness_report['details'].append({
+                                'developer_id': entry_id,
+                                'entry_age_ms': entry_age * 1000,
+                                'status_before': old_status,
+                                'status_after': new_status,
+                                'refresh_attempt': attempt + 1
+                            })
+                            break
+
+                    if entry_id in refreshed_entries:
+                        break  # Successfully refreshed, stop retrying
+                except Exception as e:
+                    staleness_report['details'].append({
+                        'developer_id': entry_id,
+                        'error': f"Refresh failed: {str(e)}",
+                        'attempt': attempt + 1
+                    })
+
+    # Replace stale entries with refreshed ones
+    result_entries = []
+    for entry in entries:
+        entry_id = entry.get('developer_id')
+        if entry_id in refreshed_entries:
+            result_entries.append(refreshed_entries[entry_id])
+            staleness_report['refreshed_entries'][entry_id] = True
+        else:
+            result_entries.append(entry)
+
+    return result_entries, staleness_report
 
 
 def check_for_conflicts(
@@ -34,6 +119,26 @@ def check_for_conflicts(
 
     # Get active entries for this tenant only (conflict checks are per-tenant)
     active_entries = get_active_entries(tenant_id=resolved_tenant)
+
+    # STALENESS DETECTION & REFRESH: Automatically refresh stale entries
+    # This ensures we detect the latest state even if log entries are slightly old
+    active_entries, staleness_report = _detect_and_refresh_stale_entries(active_entries, resolved_tenant)
+
+    # Log staleness events if any were found
+    if staleness_report['stale_count'] > 0:
+        log_activity(
+            developer_id="_neo_system",
+            file_path=file_path,
+            intent=f"Staleness detection: {staleness_report['stale_count']} entries were stale, refreshed {staleness_report['refresh_count']}",
+            region=region,
+            intent_category="system",
+            agent_metadata={
+                "system_event": "staleness_detection",
+                "stale_count": staleness_report['stale_count'],
+                "refresh_count": staleness_report['refresh_count'],
+                "details": staleness_report['details']
+            }
+        )
 
     # Filter entries for the same file from other agents (same tenant only)
     # Keep only the LATEST entry per developer (handles duplicate log entries)
