@@ -40,7 +40,7 @@ def test_devin_instance_a():
     # Step 1: Alice declares intent
     print_step(1, "Alice declares intent on auth.py::validate_password")
     log_activity(
-        agent_id="alice-devin",
+        developer_id="alice-devin",
         file_path="auth.py",
         intent="Refactor password validation to use bcrypt",
         region="validate_password",
@@ -67,7 +67,7 @@ def test_devin_instance_a():
     # Step 4: Log completion
     print_step(4, "Alice completes work and publishes changes")
     log_activity(
-        agent_id="alice-devin",
+        developer_id="alice-devin",
         file_path="auth.py",
         intent="Refactor password validation to use bcrypt",
         region="validate_password",
@@ -99,7 +99,7 @@ def test_devin_instance_b():
     print("   (Alice should already be working on this)")
 
     log_activity(
-        agent_id="bob-devin",
+        developer_id="bob-devin",
         file_path="auth.py",
         intent="Add password strength validation",
         region="validate_password",
@@ -138,7 +138,7 @@ def test_devin_instance_b():
 
         # Check if lock is released
         risk_level_after, _ = check_for_conflicts(
-            agent_id="bob-devin",
+            developer_id="bob-devin",
             file_path="auth.py",
             intent="Add password strength validation",
             region="validate_password"
@@ -148,7 +148,7 @@ def test_devin_instance_b():
     # Step 5: Bob completes work
     print_step(5, "Bob completes work (built on Alice's changes)")
     log_activity(
-        agent_id="bob-devin",
+        developer_id="bob-devin",
         file_path="auth.py",
         intent="Add password strength validation",
         region="validate_password",
