@@ -85,7 +85,7 @@ def test_devin_instance_a():
     log_data = read_log()
     for entry in log_data:
         if entry:
-            print(f"   - {entry.developer_id}: {entry.intent} ({entry.region})")
+            print(f"   - {entry.get('developer_id')}: {entry.get('intent')} ({entry.get('region')})")
 
     print("\n✅ DEVIN A COMPLETE - Alice finished successfully")
     print("   → Now run Devin Instance B (Bob will see lock)\n")
@@ -129,8 +129,8 @@ def test_devin_instance_b():
     log_data = read_log()
     for entry in log_data:
         if entry:
-            status = (entry.agent_metadata or {}).get('status', 'unknown')
-            print(f"   - {entry.developer_id}: {entry.intent} ({status})")
+            status = (entry.get('agent_metadata') or {}).get('status', 'unknown')
+            print(f"   - {entry.get('developer_id')}: {entry.get('intent')} ({status})")
 
     # Step 4: If locked, wait for Alice
     if risk_level == RiskLevel.MEDIUM:
@@ -140,7 +140,7 @@ def test_devin_instance_b():
 
         # Check if lock is released
         risk_level_after, _, _ = check_for_conflicts(
-            developer_id="bob-devin",
+            agent_id="bob-devin",
             file_path="auth.py",
             intent="Add password strength validation",
             region="validate_password"
@@ -169,8 +169,8 @@ def test_devin_instance_b():
     log_data = read_log()
     for entry in log_data:
         if entry:
-            status = (entry.agent_metadata or {}).get('status', 'unknown')
-            print(f"   - {entry.developer_id}: {status}")
+            status = (entry.get('agent_metadata') or {}).get('status', 'unknown')
+            print(f"   - {entry.get('developer_id')}: {status}")
 
     print("\n✅ DEVIN B COMPLETE - Bob finished after Alice")
     print("   → Zero conflicts, sequential execution enforced\n")
