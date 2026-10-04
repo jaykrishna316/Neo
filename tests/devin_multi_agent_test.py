@@ -48,7 +48,7 @@ def test_devin_instance_a():
     )
 
     # Step 2: Check for conflicts (should be LOW, no lock yet)
-    risk_level, msg = check_for_conflicts(
+    risk_level, msg, _ = check_for_conflicts(
         agent_id="alice-devin",
         file_path="auth.py",
         intent="Refactor password validation to use bcrypt",
@@ -107,7 +107,7 @@ def test_devin_instance_b():
     )
 
     # Step 2: Check for conflicts (should be MEDIUM, lock applies)
-    risk_level, msg = check_for_conflicts(
+    risk_level, msg, _ = check_for_conflicts(
         agent_id="bob-devin",
         file_path="auth.py",
         intent="Add password strength validation",
@@ -137,7 +137,7 @@ def test_devin_instance_b():
         time.sleep(10)
 
         # Check if lock is released
-        risk_level_after, _ = check_for_conflicts(
+        risk_level_after, _, _ = check_for_conflicts(
             developer_id="bob-devin",
             file_path="auth.py",
             intent="Add password strength validation",
