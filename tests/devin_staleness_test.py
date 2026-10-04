@@ -159,14 +159,31 @@ def test_bob_staleness_detection():
 
             if alice_entry:
                 entry_age = time.time() - alice_entry.get('timestamp', time.time())
+                status = (alice_entry.get('agent_metadata') or {}).get('status', 'working')
 
-                # Print staleness on every poll
+                # When staleness detected, AUTOMATICALLY REFRESH the entry
                 if entry_age > stale_threshold:
                     stale_count += 1
-                    status = (alice_entry.get('agent_metadata') or {}).get('status', 'working')
-                    print(f"   [{time.time() - start_time:.1f}s] ⚠️  STALE: Alice's entry is {entry_age*1000:.0f}ms old | Status: {status}")
+                    # REFRESH ACTION: Re-read activity log to get latest data
+                    refreshed_log = read_log()
+                    alice_refreshed = None
+                    for entry in refreshed_log:
+                        if entry and entry.get('developer_id') == 'alice-devin':
+                            alice_refreshed = entry
+                            break
+
+                    refreshed_status = (alice_refreshed.get('agent_metadata') or {}).get('status', 'unknown') if alice_refreshed else 'unknown'
+
+                    # Show the refresh action
+                    print(f"   [{time.time() - start_time:.1f}s] STALE: {entry_age*1000:.0f}ms old -> REFRESH TRIGGERED")
+                    print(f"                   Before: {status} | After: {refreshed_status}")
+
+                    # If refreshed data shows Alice completed, use it immediately
+                    if refreshed_status == 'completed':
+                        print(f"                   SUCCESS: Alice completion detected via refresh!")
+                        alice_entry = alice_refreshed  # Update to refreshed data
                 else:
-                    print(f"   [{time.time() - start_time:.1f}s] ✅ FRESH: Alice's entry is {entry_age*1000:.0f}ms old")
+                    print(f"   [{time.time() - start_time:.1f}s] FRESH: {entry_age*1000:.0f}ms old | Status: {status}")
 
             # Check if lock is released
             risk_level_after, _, _ = check_for_conflicts(
