@@ -84,7 +84,8 @@ def test_devin_instance_a():
     print_step(5, "Activity log after Alice completes:")
     log_data = read_log()
     for entry in log_data:
-        print(f"   - {entry.get('agent_id')}: {entry.get('intent')} ({entry.get('region')})")
+        if entry:
+            print(f"   - {entry.developer_id}: {entry.intent} ({entry.region})")
 
     print("\n✅ DEVIN A COMPLETE - Alice finished successfully")
     print("   → Now run Devin Instance B (Bob will see lock)\n")
@@ -127,8 +128,9 @@ def test_devin_instance_b():
     print_step(3, "Activity log (shows Bob waiting):")
     log_data = read_log()
     for entry in log_data:
-        status = entry.get('agent_metadata', {}).get('status', 'unknown')
-        print(f"   - {entry.get('agent_id')}: {entry.get('intent')} ({status})")
+        if entry:
+            status = (entry.agent_metadata or {}).get('status', 'unknown')
+            print(f"   - {entry.developer_id}: {entry.intent} ({status})")
 
     # Step 4: If locked, wait for Alice
     if risk_level == RiskLevel.MEDIUM:
@@ -166,8 +168,9 @@ def test_devin_instance_b():
     print_step(6, "Final activity log (both completed):")
     log_data = read_log()
     for entry in log_data:
-        status = entry.get('agent_metadata', {}).get('status', 'unknown')
-        print(f"   - {entry.get('agent_id')}: {status}")
+        if entry:
+            status = (entry.agent_metadata or {}).get('status', 'unknown')
+            print(f"   - {entry.developer_id}: {status}")
 
     print("\n✅ DEVIN B COMPLETE - Bob finished after Alice")
     print("   → Zero conflicts, sequential execution enforced\n")
