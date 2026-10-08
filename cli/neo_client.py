@@ -15,6 +15,7 @@ from typing import Dict, Optional
 from pathlib import Path
 from datetime import datetime
 import argparse
+import hashlib
 import os
 import subprocess
 
@@ -38,15 +39,18 @@ class NeoClient:
         file_path: str,
         intent: str,
         region: Optional[str] = None,
-        intent_category: str = 'feature'
+        intent_category: str = 'feature',
+        snapshot: Optional[Dict] = None
     ) -> Dict:
-        """Declare intent to work on a file"""
+        """Declare intent to work on a file. `snapshot` is {commit, file_hash} of the
+        developer's working copy, used to validate their context at hand-off."""
         payload = {
             'agent_id': agent_id,
             'file_path': file_path,
             'intent': intent,
             'intent_category': intent_category,
-            'region': region
+            'region': region,
+            'snapshot': snapshot
         }
 
         try:
@@ -88,16 +92,20 @@ class NeoClient:
         lines_added: int = 0,
         lines_removed: int = 0,
         summary: Optional[str] = None,
-        diff: Optional[str] = None
+        diff: Optional[str] = None,
+        commit: Optional[str] = None,
+        file_hash: Optional[str] = None
     ) -> Dict:
-        """Mark work as complete, release lock, and notify the other developers"""
+        """Mark work as complete, release lock, and hand off to the next developer"""
         payload = {
             'agent_id': agent_id,
             'file_path': file_path,
             'lines_added': lines_added,
             'lines_removed': lines_removed,
             'summary': summary,
-            'diff': diff
+            'diff': diff,
+            'commit': commit,
+            'file_hash': file_hash
         }
 
         try:
@@ -204,10 +212,10 @@ class NeoClient:
             return {'error': str(e)}
 
     def refresh_context(self, agent_id: str, file_path: str, repo_dir: str = '.') -> Dict:
-        """Pull the latest code, then acknowledge the refresh requirement for this file.
+        """Pull the latest code, then confirm the working copy matches the reset context.
 
-        The server refuses further declare/complete on the file until this succeeds.
-        If git pull fails, the refresh is not acknowledged.
+        The server refuses further declare/complete on the file until the file on disk
+        matches the version the hand-off recorded. If git pull fails, nothing is confirmed.
         """
         try:
             pull = subprocess.run(
@@ -222,10 +230,12 @@ class NeoClient:
                 'hint': pull.stderr.strip() or pull.stdout.strip(),
             }
 
+        snap = repo_snapshot(file_path, repo_dir)
         try:
             response = self.session.post(
                 f'{self.server_url}/api/refresh-context',
-                json={'agent_id': agent_id, 'file_path': file_path},
+                json={'agent_id': agent_id, 'file_path': file_path,
+                      'commit': snap['commit'], 'file_hash': snap['file_hash']},
                 timeout=5
             )
             data = response.json()
@@ -233,6 +243,91 @@ class NeoClient:
             return data
         except Exception as e:
             return {'error': str(e)}
+
+    def get_file_session(self, file_path: str) -> Dict:
+        """Base commit and every contribution to this file in the current session"""
+        try:
+            response = self.session.get(
+                f'{self.server_url}/api/file-session',
+                params={'file_path': file_path},
+                timeout=5
+            )
+            return response.json()
+        except requests.exceptions.ConnectionError:
+            return {'error': f'Cannot connect to Neo server at {self.server_url}'}
+        except Exception as e:
+            return {'error': str(e)}
+
+
+def _git_out(args: list, repo_dir: str = '.') -> Optional[str]:
+    """Stdout of a git command, stripped. None if git fails or is missing."""
+    try:
+        result = subprocess.run(['git', *args], cwd=repo_dir, capture_output=True,
+                                text=True, timeout=30)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def repo_snapshot(file_path: str, repo_dir: str = '.') -> Dict:
+    """The working copy's state: HEAD commit and sha256 of the file's content"""
+    path = Path(repo_dir) / file_path
+    file_hash = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
+    return {'commit': _git_out(['rev-parse', 'HEAD'], repo_dir), 'file_hash': file_hash}
+
+
+def hand_off_problem(file_path: str, repo_dir: str = '.') -> Optional[str]:
+    """Why this developer cannot hand off yet, or None if they can.
+
+    The next developer pulls from the remote, so the work must be committed and pushed.
+    """
+    if _git_out(['rev-parse', '--is-inside-work-tree'], repo_dir) is None:
+        return f"{repo_dir} is not a git repository. Run complete from your clone."
+    if _git_out(['status', '--porcelain', '--', file_path], repo_dir):
+        return f"{file_path} has uncommitted changes. Commit them before completing."
+    if not _git_out(['branch', '-r', '--contains', 'HEAD'], repo_dir):
+        return "Your latest commit is not pushed. Push it so the next developer can pull it."
+    return None
+
+
+def build_changes_report(session: Dict, file_path: str, repo_dir: str = '.') -> str:
+    """Combined changes to the file from the session base, with each contribution attributed"""
+    contributions = session.get('contributions', [])
+    if not contributions:
+        return f"No changes recorded for {file_path} yet."
+
+    _git_out(['fetch', '--quiet'], repo_dir)  # best effort: make other developers' commits visible
+
+    base = session.get('base_commit')
+    last = contributions[-1].get('commit')
+    devs = []
+    for c in contributions:
+        if c['developer'] not in devs:
+            devs.append(c['developer'])
+
+    lines = [f"Changes to {file_path} ({session.get('status', 'open')} session)",
+             f"Developers: {', '.join(devs)}", ""]
+
+    if base and last:
+        overall = _git_out(['diff', base, last, '--', file_path], repo_dir)
+        lines.append(f"Overall, from {base[:8]} to {last[:8]}:")
+        lines.append(overall or "(no net change to the file)")
+    else:
+        lines.append("Overall: git history unavailable here; contributions below.")
+    lines.append("")
+
+    prev = base
+    for i, c in enumerate(contributions, 1):
+        lines.append(f"--- {i}. {c['developer']}: {c.get('summary') or '(no summary)'}")
+        step = None
+        if prev and c.get('commit'):
+            step = _git_out(['diff', prev, c['commit'], '--', file_path], repo_dir)
+        lines.append(step or c.get('diff') or "(no diff recorded)")
+        lines.append("")
+        prev = c.get('commit') or prev
+    return "\n".join(lines)
 
 
 def git_diff(file_path: str, max_chars: int = 8000, repo_dir: str = '.') -> Optional[str]:
@@ -274,6 +369,8 @@ def print_response(data: Dict, action: str):
             print(f"    {e['message']}")
             if e.get('summary'):
                 print(f"    Summary: {e['summary']}")
+            if e.get('context_expired'):
+                print(f"    ♻️  Your context had expired and was reset to {e['from']}'s version")
             if e.get('refresh_required') and not e.get('acknowledged'):
                 print(f"    ⚠️  Refresh required: run 'refresh' before continuing")
         return
@@ -283,6 +380,8 @@ def print_response(data: Dict, action: str):
             print(f"\n✅ {data.get('message', 'Nothing to refresh')}")
             return
         print(f"\n🔁 Context refreshed for {data.get('file_path')}")
+        if data.get('context_expired'):
+            print(f"   ♻️  Context had expired and was reset")
         print(f"   Changes from: {data.get('from')}")
         print(f"   Summary: {data.get('summary') or 'none provided'}")
         if data.get('diff'):
@@ -370,6 +469,7 @@ def main():
     declare_parser.add_argument('intent', help='What you intend to do')
     declare_parser.add_argument('--region', help='Specific region (optional)')
     declare_parser.add_argument('--category', default='feature', help='Intent category')
+    declare_parser.add_argument('--repo', default='.', help='Your git clone (default: current directory)')
 
     # check command
     check_parser = subparsers.add_parser('check', help='Check for conflicts')
@@ -386,6 +486,12 @@ def main():
     complete_parser.add_argument('--removed', type=int, default=0, help='Lines removed')
     complete_parser.add_argument('--summary', default=None, help='Summary of your change (sent to the other developers)')
     complete_parser.add_argument('--no-diff', action='store_true', help="Don't attach the git diff of the file")
+    complete_parser.add_argument('--repo', default='.', help='Your git clone (default: current directory)')
+
+    # changes command
+    changes_parser = subparsers.add_parser('changes', help='Combined changes to a file, with each developer attributed')
+    changes_parser.add_argument('file_path', help='File path')
+    changes_parser.add_argument('--repo', default='.', help='Your git clone (default: current directory)')
 
     # inbox command
     inbox_parser = subparsers.add_parser('inbox', help='Show notifications for a developer')
@@ -421,21 +527,38 @@ def main():
             args.file_path,
             args.intent,
             args.region,
-            args.category
+            args.category,
+            snapshot=repo_snapshot(args.file_path, args.repo)
         )
         print_response(result, 'declare')
 
     elif args.command == 'complete':
-        diff = None if args.no_diff else git_diff(args.file_path)
+        problem = hand_off_problem(args.file_path, args.repo)
+        if problem:
+            print(f"\n🚫 Cannot complete yet: {problem}")
+            return
+        snap = repo_snapshot(args.file_path, args.repo)
+        diff = None if args.no_diff else git_diff(args.file_path, repo_dir=args.repo)
         result = client.complete_work(
             args.agent_id,
             args.file_path,
             args.added,
             args.removed,
             summary=args.summary,
-            diff=diff
+            diff=diff,
+            commit=snap['commit'],
+            file_hash=snap['file_hash']
         )
         print_response(result, 'complete')
+
+    elif args.command == 'changes':
+        session = client.get_file_session(args.file_path)
+        if session.get('error'):
+            print_response(session, 'changes')
+        elif not session.get('session'):
+            print(f"\nNo changes recorded for {args.file_path} yet.")
+        else:
+            print("\n" + build_changes_report(session['session'], args.file_path, args.repo))
 
     elif args.command == 'inbox':
         result = client.get_inbox(args.agent_id, unread_only=args.unread)

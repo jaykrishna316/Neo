@@ -61,6 +61,8 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             self._handle_get_activity()
         elif parsed.path == '/api/inbox':
             self._handle_get_inbox(parse_qs(parsed.query))
+        elif parsed.path == '/api/file-session':
+            self._handle_get_file_session(parse_qs(parsed.query))
         else:
             self._send_json(404, {'error': 'Not found'})
 
@@ -148,6 +150,15 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 queue_position = lock_info.get('queue_position')
                 waiting_for = lock_info.get('waiting_for')
                 lock_state = "ACQUIRED" if lock_holder == agent_id else "WAITING"
+
+            # Remember what this developer's context was built on (commit + file hash)
+            snapshot = data.get('snapshot') or {}
+            if snapshot:
+                workflow_events.set_context(agent_id, file_path, snapshot.get('commit'),
+                                            snapshot.get('file_hash'))
+                if lock_state == "ACQUIRED":
+                    workflow_events.open_session_if_needed(file_path, snapshot.get('commit'),
+                                                           snapshot.get('file_hash'))
 
             # Log activity with lock state
             log_activity(
@@ -245,7 +256,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             self._send_json(500, {'error': str(e)})
 
     def _handle_complete_work(self, data: Dict):
-        """POST /api/complete-work - Mark work as complete and release lock"""
+        """POST /api/complete-work - Finish coding: release lock, hand off, record contribution"""
         try:
             agent_id = data.get('agent_id')
             file_path = data.get('file_path')
@@ -253,6 +264,8 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             lines_removed = data.get('lines_removed', 0)
             summary = data.get('summary') or ''
             diff = data.get('diff')
+            commit = data.get('commit')
+            file_hash = data.get('file_hash')
 
             if not all([agent_id, file_path]):
                 self._send_json(400, {'error': 'Missing required fields'})
@@ -279,16 +292,13 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             next_developer = None
 
             if agent_entry:
-                # Mark work as complete
                 lock_manager = LockManager()
                 release = lock_manager.release_lock(file_path, None, agent_id)
                 lock_released = release.get('success', False)
                 next_developer = release.get('next_lock_holder')
 
-                # Show completion message
                 self._print_completion(agent_id, file_path, lines_added, lines_removed)
-
-                self._notify_completion(agent_id, file_path, summary, diff, next_developer)
+                self._record_handoff(agent_id, file_path, summary, diff, commit, file_hash, next_developer)
 
             response = {
                 'success': True,
@@ -328,28 +338,46 @@ class NeoServerHandler(BaseHTTPRequestHandler):
         except Exception as e:
             self._send_json(500, {'error': str(e)})
 
-    def _notify_completion(self, completer: str, file_path: str, summary: str,
-                           diff: Optional[str], next_developer: Optional[str]):
-        """Tell the next developer the lock is theirs, and everyone else who worked on the file"""
+    def _record_handoff(self, completer: str, file_path: str, summary: str,
+                        diff: Optional[str], commit: Optional[str], file_hash: Optional[str],
+                        next_developer: Optional[str]):
+        """Record the completer's contribution, validate and reset the next developer's
+        context, and send the notifications."""
+        base = workflow_events.get_context(completer, file_path) or {}
+        workflow_events.open_session_if_needed(file_path, base.get('commit'), base.get('file_hash'))
+        session = workflow_events.add_contribution(
+            file_path, completer, commit, file_hash, summary, diff
+        )
+        on_top_of_others = len(session['contributions']) > 1
+
         if next_developer and next_developer != completer:
+            expired = workflow_events.validate_and_reset_context(
+                next_developer, file_path, commit, file_hash
+            )
+            status = ("Your context had expired and has been reset to " if expired
+                      else "Your context is still valid and has been reset to ")
             workflow_events.record_event(
                 to=next_developer, from_dev=completer, event_type=workflow_events.LOCK_GRANTED,
                 file_path=file_path,
-                message=f"{completer} finished {file_path}. You now hold the lock. "
-                        f"Run 'refresh' to update your context before you start.",
+                message=f"{completer} finished {file_path}. {status}{completer}'s version. "
+                        f"Run 'refresh' before you continue.",
                 summary=summary, diff=diff, refresh_required=True,
+                context_expired=expired, file_hash_value=file_hash,
             )
-            print(f"   📬 {next_developer} notified: lock granted, refresh required")
+            print(f"   📬 {next_developer} notified: {completer} is done, context "
+                  f"{'expired and reset' if expired else 'reset'}, refresh required")
+        else:
+            workflow_events.close_session(file_path)
 
         others = workflow_events.participants(
             file_path, exclude={completer, next_developer or ''}
         )
         for dev in sorted(others):
+            message = (f"{completer} submitted updates on top of your changes to {file_path}."
+                       if on_top_of_others else f"{completer} finished {file_path}.")
             workflow_events.record_event(
                 to=dev, from_dev=completer, event_type=workflow_events.WORK_COMPLETED,
-                file_path=file_path,
-                message=f"{completer} finished {file_path}.",
-                summary=summary, diff=diff,
+                file_path=file_path, message=message, summary=summary, diff=diff,
             )
             print(f"   📬 {dev} notified: {completer} finished")
 
@@ -367,6 +395,18 @@ class NeoServerHandler(BaseHTTPRequestHandler):
         except Exception as e:
             self._send_json(500, {'error': str(e)})
 
+    def _handle_get_file_session(self, query: Dict):
+        """GET /api/file-session?file_path=... - Base commit and every contribution in order"""
+        try:
+            file_path = query.get('file_path', [None])[0]
+            if not file_path:
+                self._send_json(400, {'error': 'Missing file_path'})
+                return
+            session = workflow_events.get_session(file_path)
+            self._send_json(200, {'success': True, 'file_path': file_path, 'session': session})
+        except Exception as e:
+            self._send_json(500, {'error': str(e)})
+
     def _handle_ack_inbox(self, data: Dict):
         """POST /api/inbox/ack - Mark notifications as read"""
         try:
@@ -381,26 +421,47 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             self._send_json(500, {'error': str(e)})
 
     def _handle_refresh_context(self, data: Dict):
-        """POST /api/refresh-context - Acknowledge refresh after hand-off, return the summary"""
+        """POST /api/refresh-context - Confirm the working copy matches the reset context.
+
+        Refused unless the file on disk has the same hash as the version the hand-off
+        reset the context to, so a pull that did not bring the changes cannot clear the block.
+        """
         try:
             agent_id = data.get('agent_id')
             file_path = data.get('file_path')
+            commit = data.get('commit')
+            file_hash = data.get('file_hash')
             if not all([agent_id, file_path]):
                 self._send_json(400, {'error': 'Missing required fields'})
                 return
-            event = workflow_events.acknowledge_refresh(agent_id, file_path)
-            if event is None:
+
+            pending = workflow_events.pending_refresh(agent_id, file_path)
+            if pending is None:
                 self._send_json(200, {'success': True, 'refreshed': False,
                                       'message': 'Nothing to refresh for this file'})
                 return
+
+            if file_hash != pending.get('file_hash'):
+                self._send_json(409, {
+                    'error': 'Refresh incomplete',
+                    'message': f"Your copy of {file_path} does not match {pending['from']}'s version. "
+                               f"Pull the latest changes and try again.",
+                })
+                return
+
+            workflow_events.set_context(agent_id, file_path, commit, file_hash)
+            workflow_events.acknowledge_refresh(agent_id, file_path)
+            session = workflow_events.get_session(file_path) or {}
             print(f"\n🔁 [{datetime.now().strftime('%H:%M:%S')}] {agent_id} refreshed context for {file_path}")
             self._send_json(200, {
                 'success': True,
                 'refreshed': True,
-                'from': event['from'],
+                'from': pending['from'],
                 'file_path': file_path,
-                'summary': event['summary'],
-                'diff': event['diff'],
+                'summary': pending['summary'],
+                'diff': pending['diff'],
+                'context_expired': pending['context_expired'],
+                'contributions': len(session.get('contributions', [])),
             })
         except Exception as e:
             self._send_json(500, {'error': str(e)})
