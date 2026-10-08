@@ -15,13 +15,21 @@ from typing import Dict, Optional
 from pathlib import Path
 from datetime import datetime
 import argparse
+import os
 
 
 class NeoClient:
     """Client for Neo coordination server"""
 
-    def __init__(self, server_url: str = 'http://localhost:8000'):
+    def __init__(self, server_url: str = 'http://localhost:8000', api_token: Optional[str] = None):
         self.server_url = server_url
+        self.session = requests.Session()
+        # Token is only needed when the server runs with one (e.g. behind ngrok).
+        # The ngrok header skips its browser warning page for API clients.
+        token = api_token or os.getenv('NEO_API_TOKEN')
+        if token:
+            self.session.headers['Authorization'] = f'Bearer {token}'
+        self.session.headers['ngrok-skip-browser-warning'] = 'true'
 
     def declare_intent(
         self,
@@ -41,7 +49,7 @@ class NeoClient:
         }
 
         try:
-            response = requests.post(
+            response = self.session.post(
                 f'{self.server_url}/api/log-activity',
                 json=payload,
                 timeout=5
@@ -58,7 +66,7 @@ class NeoClient:
     def reset_log(self) -> Dict:
         """Clear the activity log (reset test)"""
         try:
-            response = requests.post(
+            response = self.session.post(
                 f'{self.server_url}/api/reset-log',
                 json={},
                 timeout=5
@@ -88,7 +96,7 @@ class NeoClient:
         }
 
         try:
-            response = requests.post(
+            response = self.session.post(
                 f'{self.server_url}/api/complete-work',
                 json=payload,
                 timeout=5
@@ -118,7 +126,7 @@ class NeoClient:
         }
 
         try:
-            response = requests.post(
+            response = self.session.post(
                 f'{self.server_url}/api/check-conflicts',
                 json=payload,
                 timeout=5
@@ -135,7 +143,7 @@ class NeoClient:
     def get_activity(self) -> Dict:
         """Get all activity from log"""
         try:
-            response = requests.get(
+            response = self.session.get(
                 f'{self.server_url}/api/activity',
                 timeout=5
             )
@@ -151,7 +159,7 @@ class NeoClient:
     def get_status(self) -> Dict:
         """Get server status"""
         try:
-            response = requests.get(
+            response = self.session.get(
                 f'{self.server_url}/api/status',
                 timeout=5
             )
@@ -242,6 +250,8 @@ def main():
     """CLI entry point"""
     parser = argparse.ArgumentParser(description='Neo Local Coordination Client')
     parser.add_argument('--server', default='http://localhost:8000', help='Server URL')
+    parser.add_argument('--token', default=None,
+                        help='API token for the server (default: $NEO_API_TOKEN, if set)')
 
     subparsers = parser.add_subparsers(dest='command', help='Command')
 
@@ -282,7 +292,7 @@ def main():
         parser.print_help()
         return
 
-    client = NeoClient(args.server)
+    client = NeoClient(args.server, api_token=args.token)
 
     if args.command == 'declare':
         result = client.declare_intent(

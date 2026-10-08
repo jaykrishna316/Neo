@@ -10,6 +10,10 @@ Runs a simple HTTP server that:
 
 import json
 import asyncio
+import hmac
+import os
+import secrets
+import signal
 from pathlib import Path
 from typing import Dict, List, Optional
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -21,13 +25,33 @@ from core.activity_log import log_activity, get_active_entries, read_log, clear_
 from core.pre_gen_check import check_for_conflicts
 from core.risk_classifier import RiskLevel
 from core.lock_manager import LockManager
+from cli.ngrok_tunnel import NgrokError, start_ngrok_tunnel, stop_ngrok_tunnel
 
 
 class NeoServerHandler(BaseHTTPRequestHandler):
     """HTTP request handler for Neo server"""
 
+    # Set by NeoServer. When None, requests are not authenticated (localhost use).
+    # When set (e.g. when exposed through ngrok), every request needs a matching
+    # 'Authorization: Bearer <token>' header.
+    api_token: Optional[str] = None
+
+    def _is_authorized(self) -> bool:
+        """Check the bearer token, if one is configured"""
+        if not self.api_token:
+            return True
+        header = self.headers.get('Authorization', '')
+        prefix = 'Bearer '
+        if not header.startswith(prefix):
+            return False
+        return hmac.compare_digest(header[len(prefix):], self.api_token)
+
     def do_GET(self):
         """Handle GET requests"""
+        if not self._is_authorized():
+            self._send_json(401, {'error': 'Unauthorized: missing or invalid API token'})
+            return
+
         parsed = urlparse(self.path)
 
         if parsed.path == '/api/status':
@@ -39,6 +63,10 @@ class NeoServerHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Handle POST requests"""
+        if not self._is_authorized():
+            self._send_json(401, {'error': 'Unauthorized: missing or invalid API token'})
+            return
+
         parsed = urlparse(self.path)
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length).decode('utf-8')
@@ -365,18 +393,42 @@ class NeoServerHandler(BaseHTTPRequestHandler):
 class NeoServer:
     """Local Neo coordination server"""
 
-    def __init__(self, host: str = 'localhost', port: int = 8000):
+    def __init__(self, host: str = 'localhost', port: int = 8000,
+                 api_token: Optional[str] = None, use_ngrok: bool = False):
         self.host = host
         self.port = port
+        self.api_token = api_token
+        self.use_ngrok = use_ngrok
+        self.public_url: Optional[str] = None
+        NeoServerHandler.api_token = api_token
         self.server = HTTPServer((host, port), NeoServerHandler)
         self.log_file = Path('.devsync/activity-log.json')
 
     def start(self):
         """Start the server"""
+        ngrok_proc = None
+        if self.use_ngrok:
+            try:
+                ngrok_proc, self.public_url = start_ngrok_tunnel(self.port)
+            except NgrokError as e:
+                print(f"\n❌ {e}")
+                self.server.server_close()
+                return
+
+            # Treat SIGTERM like Ctrl+C so the ngrok child is always cleaned up
+            def _interrupt(signum, frame):
+                raise KeyboardInterrupt
+            signal.signal(signal.SIGTERM, _interrupt)
+
         print("\n" + "="*60)
         print("🚀 Neo Local Coordination Server")
         print("="*60)
         print(f"\n📍 Server running at http://{self.host}:{self.port}")
+        if self.public_url:
+            print(f"🌐 Public URL (ngrok): {self.public_url}")
+        if self.api_token:
+            print(f"🔑 API token required on every request: {self.api_token}")
+            print("   Send as header: Authorization: Bearer <token>")
         print(f"📝 Activity log: {self.log_file}")
         print(f"⏰ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("\n" + "="*60)
@@ -389,14 +441,29 @@ class NeoServer:
             print("\n\n" + "="*60)
             print("🛑 Server stopped")
             print("="*60 + "\n")
+        finally:
+            if ngrok_proc is not None:
+                stop_ngrok_tunnel(ngrok_proc)
 
 
-def run_server(host: str = 'localhost', port: int = 8000, clear: bool = False):
-    """Run the Neo local server"""
+def run_server(host: str = 'localhost', port: int = 8000, clear: bool = False,
+               api_token: Optional[str] = None, use_ngrok: bool = False):
+    """Run the Neo local server
+
+    Args:
+        api_token: Require this bearer token on every request. Falls back to the
+                   NEO_API_TOKEN env var.
+        use_ngrok: Expose the server through an ngrok tunnel. Implies a token:
+                   one is generated if none is supplied.
+    """
     if clear:
         clear_log()
 
-    server = NeoServer(host, port)
+    token = api_token or os.getenv('NEO_API_TOKEN') or None
+    if use_ngrok and not token:
+        token = secrets.token_urlsafe(16)
+
+    server = NeoServer(host, port, api_token=token, use_ngrok=use_ngrok)
     server.start()
 
 
@@ -406,6 +473,11 @@ if __name__ == '__main__':
     parser.add_argument('--host', default='localhost', help='Server host')
     parser.add_argument('--port', type=int, default=8000, help='Server port')
     parser.add_argument('--clear', action='store_true', help='Clear activity log on startup')
+    parser.add_argument('--token', default=None,
+                        help='Require this API token (default: $NEO_API_TOKEN, if set)')
+    parser.add_argument('--ngrok', action='store_true',
+                        help='Expose the server via an ngrok tunnel (requires the ngrok CLI). '
+                             'Generates a token if none is set.')
 
     args = parser.parse_args()
-    run_server(args.host, args.port, args.clear)
+    run_server(args.host, args.port, args.clear, api_token=args.token, use_ngrok=args.ngrok)
