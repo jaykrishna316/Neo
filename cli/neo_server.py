@@ -25,6 +25,7 @@ from core.activity_log import log_activity, get_active_entries, read_log, clear_
 from core.pre_gen_check import check_for_conflicts
 from core.risk_classifier import RiskLevel
 from core.lock_manager import LockManager
+from core import workflow_events
 from cli.ngrok_tunnel import NgrokError, start_ngrok_tunnel, stop_ngrok_tunnel
 
 
@@ -58,6 +59,8 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             self._handle_status()
         elif parsed.path == '/api/activity':
             self._handle_get_activity()
+        elif parsed.path == '/api/inbox':
+            self._handle_get_inbox(parse_qs(parsed.query))
         else:
             self._send_json(404, {'error': 'Not found'})
 
@@ -80,6 +83,10 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             self._handle_complete_work(data)
         elif parsed.path == '/api/reset-log':
             self._handle_reset_log(data)
+        elif parsed.path == '/api/inbox/ack':
+            self._handle_ack_inbox(data)
+        elif parsed.path == '/api/refresh-context':
+            self._handle_refresh_context(data)
         else:
             self._send_json(404, {'error': 'Not found'})
 
@@ -105,6 +112,16 @@ class NeoServerHandler(BaseHTTPRequestHandler):
 
             if not all([agent_id, file_path, intent]):
                 self._send_json(400, {'error': 'Missing required fields'})
+                return
+
+            # Must refresh context after a hand-off before declaring on this file again
+            pending = workflow_events.pending_refresh(agent_id, file_path)
+            if pending:
+                self._send_json(409, {
+                    'error': 'Refresh required',
+                    'message': f"{pending['from']} finished {file_path}. "
+                               f"Run 'refresh' before declaring intent on it.",
+                })
                 return
 
             # Check for conflicts BEFORE logging (also acquires locks if needed)
@@ -234,9 +251,20 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             file_path = data.get('file_path')
             lines_added = data.get('lines_added', 0)
             lines_removed = data.get('lines_removed', 0)
+            summary = data.get('summary') or ''
+            diff = data.get('diff')
 
             if not all([agent_id, file_path]):
                 self._send_json(400, {'error': 'Missing required fields'})
+                return
+
+            pending = workflow_events.pending_refresh(agent_id, file_path)
+            if pending:
+                self._send_json(409, {
+                    'error': 'Refresh required',
+                    'message': f"{pending['from']} finished {file_path}. "
+                               f"Run 'refresh' before completing your work on it.",
+                })
                 return
 
             # Find active entry for this developer
@@ -253,16 +281,14 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             if agent_entry:
                 # Mark work as complete
                 lock_manager = LockManager()
-                lock_manager.release_lock(file_path, None, agent_id)
-                lock_released = True
+                release = lock_manager.release_lock(file_path, None, agent_id)
+                lock_released = release.get('success', False)
+                next_developer = release.get('next_lock_holder')
 
                 # Show completion message
                 self._print_completion(agent_id, file_path, lines_added, lines_removed)
 
-                # Promote next developer from queue
-                lock_state = lock_manager.get_lock_state(file_path, None)
-                if lock_state.get('queue_size', 0) > 0:
-                    next_developer = lock_state.get('queue', [{}])[0].get('developer_id')
+                self._notify_completion(agent_id, file_path, summary, diff, next_developer)
 
             response = {
                 'success': True,
@@ -299,6 +325,83 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             }
 
             self._send_json(200, response)
+        except Exception as e:
+            self._send_json(500, {'error': str(e)})
+
+    def _notify_completion(self, completer: str, file_path: str, summary: str,
+                           diff: Optional[str], next_developer: Optional[str]):
+        """Tell the next developer the lock is theirs, and everyone else who worked on the file"""
+        if next_developer and next_developer != completer:
+            workflow_events.record_event(
+                to=next_developer, from_dev=completer, event_type=workflow_events.LOCK_GRANTED,
+                file_path=file_path,
+                message=f"{completer} finished {file_path}. You now hold the lock. "
+                        f"Run 'refresh' to update your context before you start.",
+                summary=summary, diff=diff, refresh_required=True,
+            )
+            print(f"   📬 {next_developer} notified: lock granted, refresh required")
+
+        others = workflow_events.participants(
+            file_path, exclude={completer, next_developer or ''}
+        )
+        for dev in sorted(others):
+            workflow_events.record_event(
+                to=dev, from_dev=completer, event_type=workflow_events.WORK_COMPLETED,
+                file_path=file_path,
+                message=f"{completer} finished {file_path}.",
+                summary=summary, diff=diff,
+            )
+            print(f"   📬 {dev} notified: {completer} finished")
+
+    def _handle_get_inbox(self, query: Dict):
+        """GET /api/inbox?agent_id=...&unread=1 - Developer's notifications"""
+        try:
+            agent_id = query.get('agent_id', [None])[0]
+            if not agent_id:
+                self._send_json(400, {'error': 'Missing agent_id'})
+                return
+            unread_only = query.get('unread', ['0'])[0] in ('1', 'true')
+            events = workflow_events.get_inbox(agent_id, unread_only=unread_only)
+            self._send_json(200, {'success': True, 'agent_id': agent_id,
+                                  'events': events, 'count': len(events)})
+        except Exception as e:
+            self._send_json(500, {'error': str(e)})
+
+    def _handle_ack_inbox(self, data: Dict):
+        """POST /api/inbox/ack - Mark notifications as read"""
+        try:
+            agent_id = data.get('agent_id')
+            event_ids = data.get('event_ids', [])
+            if not agent_id:
+                self._send_json(400, {'error': 'Missing agent_id'})
+                return
+            changed = workflow_events.mark_read(agent_id, event_ids)
+            self._send_json(200, {'success': True, 'marked_read': changed})
+        except Exception as e:
+            self._send_json(500, {'error': str(e)})
+
+    def _handle_refresh_context(self, data: Dict):
+        """POST /api/refresh-context - Acknowledge refresh after hand-off, return the summary"""
+        try:
+            agent_id = data.get('agent_id')
+            file_path = data.get('file_path')
+            if not all([agent_id, file_path]):
+                self._send_json(400, {'error': 'Missing required fields'})
+                return
+            event = workflow_events.acknowledge_refresh(agent_id, file_path)
+            if event is None:
+                self._send_json(200, {'success': True, 'refreshed': False,
+                                      'message': 'Nothing to refresh for this file'})
+                return
+            print(f"\n🔁 [{datetime.now().strftime('%H:%M:%S')}] {agent_id} refreshed context for {file_path}")
+            self._send_json(200, {
+                'success': True,
+                'refreshed': True,
+                'from': event['from'],
+                'file_path': file_path,
+                'summary': event['summary'],
+                'diff': event['diff'],
+            })
         except Exception as e:
             self._send_json(500, {'error': str(e)})
 

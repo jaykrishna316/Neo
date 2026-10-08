@@ -16,6 +16,7 @@ from pathlib import Path
 from datetime import datetime
 import argparse
 import os
+import subprocess
 
 
 class NeoClient:
@@ -85,14 +86,18 @@ class NeoClient:
         agent_id: str,
         file_path: str,
         lines_added: int = 0,
-        lines_removed: int = 0
+        lines_removed: int = 0,
+        summary: Optional[str] = None,
+        diff: Optional[str] = None
     ) -> Dict:
-        """Mark work as complete and release lock"""
+        """Mark work as complete, release lock, and notify the other developers"""
         payload = {
             'agent_id': agent_id,
             'file_path': file_path,
             'lines_added': lines_added,
-            'lines_removed': lines_removed
+            'lines_removed': lines_removed,
+            'summary': summary,
+            'diff': diff
         }
 
         try:
@@ -172,13 +177,116 @@ class NeoClient:
         except Exception as e:
             return {'error': str(e)}
 
+    def get_inbox(self, agent_id: str, unread_only: bool = False) -> Dict:
+        """Notifications for this developer"""
+        try:
+            response = self.session.get(
+                f'{self.server_url}/api/inbox',
+                params={'agent_id': agent_id, 'unread': '1' if unread_only else '0'},
+                timeout=5
+            )
+            return response.json()
+        except requests.exceptions.ConnectionError:
+            return {'error': f'Cannot connect to Neo server at {self.server_url}'}
+        except Exception as e:
+            return {'error': str(e)}
+
+    def ack_inbox(self, agent_id: str, event_ids: list) -> Dict:
+        """Mark notifications as read"""
+        try:
+            response = self.session.post(
+                f'{self.server_url}/api/inbox/ack',
+                json={'agent_id': agent_id, 'event_ids': event_ids},
+                timeout=5
+            )
+            return response.json()
+        except Exception as e:
+            return {'error': str(e)}
+
+    def refresh_context(self, agent_id: str, file_path: str, repo_dir: str = '.') -> Dict:
+        """Pull the latest code, then acknowledge the refresh requirement for this file.
+
+        The server refuses further declare/complete on the file until this succeeds.
+        If git pull fails, the refresh is not acknowledged.
+        """
+        try:
+            pull = subprocess.run(
+                ['git', 'pull', '--ff-only'], cwd=repo_dir,
+                capture_output=True, text=True, timeout=60
+            )
+        except FileNotFoundError:
+            return {'error': 'git not found on PATH'}
+        if pull.returncode != 0:
+            return {
+                'error': 'git pull failed; context not refreshed',
+                'hint': pull.stderr.strip() or pull.stdout.strip(),
+            }
+
+        try:
+            response = self.session.post(
+                f'{self.server_url}/api/refresh-context',
+                json={'agent_id': agent_id, 'file_path': file_path},
+                timeout=5
+            )
+            data = response.json()
+            data['git_pull'] = pull.stdout.strip()
+            return data
+        except Exception as e:
+            return {'error': str(e)}
+
+
+def git_diff(file_path: str, max_chars: int = 8000, repo_dir: str = '.') -> Optional[str]:
+    """Diff of one file for the hand-off: uncommitted changes if any, else the last commit
+    that touched it. Truncated. None if git is unavailable or there is no change."""
+    commands = [
+        ['git', 'diff', 'HEAD', '--', file_path],
+        ['git', 'show', '--format=', 'HEAD', '--', file_path],
+    ]
+    for cmd in commands:
+        try:
+            result = subprocess.run(cmd, cwd=repo_dir, capture_output=True, text=True, timeout=30)
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return None
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout[:max_chars]
+    return None
+
 
 def print_response(data: Dict, action: str):
     """Pretty-print server response"""
     if 'error' in data:
         print(f"\n❌ Error: {data['error']}")
+        if 'message' in data:
+            print(f"   {data['message']}")
         if 'hint' in data:
             print(f"💡 {data['hint']}")
+        return
+
+    if action == 'inbox':
+        events = data.get('events', [])
+        if not events:
+            print(f"\n📭 No notifications for {data.get('agent_id')}")
+            return
+        print(f"\n📬 Notifications for {data.get('agent_id')} ({len(events)})")
+        for e in events:
+            flag = '' if e.get('read') else ' [NEW]'
+            print(f"\n  • {e['type']}{flag} from {e['from']} on {e['file_path']}")
+            print(f"    {e['message']}")
+            if e.get('summary'):
+                print(f"    Summary: {e['summary']}")
+            if e.get('refresh_required') and not e.get('acknowledged'):
+                print(f"    ⚠️  Refresh required: run 'refresh' before continuing")
+        return
+
+    if action == 'refresh':
+        if not data.get('refreshed'):
+            print(f"\n✅ {data.get('message', 'Nothing to refresh')}")
+            return
+        print(f"\n🔁 Context refreshed for {data.get('file_path')}")
+        print(f"   Changes from: {data.get('from')}")
+        print(f"   Summary: {data.get('summary') or 'none provided'}")
+        if data.get('diff'):
+            print(f"\n{data['diff']}")
         return
 
     if action == 'declare':
@@ -276,6 +384,19 @@ def main():
     complete_parser.add_argument('file_path', help='File path')
     complete_parser.add_argument('--added', type=int, default=0, help='Lines added')
     complete_parser.add_argument('--removed', type=int, default=0, help='Lines removed')
+    complete_parser.add_argument('--summary', default=None, help='Summary of your change (sent to the other developers)')
+    complete_parser.add_argument('--no-diff', action='store_true', help="Don't attach the git diff of the file")
+
+    # inbox command
+    inbox_parser = subparsers.add_parser('inbox', help='Show notifications for a developer')
+    inbox_parser.add_argument('agent_id', help='Developer ID')
+    inbox_parser.add_argument('--unread', action='store_true', help='Only unread notifications')
+
+    # refresh command
+    refresh_parser = subparsers.add_parser('refresh', help='Pull latest code and refresh context after a hand-off')
+    refresh_parser.add_argument('agent_id', help='Developer ID')
+    refresh_parser.add_argument('file_path', help='File path')
+    refresh_parser.add_argument('--repo', default='.', help='Git repo directory (default: current)')
 
     # reset command
     reset_parser = subparsers.add_parser('reset', help='Reset activity log (clear test)')
@@ -305,13 +426,28 @@ def main():
         print_response(result, 'declare')
 
     elif args.command == 'complete':
+        diff = None if args.no_diff else git_diff(args.file_path)
         result = client.complete_work(
             args.agent_id,
             args.file_path,
             args.added,
-            args.removed
+            args.removed,
+            summary=args.summary,
+            diff=diff
         )
         print_response(result, 'complete')
+
+    elif args.command == 'inbox':
+        result = client.get_inbox(args.agent_id, unread_only=args.unread)
+        print_response(result, 'inbox')
+        events = result.get('events', [])
+        unread_ids = [e['id'] for e in events if not e.get('read')]
+        if unread_ids:
+            client.ack_inbox(args.agent_id, unread_ids)
+
+    elif args.command == 'refresh':
+        result = client.refresh_context(args.agent_id, args.file_path, args.repo)
+        print_response(result, 'refresh')
 
     elif args.command == 'reset':
         result = client.reset_log()
