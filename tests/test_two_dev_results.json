@@ -1,7 +1,7 @@
 {
   "success": true,
   "summary": {
-    "timestamp": "2026-10-09T15:32:53.073553",
+    "timestamp": "2026-10-09T15:35:31.826803",
     "total_log_entries": 8,
     "developers_participated": 2,
     "completed_entries": 2,
@@ -17,42 +17,42 @@
   "details": {
     "steps": [
       {
-        "timestamp": "2026-10-09T15:32:52.358089",
+        "timestamp": "2026-10-09T15:35:31.112433",
         "step": "CLEAR_LOG",
         "details": "Activity log cleared for fresh test"
       },
       {
-        "timestamp": "2026-10-09T15:32:52.459923",
+        "timestamp": "2026-10-09T15:35:31.214087",
         "step": "DEV_A_DECLARES_INTENT",
         "details": "Alice declared intent on auth.py. Log now has 1 entry/entries. No lock yet (only 1 developer)."
       },
       {
-        "timestamp": "2026-10-09T15:32:52.563103",
+        "timestamp": "2026-10-09T15:35:31.316630",
         "step": "DEV_B_CHECKS_CONFLICTS",
         "details": "Risk level: MEDIUM. Message: MEDIUM RISK: alice is Refactor password validation to use bcrypt. Overlapping regions detected. Proceed with caution."
       },
       {
-        "timestamp": "2026-10-09T15:32:52.563762",
+        "timestamp": "2026-10-09T15:35:31.317540",
         "step": "DEV_B_DECLARES_INTENT",
         "details": "Bob declared intent on auth.py. Log now has 4 entries. Lock status: ACTIVE (4 devs on same file)"
       },
       {
-        "timestamp": "2026-10-09T15:32:52.665424",
+        "timestamp": "2026-10-09T15:35:31.419299",
         "step": "DEV_A_COMPLETES_WORK",
         "details": "Alice completed her work. Changes: +20 lines, -5 lines. Log now has 5 entries."
       },
       {
-        "timestamp": "2026-10-09T15:32:52.769842",
+        "timestamp": "2026-10-09T15:35:31.522815",
         "step": "DEV_B_GETS_FRESH_CONTEXT",
         "details": "Dev B received fresh context. Alice's changes: +20, -5. Risk: MEDIUM (MEDIUM RISK: alice is Refactor password validation...)"
       },
       {
-        "timestamp": "2026-10-09T15:32:52.872233",
+        "timestamp": "2026-10-09T15:35:31.624881",
         "step": "DEV_B_COMPLETES_WORK",
         "details": "Bob completed his work (built on Alice's changes). Changes: +15 lines, -0 lines. Log now has 8 entries. Conflicts: 0"
       },
       {
-        "timestamp": "2026-10-09T15:32:52.972851",
+        "timestamp": "2026-10-09T15:35:31.725621",
         "step": "VERIFY_NO_CONFLICTS",
         "details": "\u2705 PASS - Total conflicts reported: 0. Developers completed: 2."
       }
@@ -73,7 +73,7 @@
       }
     ],
     "final_state": {
-      "timestamp": "2026-10-09T15:32:53.073553",
+      "timestamp": "2026-10-09T15:35:31.826803",
       "total_log_entries": 8,
       "developers_participated": 2,
       "completed_entries": 2,
