@@ -7,14 +7,12 @@
 
 ## Setup: Clear the Log First
 
-### Terminal 0: Clear Activity Log (Optional, Run Once)
+### Regular Terminal: Clear Activity Log (Run Once)
 
-Paste this in any Claude terminal:
+Just run this in your regular terminal:
 
-```
-Run this command to start fresh:
-
-python3 -c "from core.activity_log import clear_log; clear_log(); print('✓ Activity log cleared')"
+```bash
+cd /home/user/Neo && python3 -c "from core.activity_log import clear_log; clear_log(); print('✓ Activity log cleared')"
 ```
 
 This clears the activity log for a clean test. You only need to do this once.
@@ -56,13 +54,11 @@ Tell me at each step:
 
 ---
 
-## Terminal 2: Activity Log Viewer (Watch Live)
+## Regular Terminal: Activity Log Viewer (Watch Live)
 
-**In another Claude terminal, paste this to watch the activity log:**
+**In a regular terminal, run this command every 5 seconds to watch the activity log:**
 
-```
-Keep running this command every 5 seconds to watch the activity log update:
-
+```bash
 python3 -c "
 import json
 from pathlib import Path
@@ -98,7 +94,7 @@ else:
 "
 ```
 
-**Run this every 5 seconds and watch:**
+**Watch this update as Alice and Bob work:**
 - When Alice declares (no lock, 1 dev)
 - When Bob declares (lock appears, bob shows WAITING)
 - When Alice completes (MarkCompleted)
@@ -164,17 +160,22 @@ Tell me at each step what you see, especially:
 
 ## How to Run (Step by Step)
 
-### Step 1: Open Terminal 1 (Alice)
+### Step 0: Clear Log (Regular Terminal)
+```bash
+cd /home/user/Neo && python3 -c "from core.activity_log import clear_log; clear_log(); print('✓ Activity log cleared')"
+```
+
+### Step 1: Open Claude Terminal 1 (Alice)
 - Create a new Claude terminal
 - Paste the **Alice** prompt above
 - Watch her declare intent
 
-### Step 2: Open Terminal 2 (Activity Log Viewer)
-- Create another Claude terminal
-- Paste the **Activity Log Viewer** prompt above
-- Keep running that command every 5 seconds
+### Step 2: Open Regular Terminal (Activity Log Viewer) 
+- Open a regular (non-Claude) terminal
+- Paste the **Activity Log Viewer** command above
+- Keep running that command every 5 seconds to watch updates
 
-### Step 3: Open Terminal 3 (Bob)
+### Step 3: Open Claude Terminal 2 (Bob)
 - Create another Claude terminal
 - Paste the **Bob** prompt above
 - Bob will see Alice already declared
