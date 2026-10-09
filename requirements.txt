@@ -14,9 +14,9 @@ isort>=5.12
 # MCP Server (for IDE/Claude Code integration)
 mcp>=0.1.0
 
-# Cloud Storage (optional, for Phase 2)
+# Cloud Storage (optional, for Phase 3: Cloud Deployment)
 # Uncomment to use Supabase cloud backend
-# supabase-py>=0.9.0
+supabase-py>=0.9.0
 
 # Documentation
 # mkdocs>=1.4
