@@ -23,7 +23,9 @@ from mcp.server.mcpserver import MCPServer
 
 from core.activity_log_adapter import ActivityLogAdapter
 from core.activity_log import ActivityEntry
-from core.pre_gen_check import check_for_conflicts
+from core.pre_gen_check import check_for_conflicts, check_source_staleness
+from core.delta_refresh import DeltaGenerator, ContextRefreshBuilder
+from core.symbol_hasher import snapshot_file
 
 TENANT_ID = os.getenv("CLAUDE_TENANT_ID", "default")
 MULTITENANCY = os.getenv("NEO_MULTITENANCY", "false").lower() == "true"
@@ -251,6 +253,151 @@ def neo_get_active_work(tenant_id: Optional[str] = None) -> Dict[str, Any]:
         }
 
 
+@mcp.tool(name="neo_check_source_staleness")
+def neo_check_source_staleness(
+    file_path: str,
+    agent_id: str,
+    read_time: float,
+    dependency_symbols: Optional[list] = None,
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Check if source file is stale using C1 (symbol-level hash detection).
+
+    Args:
+        file_path: Path to the file to check
+        agent_id: Agent that originally read the file
+        read_time: When the file was read (Unix timestamp)
+        dependency_symbols: Specific symbols to check (None = whole file)
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        state, report = check_source_staleness(
+            file_path=file_path,
+            agent_id=agent_id,
+            read_time=read_time,
+            dependency_symbols=dependency_symbols,
+            tenant_id=final_tenant,
+        )
+
+        return {
+            "success": True,
+            "staleness_state": state,  # CURRENT / STALE_SOURCE / UNVERIFIABLE
+            "report": report,
+            "is_current": state == "CURRENT",
+            "tenant_id": final_tenant,
+        }
+    except Exception as e:
+        logger.warning(f"Staleness check failed: {e}")
+        return {
+            "success": False,
+            "error": f"Staleness check failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
+
+
+@mcp.tool(name="neo_get_context_refresh")
+def neo_get_context_refresh(
+    file_path: str,
+    agent_id: str,
+    base_snapshot_time: float,
+    dependency_symbols: Optional[list] = None,
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Get symbol-level context refresh delta (C2).
+
+    Uses delta refresh to send only changed symbols instead of full file,
+    reducing token costs by 10-100x.
+
+    Args:
+        file_path: Path to the file to refresh
+        agent_id: Agent requesting the refresh
+        base_snapshot_time: When agent last read the file
+        dependency_symbols: Specific symbols to include (None = all)
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        # Create base snapshot from when file was originally read
+        base_snap = snapshot_file(file_path, agent_id, base_snapshot_time)
+
+        if base_snap.parse_error:
+            return {
+                "success": False,
+                "error": f"Couldn't parse file at snapshot time: {base_snap.parse_error}",
+                "status_code": 400,
+                "tenant_id": final_tenant,
+            }
+
+        # Generate delta from base to current
+        delta = DeltaGenerator.generate(
+            base_snap,
+            file_path,
+            dependency_symbols=dependency_symbols
+        )
+
+        # Build human-readable message
+        message = ContextRefreshBuilder.build_message([delta], agent_id, file_path)
+
+        # Estimate token cost
+        tokens = ContextRefreshBuilder.estimate_tokens(delta)
+
+        return {
+            "success": True,
+            "delta_type": delta.delta_type,  # symbols / unified_diff / full_file
+            "message": message,
+            "token_estimate": tokens,
+            "added_symbols": delta.added_symbols or [],
+            "removed_symbols": delta.removed_symbols or [],
+            "changed_symbols": delta.changed_symbols or [],
+            "delta": delta.to_dict(),
+            "tenant_id": final_tenant,
+        }
+    except Exception as e:
+        logger.warning(f"Context refresh failed: {e}")
+        return {
+            "success": False,
+            "error": f"Context refresh failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
+
+
 @mcp.tool(name="neo_get_status")
 def neo_get_status() -> Dict[str, Any]:
     """Check Neo MCP server status."""
@@ -260,6 +407,7 @@ def neo_get_status() -> Dict[str, Any]:
         "multitenancy_enabled": MULTITENANCY,
         "tenant_id": TENANT_ID,
         "version": "1.0",
+        "features": ["conflict_detection", "activity_logging", "c1_staleness", "c2_delta_refresh"],
     }
 
 

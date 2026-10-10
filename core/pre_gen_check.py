@@ -6,10 +6,13 @@ from typing import Tuple, Optional, Dict, Any
 from core.activity_log import get_active_entries, DEFAULT_TENANT_ID, log_activity, read_log
 from core.risk_classifier import RiskLevel, classify_risk
 from core.lock_manager import LockManager
+from core.symbol_hasher import StalenessChecker, snapshot_file, extract_dependencies
 
 # Staleness detection constants
 STALE_THRESHOLD_SECONDS = 0.3  # 300ms - context older than this is considered stale
 MAX_REFRESH_ATTEMPTS = 2  # Retry up to 2 times when stale
+# C1 (symbol-level staleness): Use 1000ms fallback per optimized_activity_log.py
+SYMBOL_STALENESS_FALLBACK_MS = 1000
 
 
 def _detect_and_refresh_stale_entries(entries: list, tenant_id: str) -> Tuple[list, Dict[str, Any]]:
@@ -90,6 +93,55 @@ def _detect_and_refresh_stale_entries(entries: list, tenant_id: str) -> Tuple[li
             result_entries.append(entry)
 
     return result_entries, staleness_report
+
+
+def check_source_staleness(
+    file_path: str,
+    agent_id: str,
+    read_time: float,
+    dependency_symbols: Optional[list] = None,
+    tenant_id: Optional[str] = None
+) -> Tuple[str, Dict[str, Any]]:
+    """
+    Check if source file is stale using C1 (symbol-level hash-based detection).
+
+    Args:
+        file_path: Path to the file to check
+        agent_id: Agent that originally read the file
+        read_time: When the file was read (for comparison)
+        dependency_symbols: Specific symbols to check (None = check whole file)
+        tenant_id: Tenant context
+
+    Returns:
+        Tuple of (state, report) where state is CURRENT/STALE_SOURCE/UNVERIFIABLE
+        and report contains details about what changed
+    """
+    try:
+        # Create a snapshot from the read time
+        base_snap = snapshot_file(file_path, agent_id, read_time)
+
+        if base_snap.parse_error:
+            # If we couldn't parse at read time, be conservative
+            return "UNVERIFIABLE", {
+                "reason": "Couldn't parse file at read time",
+                "error": base_snap.parse_error
+            }
+
+        # Check current freshness
+        state, report = StalenessChecker.check_file_staleness(
+            base_snap,
+            file_path,
+            dependency_symbols=dependency_symbols
+        )
+
+        return state, report
+
+    except Exception as e:
+        # On any error, be conservative
+        return "UNVERIFIABLE", {
+            "reason": "Error checking staleness",
+            "error": str(e)
+        }
 
 
 def check_for_conflicts(
