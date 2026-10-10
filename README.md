@@ -44,7 +44,7 @@
 |-------|------|---------|
 | **1: Lock-Only-When-Needed** | Applies sequential lock at 2+ developers | Prevents simultaneous edits |
 | **2: Temporal Handoff** | Auto-queues next developer on same file | Fair, sequential workflow |
-| **3: Context Invalidation** | Detects staleness >300ms, auto-refreshes delta | 96% token reduction per refresh |
+| **3: Context Invalidation** | Detects staleness >1000ms (C1), auto-refreshes delta (C2) | 96% token reduction per refresh |
 | **4: Reviewer Provenance** | Routes to developer with deepest expertise | Better conflict resolution |
 | **5: Agent Autonomy** | Multi-agent coordination (Claude + others) | Scalable to any team |
 
@@ -155,12 +155,12 @@ Developer A (alice):
   - Publishes delta: 40 tokens (not 500)
 
 Developer B (bob) waiting:
-  - Staleness detected at 500ms
-  - Auto-refresh with delta: 7 tokens
+  - Staleness detected at 1000ms (C1 symbol-level hash)
+  - Auto-refresh with delta (C2): 7 tokens
   - Fresh context: Immediate, cost-effective
 
 Result: Zero staleness overhead, 96% token reduction per refresh
-See: context_staleness_test.py
+See: test_claims_C1_C2.py
 ```
 
 ### Real Token Efficiency (From Actual Measurements)

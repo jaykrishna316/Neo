@@ -44,35 +44,40 @@ def regions_overlap(region1: Optional[str], region2: Optional[str]) -> bool:
         start2, end2 = range2
         return not (end1 < start2 or end2 < start1)
 
-    # If either is a function/class name, match if they're identical
-    # or if one is clearly a child of the other
+    # If either is a function/class name, match only if fully identical
+    # Different classes with same method name don't overlap (A.validate vs B.validate)
     if not range1 and not range2:
-        # Both are symbolic references
-        # Normalize: remove whitespace, compare base names
-        name1 = region1.split(".")[-1].strip()
-        name2 = region2.split(".")[-1].strip()
-        return name1 == name2
+        # Both are symbolic references - must be identical, not just same base name
+        norm1 = region1.strip()
+        norm2 = region2.strip()
+        return norm1 == norm2
 
     return False
 
 
 def detect_signature_change(intent: str) -> bool:
     """Detect if intent explicitly mentions changing/removing a signature or API."""
-    # High-confidence keywords that indicate structural/signature changes
-    high_confidence = [
-        "rename",
-        "change signature",
-        "remove",
-        "delete",
-        "deprecate",
-        "move",
-    ]
-
     lower_intent = intent.lower()
 
-    # Strong signal: explicit rename, remove, delete
-    if any(kw in lower_intent for kw in high_confidence):
+    # High-confidence keywords that indicate structural/signature changes
+    strong_keywords = [
+        "rename",
+        "change signature",
+        "remove ",  # space to avoid "remote"
+        "delete",
+        "deprecate",
+    ]
+
+    # Check strong keywords
+    if any(kw in lower_intent for kw in strong_keywords):
         return True
+
+    # "move" only counts if it's about moving functions/methods/APIs, not UI elements
+    # Look for context: "move function", "move method", "move API", etc.
+    if "move" in lower_intent:
+        move_context = ["function", "method", "api", "parameter", "argument", "module", "class"]
+        if any(ctx in lower_intent for ctx in move_context):
+            return True
 
     # "refactor" + API/signature mention is a signal
     if "refactor" in lower_intent:
