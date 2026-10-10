@@ -37,12 +37,15 @@ class FileSnapshot:
 
 def normalize_source(source: str) -> str:
     """Normalize source code: remove comments and excess whitespace."""
-    # Remove comments
+    # Remove comments (and trailing whitespace from comment removal)
     source = re.sub(r'#.*$', '', source, flags=re.MULTILINE)
+    source = re.sub(r'[ \t]+$', '', source, flags=re.MULTILINE)  # Remove trailing spaces
     # Remove docstrings (very basic: just triple quotes on their own line)
     source = re.sub(r'^\s*"""[\s\S]*?"""', '', source, flags=re.MULTILINE)
     source = re.sub(r"^\s*'''[\s\S]*?'''", '', source, flags=re.MULTILINE)
-    # Normalize whitespace: collapse multiple spaces/newlines
+    # Normalize whitespace around operators: remove spaces around * / + - = etc
+    source = re.sub(r'\s*([*/%+\-=<>!&|^])\s*', r'\1', source)
+    # Normalize remaining whitespace: collapse multiple spaces/newlines
     source = re.sub(r'[ \t]+', ' ', source)
     source = re.sub(r'\n\s*\n', '\n', source)
     return source.strip()
@@ -149,10 +152,11 @@ def snapshot_file(file_path: str, agent_id: str, timestamp: float) -> FileSnapsh
     """Create a snapshot of a file's content at symbol level."""
     path = Path(file_path)
 
-    # Content hash
+    # Content hash (normalized to ignore comments and formatting)
     if path.exists():
         content = path.read_text()
-        content_hash = compute_hash(content)
+        normalized = normalize_source(content)
+        content_hash = compute_hash(normalized)
     else:
         content_hash = "MISSING"
 

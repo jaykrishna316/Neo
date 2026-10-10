@@ -61,14 +61,17 @@ def record_read(agent_id: str, path: str, symbols: Optional[List[str]] = None) -
         if not file_path.exists():
             return
 
-        # Create snapshot of current state
-        snapshot = snapshot_file(file_path, agent_id, time.time())
+        # Create snapshot of current state and capture file content
+        current_time = time.time()
+        file_content = file_path.read_text()
+        snapshot = snapshot_file(file_path, agent_id, current_time)
 
-        # Store in agent's state
+        # Store in agent's state - include actual file content for later comparison
         state = _read_state_file(agent_id)
         state[path] = {
             "snapshot_time": snapshot.timestamp,
             "content_hash": snapshot.content_hash,
+            "file_content": file_content,  # Store actual content to detect changes
             "symbols": {
                 name: {
                     "hash": sym.body_hash,
@@ -108,14 +111,35 @@ def check_freshness(agent_id: str, path: str) -> str:
         # Get the dependency symbols agent cares about
         dependency_symbols = cached.get("dependency_symbols")
 
-        # Create a snapshot from the cached time
-        cached_snapshot = snapshot_file(
-            file_path,
-            agent_id,
-            cached["snapshot_time"]
-        )
+        # Use stored file content to create base snapshot (not current file)
+        # This way we detect actual changes from when agent read it
+        if "file_content" not in cached:
+            return "UNVERIFIABLE"
 
-        if cached_snapshot.parse_error:
+        from core.symbol_hasher import FileSnapshot, SymbolExtractor, compute_hash, normalize_source
+        import ast
+
+        try:
+            # Parse the stored (base) file content
+            base_content = cached["file_content"]
+            base_normalized = normalize_source(base_content)
+            base_hash = compute_hash(base_normalized)
+
+            # Extract symbols from base content
+            base_tree = ast.parse(base_content)
+            base_lines = base_content.splitlines()
+            base_extractor = SymbolExtractor(base_content, base_lines)
+            base_extractor.visit(base_tree)
+
+            # Recreate base snapshot
+            cached_snapshot = FileSnapshot(
+                file_path=str(file_path),
+                content_hash=base_hash,
+                symbols=base_extractor.symbols,
+                timestamp=cached["snapshot_time"],
+                agent_id=agent_id
+            )
+        except Exception:
             return "UNVERIFIABLE"
 
         # Check freshness at symbol level
@@ -126,7 +150,7 @@ def check_freshness(agent_id: str, path: str) -> str:
         )
 
         return freshness_state
-    except Exception:
+    except Exception as e:
         return "UNVERIFIABLE"
 
 
@@ -159,14 +183,34 @@ def delta_since_base(agent_id: str, path: str) -> str:
         if not file_path.exists():
             return ""
 
-        # Create snapshot from cached time (base)
-        base_snapshot = snapshot_file(
-            file_path,
-            agent_id,
-            cached["snapshot_time"]
-        )
+        # Use stored file content to create base snapshot
+        if "file_content" not in cached:
+            return file_path.read_text()
 
-        if base_snapshot.parse_error:
+        from core.symbol_hasher import FileSnapshot, SymbolExtractor, compute_hash, normalize_source
+        import ast
+
+        try:
+            # Parse the stored (base) file content
+            base_content = cached["file_content"]
+            base_normalized = normalize_source(base_content)
+            base_hash = compute_hash(base_normalized)
+
+            # Extract symbols from base content
+            base_tree = ast.parse(base_content)
+            base_lines = base_content.splitlines()
+            base_extractor = SymbolExtractor(base_content, base_lines)
+            base_extractor.visit(base_tree)
+
+            # Recreate base snapshot
+            base_snapshot = FileSnapshot(
+                file_path=str(file_path),
+                content_hash=base_hash,
+                symbols=base_extractor.symbols,
+                timestamp=cached["snapshot_time"],
+                agent_id=agent_id
+            )
+        except Exception:
             # Can't parse base - return current full file
             return file_path.read_text()
 

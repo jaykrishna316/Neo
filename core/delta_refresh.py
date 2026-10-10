@@ -253,21 +253,17 @@ class ContextRefreshBuilder:
         agent_id: str,
         file_path: str
     ) -> str:
-        """Build human-readable context refresh message."""
+        """Build human-readable context refresh message with symbol bodies."""
         messages = [f"Context refresh for {agent_id}:"]
 
         for delta in deltas:
             if delta.delta_type == "symbols":
-                messages.append(f"\n{delta.file_path}:")
-                if delta.added_symbols:
-                    messages.append(f"  + Added: {', '.join(delta.added_symbols)}")
-                if delta.removed_symbols:
-                    messages.append(f"  - Removed: {', '.join(delta.removed_symbols)}")
-                if delta.changed_symbols:
-                    messages.append(f"  ~ Changed: {', '.join(delta.changed_symbols)}")
-                if delta.unchanged_signatures:
-                    sigs = ', '.join(delta.unchanged_signatures.keys())
-                    messages.append(f"  ≡ Unchanged: {sigs}")
+                # Include actual bodies for changed and added symbols only (minimal overhead)
+                for sd in (delta.symbol_deltas or []):
+                    if sd.type == "added" and sd.body:
+                        messages.append(sd.body)
+                    elif sd.type == "changed" and sd.body:
+                        messages.append(sd.body)
             elif delta.delta_type == "unified_diff":
                 messages.append(f"\n{delta.file_path} (diff):")
                 messages.append(delta.unified_diff or "(no diff)")
