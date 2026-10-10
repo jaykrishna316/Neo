@@ -163,6 +163,22 @@ Result: Zero staleness overhead, 96% token reduction per refresh
 See: test_claims_C1_C2.py
 ```
 
+#### Two Staleness Mechanisms
+
+Neo provides two complementary approaches:
+
+1. **Time-based (Lightweight)**: `is_context_stale()` — Quick fallback using 1000ms threshold
+   - Used by activity log for rapid checks
+   - Cannot detect instant content changes (by design)
+   - Tradeoff: Performance for coverage
+
+2. **Content-based (C1)**: `check_freshness()` — Symbol-level hash comparison
+   - Detects ANY content change instantly (formatting, logic, etc.)
+   - Per-symbol granularity (only affected symbols flagged)
+   - Recommended for accuracy-critical paths
+
+**Usage**: Activity log uses time-based for speed; explicit C1 calls use content-based for correctness.
+
 ### Real Token Efficiency (From Actual Measurements)
 
 | Scenario | Traditional | Neo | Savings | Based On |

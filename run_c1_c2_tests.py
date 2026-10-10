@@ -112,7 +112,7 @@ def run_tests():
         f"Looking for '{ms}ms' or '{ms} ms' reference"
     )
 
-    # ===== T2: Content-based Staleness (Expected FAIL) =====
+    # ===== T2: Content-based Staleness (Expected FAIL - time-only check) =====
     print("\n[T2] Content-based Staleness Detection (Expected FAIL - time-only)")
     print("-" * 70)
     with tempfile.TemporaryDirectory() as tmp:
@@ -125,7 +125,8 @@ def run_tests():
         runner.test(
             "T2: Content change detected at t0",
             stale == True,
-            "Currently time-based only (content hashing not integrated)"
+            "Expected FAIL: is_context_stale() is time-only fallback. "
+            "Use check_freshness() (C1) for content-based detection"
         )
 
     # ===== T2a: C1 - Changed Symbol Flags STALE_SOURCE =====

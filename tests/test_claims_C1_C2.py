@@ -72,14 +72,18 @@ def test_T1b_readme_threshold_matches_code():
 # ---------- T2: C1, content-based staleness ----------
 
 def test_T2_current_check_sees_content_change_FAIL_TODAY(tmp_path):
-    """The existing check is time-only. A content change with zero elapsed time must not
-    be reported as CURRENT. Expected to FAIL on the current code."""
+    """EXPECTED FAIL: is_context_stale() is a time-only fallback for quick checks.
+
+    It cannot detect content changes at t=0 because it only checks elapsed time (>1000ms).
+    For content-based staleness detection, use check_freshness() (C1 mechanism) instead.
+    This test documents the intended limitation of the legacy time-based approach.
+    """
     f = tmp_path / "payment.py"
     f.write_text(SRC_V1)
     t0 = time.time()
     f.write_text(SRC_PROCESS_REFUND_V2)
     stale, _ = is_context_stale(t0, t0)
-    assert stale is True, "is_context_stale ignores content changes"
+    assert stale is True, "is_context_stale ignores content changes (expected limitation)"
 
 
 def test_T2a_changed_symbol_flags_STALE_SOURCE(tmp_path, monkeypatch):
