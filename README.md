@@ -92,16 +92,16 @@ For a deeper hands-on experience with real terminals:
 ---
 
 ### 🧠 IDE: Claude Code + MCP Server (10 minutes)
-```bash
-# Configure in .claude/settings.json
-# See: CLAUDE.md for MCP server configuration
 
-# Then open 2 Claude Code IDE instances:
-# IDE 1 (Alice): Generate code with Neo conflict check
-# IDE 2 (Bob): See conflict detection before generation
-```
+Run the two-developer coordination test entirely within Claude Code IDE using the Neo MCP server:
 
-See full guide: [docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md](docs/CLAUDE_CODE_TWO_DEVELOPER_TEST.md)
+See full guide: [docs/MCP_TWO_DEVELOPER_TEST.md](docs/MCP_TWO_DEVELOPER_TEST.md)
+
+**What you'll verify:**
+- ✅ Neo MCP server operational in Claude Code
+- ✅ Lock coordination working (activity logging, conflict detection)
+- ✅ C1 Staleness Detection identifying outdated context
+- ✅ C2 Delta Refresh calculating 91%+ token savings
 
 ---
 
