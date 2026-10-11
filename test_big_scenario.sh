@@ -251,7 +251,13 @@ state, report = StalenessChecker.check_file_staleness(
 )
 
 # Always get fresh snapshot to compare
-bob_snapshot_after = snapshot_file('src/auth.py', 'bob', time.time())
+try:
+    bob_snapshot_after = snapshot_file('src/auth.py', 'bob', time.time())
+except Exception as e:
+    print(f"ERROR taking snapshot: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
 
 before_syms = set(bob_before_data['symbols'])
 after_syms = set(bob_snapshot_after.symbols.keys())
