@@ -10,3 +10,4 @@ build/
 tests/*_results.json
 .test_results/
 .neo_state/
+src/
