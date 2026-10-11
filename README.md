@@ -93,9 +93,13 @@ For a deeper hands-on experience with real terminals:
 
 ### 🧠 IDE: Claude Code + MCP Server (10 minutes)
 
-Run the two-developer coordination test entirely within Claude Code IDE using the Neo MCP server:
+Run the two-developer coordination test with Neo MCP integration:
 
-See full guide: [docs/MCP_TWO_DEVELOPER_TEST.md](docs/MCP_TWO_DEVELOPER_TEST.md)
+**Option 1: Full Claude Code IDE** (all steps in Claude Code terminal)
+See: [docs/MCP_TWO_DEVELOPER_TEST.md](docs/MCP_TWO_DEVELOPER_TEST.md)
+
+**Option 2: Hybrid Approach** (file setup in regular terminal, Neo in Claude Code)
+See: [docs/MCP_HYBRID_TEST.md](docs/MCP_HYBRID_TEST.md)
 
 **What you'll verify:**
 - ✅ Neo MCP server operational in Claude Code
