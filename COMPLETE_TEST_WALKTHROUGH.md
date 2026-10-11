@@ -26,22 +26,22 @@ echo "✅ Setup complete"
 
 ---
 
-## TERMINAL 1: Start Neo Server
+## NEO SERVER TERMINAL: Start Neo Server
 
-**Open a new terminal and run:**
+**Open a new terminal and run (this is the "NEO SERVER" terminal):**
 
 ```bash
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_server --clear
 ```
 
-**Keep this running. Watch for output messages from Neo.**
+**Keep this running. All test commands will show output here.**
 
 ---
 
-## TERMINAL 2: Run All Test Steps
+## ALICE TERMINAL: Lock Coordination Steps
 
-**Copy and run each section below. After each command, note what appears in Terminal 1.**
+**Open a new terminal for Alice (this is the "ALICE" terminal).**
 
 ---
 
@@ -49,16 +49,20 @@ cd ~/Neo
 
 #### Step 1: Alice Declares Intent
 
+**Run in ALICE terminal:**
+
 ```bash
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client declare alice src/auth.py "Add bcrypt password hashing" --category feature
 ```
 
-**📝 Note Terminal 1 output here:**
+**📝 Watch NEO SERVER terminal and note output here:**
 
 ---
 
 #### Step 2: Alice Edits File
+
+**Run in ALICE terminal:**
 
 ```bash
 cat > src/auth.py << 'EOF'
@@ -79,35 +83,42 @@ def hash_password(password):
 EOF
 ```
 
-**📝 Note Terminal 1 output here:**
+**📝 Watch NEO SERVER terminal and note output here:**
 
 ---
 
 #### Step 3: Bob Declares Intent (CONFLICT!)
+
+**Run in BOB terminal (new terminal):**
 
 ```bash
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client declare bob src/auth.py "Add OAuth2 support" --category feature
 ```
 
-**📝 Note Terminal 1 output here:**
+**📝 Watch NEO SERVER terminal - THIS IS WHERE LOCK APPEARS! Note output here:**
 
 ---
 
 #### Step 4: Alice Completes Work
+
+**Run in ALICE terminal:**
 
 ```bash
 cd ~/Neo
 .venv/bin/python3 -m cli.neo_client complete alice src/auth.py --added 10 --removed 2
 ```
 
-**📝 Note Terminal 1 output here:**
+**📝 Watch NEO SERVER terminal and note output here:**
 
 ---
 
 #### Step 5: View Activity Log
 
+**Run in ACTIVITY LOG terminal (new terminal):**
+
 ```bash
+cd ~/Neo
 cat .devsync/activity-log.json | jq '.[] | {dev: .developer_id, intent: .intent[:35], lock_state, lock_holder, queue_pos: .queue_position}'
 ```
 
@@ -115,9 +126,17 @@ cat .devsync/activity-log.json | jq '.[] | {dev: .developer_id, intent: .intent[
 
 ---
 
+## BOB TERMINAL: C1 & C2 Testing Steps
+
+**Use the same BOB terminal from before, or open a new one.**
+
+---
+
 ### PART 2: C1 STALENESS DETECTION
 
 #### Step 6: Take Bob's Snapshot (BEFORE Alice changes)
+
+**Run in BOB terminal:**
 
 ```bash
 python3 << 'EOF'
@@ -154,6 +173,8 @@ EOF
 
 #### Step 7: Wait 3 Seconds
 
+**Run in BOB terminal:**
+
 ```bash
 sleep 3
 echo "Waiting complete..."
@@ -162,6 +183,8 @@ echo "Waiting complete..."
 ---
 
 #### Step 8: Alice Adds New Functions
+
+**Run in ALICE terminal:**
 
 ```bash
 cat > src/auth.py << 'EOF'
@@ -195,6 +218,8 @@ echo "✅ Alice's changes complete"
 ---
 
 #### Step 9: Check If Bob's Context is Stale (C1)
+
+**Run in BOB terminal:**
 
 ```bash
 python3 << 'EOF'
@@ -258,6 +283,8 @@ EOF
 ### PART 3: C2 DELTA REFRESH TOKEN SAVINGS
 
 #### Step 10: Calculate Token Savings (C2)
+
+**Run in BOB terminal:**
 
 ```bash
 python3 << 'EOF'
@@ -339,6 +366,8 @@ EOF
 
 #### Step 11: View Final Results
 
+**Run in ACTIVITY LOG terminal:**
+
 ```bash
 cat .devsync/c1_c2_test_results.json
 ```
@@ -349,10 +378,12 @@ cat .devsync/c1_c2_test_results.json
 
 ## CLEANUP
 
+**Run in BOB terminal:**
+
 ```bash
 rm -f .devsync/bob_snapshot_before.json
 rm -f .devsync/bob_snapshot_after.json
-# Keep c1_c2_test_results.json and activity-log.json
+# Keep c1_c2_test_results.json and activity-log.json for review
 ```
 
 ---
