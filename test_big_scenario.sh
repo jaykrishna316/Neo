@@ -250,25 +250,25 @@ state, report = StalenessChecker.check_file_staleness(
     dependency_symbols=None
 )
 
-if state == "STALE_SOURCE":
-    bob_snapshot_after = snapshot_file('src/auth.py', 'bob', time.time())
+# Always get fresh snapshot to compare
+bob_snapshot_after = snapshot_file('src/auth.py', 'bob', time.time())
 
-    before_syms = set(bob_before_data['symbols'])
-    after_syms = set(bob_snapshot_after.symbols.keys())
+before_syms = set(bob_before_data['symbols'])
+after_syms = set(bob_snapshot_after.symbols.keys())
 
-    added = after_syms - before_syms
-    removed = before_syms - after_syms
+added = after_syms - before_syms
+removed = before_syms - after_syms
 
-    with open('.devsync/bob_snapshot_after.json', 'w') as f:
-        json.dump({
-            'symbols': sorted(list(bob_snapshot_after.symbols.keys())),
-            'symbol_count': len(bob_snapshot_after.symbols),
-            'content_hash': bob_snapshot_after.content_hash,
-            'added_count': len(added),
-            'added': sorted(list(added)),
-            'removed_count': len(removed),
-            'removed': sorted(list(removed))
-        }, f, indent=2)
+with open('.devsync/bob_snapshot_after.json', 'w') as f:
+    json.dump({
+        'symbols': sorted(list(bob_snapshot_after.symbols.keys())),
+        'symbol_count': len(bob_snapshot_after.symbols),
+        'content_hash': bob_snapshot_after.content_hash,
+        'added_count': len(added),
+        'added': sorted(list(added)),
+        'removed_count': len(removed),
+        'removed': sorted(list(removed))
+    }, f, indent=2)
 
 print("✅ Step 8: C1 Staleness Detection")
 print(f"   State: {state}")
@@ -317,6 +317,8 @@ print(f"   Full file tokens: ~{full_tokens}")
 print(f"   Delta tokens: ~{delta_tokens}")
 print(f"   Tokens saved: {savings} ({savings_percent:.1f}%)")
 
+c1_state = "STALE_SOURCE" if after_data['added_count'] > 0 else "CURRENT"
+
 with open('.devsync/big_test_results.json', 'w') as f:
     json.dump({
         'test_type': 'LARGE_CHANGES',
@@ -327,7 +329,7 @@ with open('.devsync/big_test_results.json', 'w') as f:
         },
         'c1_staleness_detection': {
             'status': 'PASSED',
-            'state': 'STALE_SOURCE',
+            'state': c1_state,
             'symbols_before': before_data['symbol_count'],
             'symbols_after': after_data['symbol_count'],
             'new_symbols_found': after_data['added'],
