@@ -102,7 +102,13 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 lock_holder = lock_info.get('lock_holder')
                 queue_position = lock_info.get('queue_position')
                 waiting_for = lock_info.get('waiting_for')
+                lock_acquired_at = lock_info.get('lock_acquired_at')
+                lock_expires_at = lock_info.get('lock_expires_at')
                 lock_state = "ACQUIRED" if lock_holder == agent_id else "WAITING"
+
+                # Set lock reason and scope based on risk level and region
+                lock_reason = "HIGH_CONFLICT" if risk_level == RiskLevel.HIGH else "MEDIUM_CONFLICT"
+                lock_scope = "region" if region else "file"
 
             # Log activity with lock state
             log_activity(
