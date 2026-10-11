@@ -1,3 +1,4 @@
+import ast
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 from core.symbol_hasher import FileSnapshot
@@ -23,15 +24,50 @@ class DeltaGenerator:
         current_snap = snapshot_file(current_file_path, base_snap.agent_id, time.time())
         if current_snap.parse_error:
             return FileDelta(current_file_path, "full_file", changed_symbols=[])
-        
+
         changed = []
         deltas = []
+
+        # Read source for body extraction
+        try:
+            with open(current_file_path, 'r') as f:
+                source = f.read()
+            tree = ast.parse(source)
+        except:
+            tree = None
+
         for sym in current_snap.symbols:
-            if sym not in base_snap.symbols or base_snap.symbols[sym].body_hash != current_snap.symbols[sym].body_hash:
+            if sym not in base_snap.symbols:
+                # Added symbol
+                body = DeltaGenerator._extract_body(tree, sym, source) if tree else None
+                deltas.append(SymbolDelta(sym, "added", body))
                 changed.append(sym)
-                deltas.append(SymbolDelta(sym, "changed", current_snap.symbols[sym].signature))
-        
+            elif base_snap.symbols[sym].body_hash != current_snap.symbols[sym].body_hash:
+                # Changed symbol
+                body = DeltaGenerator._extract_body(tree, sym, source) if tree else None
+                deltas.append(SymbolDelta(sym, "changed", body))
+                changed.append(sym)
+
         return FileDelta(current_file_path, "symbols", deltas, changed)
+
+    @staticmethod
+    def _extract_body(tree, sym_name: str, source: str) -> Optional[str]:
+        """Extract the body of a symbol from AST."""
+        if not tree:
+            return None
+
+        lines = source.split('\n')
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if node.name == sym_name:
+                    try:
+                        start = node.lineno - 1
+                        end = node.end_lineno
+                        if start >= 0 and end <= len(lines):
+                            return '\n'.join(lines[start:end])
+                    except:
+                        pass
+        return None
 
 class ContextRefreshBuilder:
     @staticmethod
