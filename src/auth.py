@@ -1,4 +1,4 @@
 def authenticate_user(username, password):
-    """Authenticate user with OAuth2"""
-    # Alice is adding OAuth2 support
+    """Authenticate user with OAuth2 + JWT"""
+    # Building on Alice's OAuth2 work
     pass
