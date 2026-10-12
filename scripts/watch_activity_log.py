@@ -58,11 +58,11 @@ def format_entry(entry):
     elif queue_pos is not None:
         status = f" [queue pos: {queue_pos}]"
 
-    completed = entry.get("agent_metadata", {}).get("status") == "completed"
+    metadata = entry.get("agent_metadata") or {}
+    completed = metadata.get("status") == "completed"
     if completed:
-        lines = entry.get("agent_metadata", {})
-        added = lines.get("lines_added", 0)
-        removed = lines.get("lines_removed", 0)
+        added = metadata.get("lines_added", 0)
+        removed = metadata.get("lines_removed", 0)
         block_marker = "✅ DONE   "
         status = f" [+{added},-{removed}]"
 
@@ -102,7 +102,8 @@ def watch_log():
             if entries:
                 locked = [e for e in entries if e.get("lock_state") == "ACQUIRED"]
                 waiting = [e for e in entries if e.get("lock_state") == "WAITING"]
-                completed = [e for e in entries if e.get("agent_metadata", {}).get("status") == "completed"]
+                metadata = [e.get("agent_metadata") or {} for e in entries]
+                completed = [e for e in entries if (e.get("agent_metadata") or {}).get("status") == "completed"]
 
                 # Summary line
                 summary = f"\n[SUMMARY] "

@@ -109,7 +109,7 @@ class ActivityEntry:
 
 
 def ensure_log_exists(tenant_id: Optional[str] = None) -> Path:
-    """Ensure log directory and file exist (tenant-aware).
+    """Ensure log directory and file exist (tenant-aware, JSONL format).
 
     Args:
         tenant_id: Tenant ID. If None, uses DEFAULT_TENANT_ID or legacy path.
@@ -120,7 +120,7 @@ def ensure_log_exists(tenant_id: Optional[str] = None) -> Path:
     log_file = get_tenant_log_path(tenant_id)
     log_file.parent.mkdir(parents=True, exist_ok=True)
     if not log_file.exists():
-        log_file.write_text(json.dumps([]))
+        log_file.write_text("")
     return log_file
 
 
@@ -196,15 +196,13 @@ def log_activity(
         waiting_for=waiting_for,
     )
 
-    entries = json.loads(log_file.read_text())
-    entries.append(entry.to_dict())
-
-    log_file.write_text(json.dumps(entries, indent=2))
+    with open(log_file, "a") as f:
+        f.write(json.dumps(entry.to_dict()) + "\n")
     return entry
 
 
 def read_log(tenant_id: Optional[str] = None) -> List[dict]:
-    """Read all entries from the activity log (tenant-isolated).
+    """Read all entries from the activity log in JSONL format (tenant-isolated).
 
     Args:
         tenant_id: Tenant ID. If None, uses DEFAULT_TENANT_ID or legacy path.
@@ -213,7 +211,21 @@ def read_log(tenant_id: Optional[str] = None) -> List[dict]:
         List of activity entries for the tenant
     """
     log_file = ensure_log_exists(tenant_id)
-    return json.loads(log_file.read_text())
+    if not log_file.exists():
+        return []
+
+    entries = []
+    try:
+        with open(log_file, "r") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        entries.append(json.loads(line.strip()))
+                    except json.JSONDecodeError:
+                        pass
+    except Exception:
+        pass
+    return entries
 
 
 def get_active_entries(
