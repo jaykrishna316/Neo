@@ -8,10 +8,12 @@ Supports multiple backends:
 """
 
 import os
+import json
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from dataclasses import asdict
 from pathlib import Path
+from datetime import datetime
 
 from .activity_log import ActivityEntry, DEFAULT_TENANT_ID, MULTITENANCY_ENABLED
 
@@ -62,7 +64,7 @@ class FileBackend(ActivityLogBackend):
         return tenant_dir / "activity-log.json"
 
     def read_log(self, tenant_id: str) -> List[ActivityEntry]:
-        """Read all entries from file-based log."""
+        """Read all entries from file-based log (JSONL format)."""
         log_path = self._get_tenant_path(tenant_id)
         if not log_path.exists():
             return []
@@ -74,24 +76,29 @@ class FileBackend(ActivityLogBackend):
             entries = []
             for line in lines:
                 if line.strip():
-                    data = eval(line.strip())  # Using eval for dict compatibility
-                    entries.append(ActivityEntry(**data))
+                    try:
+                        data = json.loads(line.strip())
+                        entries.append(ActivityEntry(**data))
+                    except (json.JSONDecodeError, TypeError):
+                        pass
             return entries
         except Exception:
             return []
 
     def write_log(self, entries: List[ActivityEntry], tenant_id: str) -> None:
-        """Write all entries to file-based log."""
+        """Write all entries to file-based log (JSONL format)."""
         log_path = self._get_tenant_path(tenant_id)
         with open(log_path, "w") as f:
             for entry in entries:
-                f.write(str(asdict(entry)) + "\n")
+                data = asdict(entry)
+                f.write(json.dumps(data) + "\n")
 
     def append_entry(self, entry: ActivityEntry, tenant_id: str) -> None:
-        """Append a single entry to file-based log."""
+        """Append a single entry to file-based log (JSONL format)."""
         log_path = self._get_tenant_path(tenant_id)
         with open(log_path, "a") as f:
-            f.write(str(asdict(entry)) + "\n")
+            data = asdict(entry)
+            f.write(json.dumps(data) + "\n")
 
     def clear_log(self, tenant_id: str) -> None:
         """Clear file-based log."""
