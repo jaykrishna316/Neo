@@ -34,70 +34,131 @@
 
 ---
 
-## Timeline View
+## Workflow Sequence
 
 ```
-Time    Alice (Term 2)              Activity Log (Term 1)        Bob (Term 3)
+BEFORE STARTING (Terminal 1 - Prep Phase)
+├─ Setup directories: mkdir -p .devsync src lib
+├─ Clean old logs: rm -f .devsync/activity-log.json
+└─ Create initial src/auth.py file
+
+START DEMO (All terminals ready)
+├─ Terminal 1: python scripts/watch_activity_log.py --follow --pretty
+│  └─ Output: "Waiting for activity..." [STAYS RUNNING]
+├─ Terminal 2: Ready with Python console (Alice)
+└─ Terminal 3: Ready with Python console (Bob)
+
+Timeline View:
 ────────────────────────────────────────────────────────────────────────────────
-16:30   Declare intent
-        ✅ alice-intent             📝 [alice] INTENT_DECLARED
-                                    🔒 Lock: ALICE_ACQUIRED
+Time    TERMINAL 1                  TERMINAL 2 (Alice)       TERMINAL 3 (Bob)
+        (Activity Log Watcher)      (Declares intent)        (Waits & works)
+────────────────────────────────────────────────────────────────────────────────
+16:30   [watching...]               ✅ alice-intent          
+                                    → Calls neo_log_activity
 
-16:31   
-                                                                Bob declares
-                                                                ✅ bob-intent
-                                                                
-                                    📝 [bob] INTENT_DECLARED
-                                    ⏳ Lock: BOB_WAITING (queue=0)
-                                    
-                                                                ⚠️ Notification:
-                                                                alice is working
-
-16:33   Alice finishes
-        ✅ alice-complete           📝 [alice] WORK_COMPLETED
-        📊 +20 lines, +5 functions  🔓 Lock: ALICE_RELEASED
-        💾 Delta: 40 tokens         ⚡ Bob promoted!
+        📝 [alice] INTENT_DECLARED
+        🔒 Lock: ALICE_ACQUIRED
         
-16:33                               📝 [bob] PROMOTED
-                                    🔒 Lock: BOB_ACQUIRED
-                                    📖 Fresh context available
-                                    
-                                                                🔔 Notification:
-                                                                Your turn!
-                                                                +5 functions ready
-                                                                Delta: 40 tokens
+16:31   [watching...]                                        ✅ bob-intent
+                                                             → Calls neo_log_activity
+        
+        📝 [bob] INTENT_DECLARED
+        ⏳ Lock: BOB_WAITING (queue=0)
+                                                             ⚠️ NOTIFICATION:
+                                                             "alice is working"
 
-16:34   
-                                                                Bob starts work
-                                                                ✅ bob-start
-                                                                
-                                    📝 [bob] WORK_IN_PROGRESS
+16:33   [watching...]               ✅ alice-complete
+                                    → Implements bcrypt
+        📝 [alice] WORK_COMPLETED
+        🔓 Lock: ALICE_RELEASED
+        ⚡ Bob promoted!
+        
+        📝 [bob] PROMOTED
+        🔒 Lock: BOB_ACQUIRED
+        📖 Fresh context: 40 tokens (vs 500)
+                                                             🔔 NOTIFICATION:
+                                                             "Your turn! Alice done"
+                                                             "+5 functions ready"
+                                                             "Delta: 40 tokens"
 
-16:35   
-                                                                Bob finishes
-                                                                ✅ bob-complete
-                                                                
-                                    📝 [bob] WORK_COMPLETED
-                                    🔓 Lock: BOB_RELEASED
+16:34   [watching...]                                        ✅ bob-start
+                                                             → Calls neo_log_activity
+        📝 [bob] WORK_IN_PROGRESS
+        
+16:35   [watching...]                                        ✅ bob-complete
+                                                             → Implements JWT
+        📝 [bob] WORK_COMPLETED
+        🔓 Lock: BOB_RELEASED
 
-Final   Total time: 5 minutes       📊 Activity Log Summary:
-        Code quality: High          • 2 developers coordinated
-        Merge conflicts: 0          • 0 conflicts (prevented upfront)
-        Token efficiency: 85%       • Lock transitions: 3
-        Collaboration: Perfect      • Queue management: Automatic
+Final   ✅ Log complete:             ✅ Alice done            ✅ Bob done
+        • 4 activity entries        • +20 lines              • +45 lines
+        • 2 lock transitions        • 5 functions            • 4 functions
+        • 0 conflicts!              • High quality           • High quality
 ```
 
 ---
 
 ## Quick Command Reference
 
-### Terminal 1: Activity Log Watcher
+### Terminal 1: Setup, Then Watch Activity Log
 
-**Start watching:**
+**Step 1 - Setup (do this first, before starting watcher):**
 ```bash
 cd ~/Neo
+mkdir -p .devsync src lib
+rm -f .devsync/activity-log.json .devsync/*.json
+
+# Create initial file
+cat > src/auth.py << 'EOF'
+"""Authentication module for application."""
+import hashlib
+from datetime import datetime, timedelta
+from typing import Optional
+
+def authenticate_user(username: str, password: str) -> bool:
+    if not username or not password:
+        return False
+    return len(username) > 3 and len(password) > 6
+
+def validate_token(token: str) -> bool:
+    if not token:
+        return False
+    return token.startswith("token_") and len(token) > 20
+
+def hash_password_simple(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def check_password_simple(password: str, hashed: str) -> bool:
+    return hash_password_simple(password) == hashed
+
+def generate_session_token(user_id: str) -> str:
+    timestamp = str(int(datetime.now().timestamp()))
+    return f"token_{user_id}_{timestamp}"
+
+def get_token_expiry(token: str) -> Optional[datetime]:
+    parts = token.split('_')
+    if len(parts) < 3:
+        return None
+    try:
+        timestamp = int(parts[2])
+        return datetime.fromtimestamp(timestamp) + timedelta(hours=24)
+    except (ValueError, IndexError):
+        return None
+
+def is_token_expired(token: str) -> bool:
+    expiry = get_token_expiry(token)
+    return expiry is None or datetime.now() > expiry
+EOF
+
+echo "✅ Setup complete"
+```
+
+**Step 2 - Start watching (keeps Terminal 1 running):**
+```bash
 .venv/bin/python scripts/watch_activity_log.py --follow --pretty
 ```
+
+**Terminal 1 now stays open**, displaying activity log updates in real-time as Alice and Bob work.
 
 **What you'll see:**
 ```

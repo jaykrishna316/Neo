@@ -52,16 +52,10 @@
 
 ### STEP 0: Terminal Preparation (5 minutes)
 
-#### Terminal 1 Setup (Regular Terminal)
+#### Terminal 1 Setup (Regular Terminal - NO COMMANDS YET)
 ```bash
-cd ~/Neo
-mkdir -p .devsync src lib
-rm -f .devsync/activity-log.json .devsync/*.json
-
-# Start activity log watcher
-.venv/bin/python scripts/watch_activity_log.py --follow --pretty
-
-# Expected output: Waits for activity (empty at first)
+# Keep this terminal ready - you'll start the activity log watcher in STEP 0.5
+# DO NOT run commands here until instructed
 ```
 
 #### Terminal 2 Setup (Claude Code IDE)
@@ -72,9 +66,15 @@ Open another Claude Code IDE window (or second instance) for Bob.
 
 ---
 
-### STEP 1: Create Initial Auth Module (Terminal 1)
+### STEP 0.5: Create Initial Auth Module (Terminal 1 - Before Watcher)
+
+**In Terminal 1, BEFORE starting the watcher, run these commands:**
 
 ```bash
+cd ~/Neo
+mkdir -p .devsync src lib
+rm -f .devsync/activity-log.json .devsync/*.json
+
 cat > src/auth.py << 'EOF'
 """Authentication module for application."""
 
@@ -130,7 +130,26 @@ echo "✅ Initial auth module created"
 wc -l src/auth.py
 ```
 
-**Watch Terminal 1**: Should still be empty (no activity yet)
+**Expected output**: Shows file created with ~50 lines
+
+---
+
+### STEP 1: Start Activity Log Watcher (Terminal 1)
+
+**NOW in Terminal 1, start the activity log watcher:**
+
+```bash
+.venv/bin/python scripts/watch_activity_log.py --follow --pretty
+```
+
+**Expected output**: 
+```
+Watching activity log: .devsync/activity-log.json
+Waiting for activity...
+[Stays here, watching for updates]
+```
+
+This Terminal 1 now **stays running** and shows activity as it happens.
 
 ---
 
