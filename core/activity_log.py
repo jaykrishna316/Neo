@@ -280,7 +280,7 @@ def clear_log(tenant_id: Optional[str] = None) -> None:
         tenant_id: Tenant ID. If None, uses DEFAULT_TENANT_ID or legacy path.
     """
     log_file = ensure_log_exists(tenant_id)
-    log_file.write_text(json.dumps([]))
+    log_file.write_text("")
 
     # Clean up empty tenant directory if multitenancy enabled
     if MULTITENANCY_ENABLED and tenant_id:
