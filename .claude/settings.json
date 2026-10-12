@@ -1,35 +1,28 @@
 {
-  "activity_log": {
-    "enabled": true,
-    "storage": "git",
-    "log_dir": ".activity_log",
-    "auto_push_on_high": true,
-    "description": "Local POC storage - can migrate to database later"
-  },
-
-  "merge_gate": {
-    "enabled": true,
-    "enforce_on_high_conflict": true,
-    "requires_all_approval": true,
-    "description": "Blocks merge to main until all developers approve HIGH conflicts"
-  },
-
-  "conflict_detection": {
-    "low_threshold": 0.1,
-    "medium_threshold": 0.5,
-    "high_threshold": 0.5,
-    "description": "Overlap ratio thresholds for conflict severity"
-  },
-
-  "notifications": {
-    "high_conflict": "immediate",
-    "medium_conflict": "hourly_digest",
-    "low_conflict": "none",
-    "description": "Notification schedule by conflict severity"
-  },
-
-  "defaults": {
-    "functions_are_small": true,
-    "description": "Increases HIGH conflict sensitivity for small functions"
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "Before the user edits this file, check if there are any conflicts with neo_check_conflicts MCP tool. Extract the file_path from the tool input and use it to check for conflicts. Return the conflict status to inform the user, but don't block the edit.",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "After the user edits a file, automatically log the activity using neo_log_activity MCP tool. Extract the file_path and infer a brief intent from the edit context. Use agent_id 'claude-code' and mark as work in progress.",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
