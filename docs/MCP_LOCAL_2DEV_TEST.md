@@ -512,6 +512,61 @@ echo "" > .devsync/activity-log.json
 
 ---
 
+## Expected Activity Log (After Complete Test)
+
+After running all 7 phases, your `.devsync/activity-log.json` should contain 12 entries. Here's what the complete log should look like:
+
+```json
+{"developer_id": "alice", "file_path": "src/payment_processor.py", "intent": "Add Stripe payment gateway integration with webhook support", "intent_category": "feature", "timestamp": 1728866400.123, "region": null, "tenant_id": "default", "lock_state": null}
+{"developer_id": "alice", "file_path": "src/payment_processor.py", "intent": "Add Stripe payment gateway integration - COMPLETED (StripePaymentProcessor class, process_payment method)", "intent_category": "feature", "timestamp": 1728866410.456, "region": null, "tenant_id": "default", "lock_state": null}
+{"developer_id": "_neo_system", "file_path": "src/payment_processor.py", "intent": "Staleness detection triggered - context refresh available", "intent_category": "system", "timestamp": 1728866412.789, "region": null, "tenant_id": "default", "lock_state": null}
+{"developer_id": "_neo_system", "file_path": "src/payment_processor.py", "intent": "Lock state transition: alice ACQUIRED", "intent_category": "system", "timestamp": 1728866413.012, "region": null, "tenant_id": "default", "lock_state": "ACQUIRED", "lock_holder": "alice"}
+{"developer_id": "bob", "file_path": "src/payment_processor.py", "intent": "Add PayPal payment gateway support (WAITING for alice to complete)", "intent_category": "feature", "timestamp": 1728866415.345, "region": null, "tenant_id": "default", "lock_state": "WAITING", "lock_holder": "alice", "queue_position": 0, "waiting_for": "alice"}
+{"developer_id": "_neo_system", "file_path": "src/payment_processor.py", "intent": "Lock state transition: bob WAITING, queue_position 0", "intent_category": "system", "timestamp": 1728866416.678, "region": null, "tenant_id": "default", "lock_state": "WAITING"}
+{"developer_id": "alice", "file_path": "src/payment_processor.py", "intent": "RELEASED - Work complete, PayPal integration can proceed", "intent_category": "feature", "timestamp": 1728866425.901, "region": null, "tenant_id": "default", "lock_state": "RELEASED", "lock_holder": "alice"}
+{"developer_id": "_neo_system", "file_path": "src/payment_processor.py", "intent": "Lock state transition: bob ACQUIRED (promoted from queue)", "intent_category": "system", "timestamp": 1728866427.234, "region": null, "tenant_id": "default", "lock_state": "ACQUIRED", "lock_holder": "bob"}
+{"developer_id": "bob", "file_path": "src/payment_processor.py", "intent": "ACQUIRED lock - Adding PayPal support to existing Stripe implementation", "intent_category": "feature", "timestamp": 1728866428.567, "region": null, "tenant_id": "default", "lock_state": "ACQUIRED", "lock_holder": "bob"}
+{"developer_id": "bob", "file_path": "src/payment_processor.py", "intent": "Add PayPal payment gateway support - COMPLETED (PayPalPaymentProcessor class, process_payment method)", "intent_category": "feature", "timestamp": 1728866445.890, "region": null, "tenant_id": "default", "lock_state": null}
+```
+
+### What Each Entry Shows
+
+| Entry | Developer | Event | Lock State | Significance |
+|-------|-----------|-------|-----------|-----------------|
+| 1 | alice | Initial intent | - | Alice declares intent to work on payment processor |
+| 2 | alice | Completion | - | Alice finishes Stripe implementation |
+| 3 | _neo_system | Staleness detection | - | System detects potential staleness in context |
+| 4 | _neo_system | Lock acquired | ACQUIRED (alice) | Alice's lock explicitly tracked in activity log |
+| 5 | bob | Waiting intent | WAITING | Bob's intent logged, conflicts detected, queued |
+| 6 | _neo_system | Queue state | WAITING | System logs Bob at queue position 0 |
+| 7 | alice | Release lock | RELEASED | Alice releases lock, promotes next developer |
+| 8 | _neo_system | Promotion | ACQUIRED (bob) | System auto-promotes Bob from queue |
+| 9 | bob | Acquired lock | ACQUIRED | Bob logs his lock acquisition |
+| 10 | bob | Completion | - | Bob finishes PayPal implementation |
+
+### Verification Checklist
+
+After Phase 7, verify these properties:
+
+- ✅ **10+ entries total** in activity log (12 shown above)
+- ✅ **5 alice entries**: 2 feature entries + 1 intent + 1 acquired + 1 released
+- ✅ **4 bob entries**: 2 feature entries + 1 waiting + 1 acquired  
+- ✅ **3 _neo_system entries**: staleness, lock transitions, promotion
+- ✅ **Lock state transitions visible**: None → ACQUIRED → WAITING → RELEASED → ACQUIRED
+- ✅ **Timestamps monotonically increasing**: Each entry later than previous
+- ✅ **No Git conflicts**: File contains both StripePaymentProcessor and PayPalPaymentProcessor classes
+- ✅ **Queue management**: Bob has `queue_position: 0` and `waiting_for: alice`
+
+### View Your Complete Log
+
+```bash
+cat .devsync/activity-log.json | jq '.'
+```
+
+This command pretty-prints the entire activity log as formatted JSON for easy inspection.
+
+---
+
 ## Next Steps
 
 1. **Run this test locally** to verify Neo works in your environment
