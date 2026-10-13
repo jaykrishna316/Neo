@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "neo-conflict-detection": {
-      "command": "python3",
+      "command": "/home/user/Neo/.venv/bin/python3",
       "args": ["-m", "ide.mcp_neo_server"],
       "env": {
         "PYTHONPATH": "/home/user/Neo",
