@@ -91,14 +91,35 @@ For a deeper hands-on experience with real terminals:
 
 ---
 
-### 🧠 IDE: Claude Code + MCP Server (10 minutes)
+### 🧠 IDE: Claude Code + MCP Server (10-20 minutes)
 
 Run the two-developer coordination test with Neo MCP integration:
 
-**Option 1: Full Claude Code IDE** (all steps in Claude Code terminal)
+**Option 1: Local 2-Developer Test (Manual + MCP)** ⭐ RECOMMENDED
+Interactive test in Claude Code IDE with real MCP server calls:
+See: [docs/MCP_LOCAL_2DEV_TEST.md](docs/MCP_LOCAL_2DEV_TEST.md)
+
+Follow 7 phases:
+1. Alice establishes intent
+2. Alice creates code
+3. Bob checks conflicts (gets BLOCKED)
+4. Alice releases lock
+5. Bob verifies staleness (C1)
+6. Bob creates code
+7. View complete activity log
+
+**Expected Result**: Both developers' code merged cleanly, 0 conflicts, activity log shows lock state transitions.
+
+**Option 2: Automated Python Script** (No IDE needed)
+For testing without manual Claude Code interaction:
+```bash
+python demo/mcp_local_2dev_test.py
+```
+
+**Option 3: Full Claude Code IDE** (all steps in Claude Code terminal)
 See: [docs/MCP_TWO_DEVELOPER_TEST.md](docs/MCP_TWO_DEVELOPER_TEST.md)
 
-**Option 2: Hybrid Approach** (file setup in regular terminal, Neo in Claude Code)
+**Option 4: Hybrid Approach** (file setup in regular terminal, Neo in Claude Code)
 See: [docs/MCP_HYBRID_TEST.md](docs/MCP_HYBRID_TEST.md)
 
 **What you'll verify:**
@@ -106,6 +127,7 @@ See: [docs/MCP_HYBRID_TEST.md](docs/MCP_HYBRID_TEST.md)
 - ✅ Lock coordination working (activity logging, conflict detection)
 - ✅ C1 Staleness Detection identifying outdated context
 - ✅ C2 Delta Refresh calculating 91%+ token savings
+- ✅ Multi-developer coordination without Git merge conflicts
 
 ---
 
