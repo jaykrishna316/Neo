@@ -190,6 +190,9 @@ def neo_log_activity(
             file_path=file_path,
             intent=intent,
             region=region,
+            timestamp=time.time(),
+            tenant_id=final_tenant,
+            intent_category=intent_category,
         )
         ActivityLogAdapter.append_entry(entry, tenant_id=final_tenant)
         return {
