@@ -205,42 +205,84 @@ Even if the server is running, Claude Code may need to reconnect:
 
 #### A. "too many values to unpack (expected 2, got 3)"
 
+**Symptom:** `neo_check_conflicts` returns "server-side error"
+
 **Location:** `ide/mcp_neo_server.py` line 123
 
-**Fix:** Ensure the unpacking matches what `check_for_conflicts` returns:
+**Problem:** `check_for_conflicts()` returns 3 values, but code only unpacked 2.
+
+**Before (Wrong):**
 ```python
-risk_level, message, lock_info = check_for_conflicts(...)  # 3 values
+try:
+    risk_level, message = check_for_conflicts(
+        agent_id=agent_id,
+        file_path=file_path,
+        intent=intent,
+        region=region,
+        tenant_id=final_tenant,
+    )
 ```
 
-Not:
+**After (Correct):**
 ```python
-risk_level, message = check_for_conflicts(...)  # Wrong - expects 2
+try:
+    risk_level, message, lock_info = check_for_conflicts(
+        agent_id=agent_id,
+        file_path=file_path,
+        intent=intent,
+        region=region,
+        tenant_id=final_tenant,
+    )
+```
+
+**Verification:**
+```bash
+grep -A 6 "risk_level, message" ide/mcp_neo_server.py | head -1
+# Should show: risk_level, message, lock_info = check_for_conflicts(
 ```
 
 ---
 
 #### B. Activity Logging Fails: Missing Timestamp
 
-**Symptom:** `neo_log_activity` returns "server-side error"
+**Symptom:** `neo_log_activity` returns "server-side error: too many values to unpack"
 
-**Location:** `ide/mcp_neo_server.py` line 188
+**Location:** `ide/mcp_neo_server.py` line 188-193
 
-**Fix:** Ensure ActivityEntry is created with required fields:
+**Problem:** ActivityEntry requires timestamp, but MCP tool wasn't providing it:
+
+**Before (Wrong):**
 ```python
 entry = ActivityEntry(
     developer_id=agent_id,
     file_path=file_path,
     intent=intent,
     region=region,
-    timestamp=time.time(),           # Required
-    tenant_id=final_tenant,           # Required
-    intent_category=intent_category,  # Optional but good to include
 )
 ```
 
-Make sure `time` module is imported:
+**After (Correct):**
 ```python
-import time
+entry = ActivityEntry(
+    developer_id=agent_id,
+    file_path=file_path,
+    intent=intent,
+    region=region,
+    timestamp=time.time(),           # REQUIRED - Unix timestamp
+    tenant_id=final_tenant,           # REQUIRED - for multitenancy support
+    intent_category=intent_category,  # OPTIONAL but recommended
+)
+```
+
+**Verification:**
+```bash
+# Check that time is imported at the top of the file:
+head -20 ide/mcp_neo_server.py | grep "import time"
+# Should output: import time
+
+# Verify the fix is in place:
+grep -A 8 "entry = ActivityEntry" ide/mcp_neo_server.py | grep "timestamp=time.time()"
+# Should find the line with timestamp=time.time()
 ```
 
 ---
@@ -261,6 +303,39 @@ risk_level, message, lock_info = check_for_conflicts(
 ```
 
 All parameters must match the function signature.
+
+---
+
+### Issue 4.5: JSONL Format Error in core/activity_log.py
+
+**Symptom:** Activity log entries won't parse, or old `clear_log()` function breaks JSONL format
+
+**Location:** `core/activity_log.py` line 283
+
+**Problem:** `clear_log()` was writing JSON array syntax instead of empty JSONL:
+
+**Before (Wrong):**
+```python
+def clear_log(tenant_id: Optional[str] = None) -> None:
+    log_file = ensure_log_exists(tenant_id)
+    log_file.write_text(json.dumps([]))  # Writes [] - wrong format!
+```
+
+**After (Correct):**
+```python
+def clear_log(tenant_id: Optional[str] = None) -> None:
+    log_file = ensure_log_exists(tenant_id)
+    log_file.write_text("")  # Writes empty file - correct!
+```
+
+**Why:** Activity log uses JSONL format (one JSON object per line), not JSON array. Writing `[]` breaks the parser.
+
+**Verification:**
+```bash
+# Check the fix is in place:
+grep -A 2 "def clear_log" core/activity_log.py | grep 'write_text'
+# Should show: log_file.write_text("") - NOT json.dumps([])
+```
 
 ---
 
@@ -344,20 +419,72 @@ Should show `"NEO_MULTITENANCY": "false"` for single-tenant setup.
 
 ---
 
+### Issue 7: Automatic Hook Configuration (Optional)
+
+**Note:** This is optional. You can call Neo MCP tools manually in Claude Code, or set up hooks for automatic conflict checking.
+
+**For Automatic Pre-Generation Conflict Checking:**
+
+Configure `.claude/settings.json`:
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "Before the user edits this file, check if there are any conflicts with neo_check_conflicts MCP tool. Extract the file_path from the tool input and use it to check for conflicts.",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "After the user edits a file, automatically log the activity using neo_log_activity MCP tool.",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This enables:
+- **PreToolUse:** Automatically run conflict check before file edits
+- **PostToolUse:** Automatically log activity after file edits
+
+**Troubleshooting Hooks:**
+- Hooks only run if MCP tools are available (requires working MCP server)
+- Restart Claude Code after changing settings.json
+- Hook errors appear in the Claude Code terminal, not the MCP server terminal
+
+---
+
 ## Verification Checklist
 
 Use this checklist to verify your MCP setup is working:
 
 - [ ] MCP package installed: `pip list | grep mcp`
-- [ ] `.claude/mcpjson/neo.mcpjson` exists and has correct paths
-- [ ] Python path is absolute, not relative: `/Users/xxx/...` or `/home/xxx/...`
-- [ ] MCP server runs: `PYTHONPATH=. python3 -m ide.mcp_neo_server`
-- [ ] Server blocks (doesn't exit): If it exits, check stderr for errors
+- [ ] `core/activity_log.py` line 283 has `log_file.write_text("")` (not `json.dumps([])`)
+- [ ] `ide/mcp_neo_server.py` line 123 unpacks 3 values: `risk_level, message, lock_info`
+- [ ] `ide/mcp_neo_server.py` line 188+ has `timestamp=time.time()` in ActivityEntry creation
+- [ ] `.claude/mcpjson/neo.mcpjson` exists with correct absolute paths (not bare `python3`)
+- [ ] Python path is absolute: `/Users/xxx/...` (macOS) or `/home/xxx/...` (Linux)
+- [ ] PYTHONPATH points to Neo root directory
+- [ ] MCP server runs: `PYTHONPATH=. python3 -m ide.mcp_neo_server` (blocks, doesn't exit)
 - [ ] Claude Code restarted after config changes
-- [ ] Neo tools appear in Claude Code: ask for MCP tools list
+- [ ] Neo tools appear in Claude Code MCP tools list
 - [ ] `neo_check_conflicts` returns LOW/MEDIUM/HIGH risk
 - [ ] `neo_log_activity` logs without errors
-- [ ] `.devsync/activity-log.json` has entries in JSONL format
+- [ ] `.devsync/activity-log.json` has entries in JSONL format (one JSON object per line)
 
 ---
 
