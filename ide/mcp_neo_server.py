@@ -120,7 +120,7 @@ def neo_check_conflicts(
         }
 
     try:
-        risk_level, message = check_for_conflicts(
+        risk_level, message, lock_info = check_for_conflicts(
             agent_id=agent_id,
             file_path=file_path,
             intent=intent,
