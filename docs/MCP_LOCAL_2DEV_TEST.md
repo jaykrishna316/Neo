@@ -74,8 +74,8 @@ PYTHONPATH=. .venv/bin/python3 -m ide.mcp_neo_server &
 ```
 
 ### Step 1.3: Check for Conflicts (Pre-Generation)
-**Tool:** `neo_check_conflicts`
 ```
+Tool: neo_check_conflicts
 agent_id: alice
 file_path: src/payment_processor.py
 intent: Add Stripe payment gateway integration with webhook support
@@ -87,8 +87,8 @@ region: (leave empty)
 - ✅ `success: true`
 
 ### Step 1.4: Log Alice's Intent
-**Tool:** `neo_log_activity`
 ```
+Tool: neo_log_activity
 agent_id: alice
 file_path: src/payment_processor.py
 intent: Add Stripe payment gateway integration with webhook support
@@ -148,8 +148,8 @@ cat src/payment_processor.py
 **Expected:** File exists with StripePaymentProcessor class
 
 ### Step 2.3: Log Completion
-**Tool:** `neo_log_activity`
 ```
+Tool: neo_log_activity
 agent_id: alice
 file_path: src/payment_processor.py
 intent: Add Stripe payment gateway integration - COMPLETED (StripePaymentProcessor class, process_payment method)
@@ -173,8 +173,8 @@ cat .devsync/activity-log.json | jq '.[] | {developer_id, intent}'
 **In Claude Code Window 2 (Bob's perspective):**
 
 ### Step 3.1: Check for Conflicts on Same File
-**Tool:** `neo_check_conflicts`
 ```
+Tool: neo_check_conflicts
 agent_id: bob
 file_path: src/payment_processor.py
 intent: Add PayPal payment gateway support
@@ -187,8 +187,8 @@ region: (leave empty)
 - Message indicates Alice is working on this file
 
 ### Step 3.2: Log Bob's Waiting Intent
-**Tool:** `neo_log_activity`
 ```
+Tool: neo_log_activity
 agent_id: bob
 file_path: src/payment_processor.py
 intent: Add PayPal payment gateway support (WAITING for alice to complete)
@@ -214,8 +214,8 @@ cat .devsync/activity-log.json | jq '.[] | {developer_id, lock_state, waiting_fo
 **Back in Claude Code Window 1 (Alice):**
 
 ### Step 4.1: Log Release
-**Tool:** `neo_log_activity`
 ```
+Tool: neo_log_activity
 agent_id: alice
 file_path: src/payment_processor.py
 intent: RELEASED - Work complete, PayPal integration can proceed
@@ -246,8 +246,8 @@ date +%s.%N
 **Save this value for Step 5.2**
 
 ### Step 5.2: Check for Source Staleness
-**Tool:** `neo_check_source_staleness`
 ```
+Tool: neo_check_source_staleness
 file_path: src/payment_processor.py
 agent_id: bob
 read_time: <paste timestamp from Step 5.1>
@@ -260,8 +260,8 @@ dependency_symbols: (leave empty)
 - File is fresh, no other developers have modified it since Alice completed
 
 ### Step 5.3: Log Bob's Lock Acquisition
-**Tool:** `neo_log_activity`
 ```
+Tool: neo_log_activity
 agent_id: bob
 file_path: src/payment_processor.py
 intent: ACQUIRED lock - Adding PayPal support to existing Stripe implementation
@@ -341,8 +341,8 @@ cat src/payment_processor.py
 **Expected:** File has both StripePaymentProcessor and PayPalPaymentProcessor classes
 
 ### Step 6.3: Log Completion
-**Tool:** `neo_log_activity`
 ```
+Tool: neo_log_activity
 agent_id: bob
 file_path: src/payment_processor.py
 intent: Add PayPal payment gateway support - COMPLETED (PayPalPaymentProcessor class, process_payment method)
