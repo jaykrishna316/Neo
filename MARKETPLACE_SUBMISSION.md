@@ -480,4 +480,4 @@ Neo is ready for marketplace submission. All materials prepared:
 - ✅ Documentation complete
 - ✅ Real measurements provided
 
-Submit to: https://claude.ai/marketplace/submit
+Submit to: https://claude.ai/directory/manage
