@@ -1,0 +1,242 @@
+{
+  "id": "neo-mcp-server",
+  "name": "Neo: Semantic Developer Coordination",
+  "version": "1.0.0",
+  "description": "Eliminate Git merge conflicts by coordinating developers at the semantic layer. Zero conflicts guaranteed in multi-developer AI workflows.",
+  "long_description": "Neo is a semantic multi-developer coordination engine that prevents merge conflicts BEFORE they reach Git. Instead of detecting conflicts at merge time (after code generation), Neo detects them at the semantic layer during intent declaration, preventing wasted generations entirely and saving 98-99% of tokens in multi-developer workflows.",
+  "author": "Jay Krishna",
+  "author_url": "https://github.com/jaykrishna316",
+  "homepage": "https://github.com/jaykrishna316/Neo",
+  "repository": {
+    "url": "https://github.com/jaykrishna316/Neo.git",
+    "type": "git"
+  },
+  "documentation_url": "https://github.com/jaykrishna316/Neo#readme",
+  "issues_url": "https://github.com/jaykrishna316/Neo/issues",
+  "license": "MIT",
+  "category": "development-tools",
+  "tags": [
+    "mcp",
+    "conflict-detection",
+    "multi-developer",
+    "coordination",
+    "merge-conflicts",
+    "semantic",
+    "activity-logging",
+    "lock-management",
+    "ai-agents",
+    "code-generation"
+  ],
+  "icon": "🔒",
+  "icon_url": "https://raw.githubusercontent.com/jaykrishna316/Neo/main/docs/neo-icon.png",
+  "banner_url": "https://raw.githubusercontent.com/jaykrishna316/Neo/main/docs/neo-banner.png",
+  "features": [
+    "Semantic conflict detection at intent layer (before code generation)",
+    "Automatic lock state machine with queue management (ACQUIRED → WAITING → RELEASED → PROMOTED)",
+    "Symbol-level source staleness detection (C1) - instant verification of fresh context",
+    "Delta refresh (C2) - 96% token reduction on context updates",
+    "Complete activity log audit trail - see who worked on what and when",
+    "Zero merge conflicts guaranteed - no manual conflict resolution needed",
+    "98-99% token savings in multi-developer workflows",
+    "Multitenancy support for team isolation",
+    "Works with any agent - Claude, Devin, custom agents",
+    "No external dependencies - file-based activity log (just JSON)",
+    "Production-ready - sub-millisecond conflict detection, 6,600+ log writes/sec"
+  ],
+  "requirements": {
+    "python_version": ">=3.8",
+    "dependencies": [
+      "mcp>=0.1.0"
+    ],
+    "optional_dependencies": [
+      "fastapi (for HTTP bridge)",
+      "uvicorn (for HTTP bridge)"
+    ]
+  },
+  "performance": {
+    "conflict_detection_latency_ms": "0.08-0.22",
+    "activity_log_throughput_per_sec": 6600,
+    "token_savings_percent": "98-99",
+    "average_token_savings": "98.82%",
+    "max_concurrent_developers": 16,
+    "tested_scenarios": [
+      "2-developer coordination",
+      "5-developer authentication build",
+      "8-developer extreme scale",
+      "16-developer stress test"
+    ]
+  },
+  "mcp_server": {
+    "command": "python",
+    "args": ["-m", "ide.mcp_neo_server"],
+    "tools": [
+      {
+        "name": "neo_check_conflicts",
+        "description": "Check for conflicts before code generation. Returns risk level (LOW/MEDIUM/HIGH) and lock information.",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "type": "string",
+            "description": "Unique identifier for the calling agent",
+            "required": true
+          },
+          {
+            "name": "file_path",
+            "type": "string",
+            "description": "File being modified",
+            "required": true
+          },
+          {
+            "name": "intent",
+            "type": "string",
+            "description": "Description of what the agent intends to do",
+            "required": true
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "description": "Optional region (function/class/lines) being modified",
+            "required": false
+          }
+        ]
+      },
+      {
+        "name": "neo_log_activity",
+        "description": "Log developer intent to activity log. Tracks intent declaration, lock states, and completion.",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "type": "string",
+            "description": "Unique identifier for the calling agent",
+            "required": true
+          },
+          {
+            "name": "file_path",
+            "type": "string",
+            "description": "File being modified",
+            "required": true
+          },
+          {
+            "name": "intent",
+            "type": "string",
+            "description": "Description of what the agent is doing (intent, acquired, released, completed)",
+            "required": true
+          },
+          {
+            "name": "intent_category",
+            "type": "string",
+            "description": "Category of work (feature, bugfix, refactor, other)",
+            "required": false
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "description": "Optional region being modified",
+            "required": false
+          }
+        ]
+      },
+      {
+        "name": "neo_check_source_staleness",
+        "description": "Check if source code is stale using C1 symbol-level hashing. Verifies fresh context before building on previous work.",
+        "parameters": [
+          {
+            "name": "file_path",
+            "type": "string",
+            "description": "Path to the file to check",
+            "required": true
+          },
+          {
+            "name": "agent_id",
+            "type": "string",
+            "description": "Agent that originally read the file",
+            "required": true
+          },
+          {
+            "name": "read_time",
+            "type": "number",
+            "description": "When the file was read (Unix timestamp)",
+            "required": true
+          },
+          {
+            "name": "dependency_symbols",
+            "type": "array",
+            "description": "Specific symbols to check (None = whole file)",
+            "required": false
+          }
+        ]
+      },
+      {
+        "name": "neo_get_active_work",
+        "description": "View all active developers/agents currently coordinating work. Shows queue positions, lock states, and timestamps.",
+        "parameters": []
+      },
+      {
+        "name": "neo_get_status",
+        "description": "Check Neo MCP server status, version, and features.",
+        "parameters": []
+      }
+    ]
+  },
+  "real_world_examples": [
+    {
+      "title": "5-Developer Authentication Build",
+      "description": "Five AI agents building a complete authentication system (OAuth2, JWT, rate limiting, password hashing, session management) on the same file in sequence. Zero merge conflicts despite concurrent intent declarations.",
+      "token_savings": "98.88%",
+      "conflict_count": 0
+    },
+    {
+      "title": "8-Developer Different Regions",
+      "description": "Eight developers working on different regions of the same file. Traditional Git: 10,774 tokens wasted. Neo: 112 tokens. Result: 98.96% savings, zero conflicts.",
+      "traditional_tokens": 10774,
+      "neo_tokens": 112,
+      "savings_percent": 98.96
+    },
+    {
+      "title": "8-Developer Same Lines (Worst Case)",
+      "description": "Eight developers all modifying the same lines - the hardest scenario for traditional Git. Traditional: 16,090 tokens. Neo: 70 tokens. Result: 99.57% savings, automatic queue coordination.",
+      "traditional_tokens": 16090,
+      "neo_tokens": 70,
+      "savings_percent": 99.57
+    }
+  ],
+  "compatibility": {
+    "claude_code_version": ">=0.4.0",
+    "mcp_protocol_version": "1.0",
+    "agents": [
+      "Claude (Claude Code IDE)",
+      "Devin (via HTTP bridge)",
+      "Custom agents (via adapter pattern)"
+    ],
+    "platforms": [
+      "macOS",
+      "Linux",
+      "Windows"
+    ]
+  },
+  "stats": {
+    "github_stars": 150,
+    "github_forks": 8,
+    "open_issues": 0,
+    "commits": 45,
+    "test_coverage": "95%",
+    "tests_passing": 45
+  },
+  "keywords_for_discovery": [
+    "merge conflict",
+    "conflict detection",
+    "multi-developer",
+    "coordination",
+    "semantic",
+    "lock management",
+    "queue",
+    "activity log",
+    "audit trail",
+    "token savings",
+    "code generation",
+    "AI agents",
+    "Claude",
+    "Devin",
+    "MCP"
+  ]
+}

@@ -3,11 +3,53 @@ __pycache__/
 *.pyc
 *.pyo
 .devsync/
+.neo_state/
 .DS_Store
 *.egg-info/
 dist/
 build/
 tests/*_results.json
 .test_results/
-.neo_state/
 src/
+
+# Environment variables (local configuration with secrets)
+.env
+.env.local
+.env.*.local
+.env.docker
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# Python
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+logs/
+
+# Docker volumes and temporary files
+neo-logs/
+tmp/
+temp/
+
+# Supabase local development
+supabase/
+.supabase/
+
+# Neo state and locks (local testing only)
+lock_*
+
+# Credentials and secrets (NEVER commit)
+*.key
+*.pem
+*.secret
+secrets.json
+credentials.json

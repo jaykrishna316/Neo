@@ -110,7 +110,7 @@ Time      | Status     | Developer  | Intent & Status
 
 ### Step 2: Alice Generates Code (Terminal 2)
 
-**In Terminal 2 (Claude IDE)**, Alice just writes a prompt to generate code:
+**In Terminal 2 (Claude IDE)**, Alice just writes a simple prompt:
 
 ```
 I need to update src/auth.py with secure password hashing using bcrypt:
@@ -124,14 +124,13 @@ I need to update src/auth.py with secure password hashing using bcrypt:
 Just update the file with these functions.
 ```
 
-**What happens automatically** (Neo hooks handle everything):
-- **Before edit**: Neo's hook calls `neo_check_conflicts` → Shows Alice is clear
-- **During edit**: Claude generates code
-- **After edit**: Neo's hook calls `neo_log_activity` → Updates activity log
-- Lock acquired for Alice automatically
-- Terminal 1 shows: `🔒 LOCKED | alice | Add bcrypt password hashing functions`
+**What happens automatically**:
+- Neo detects Alice's intent
+- Activity log gets updated with Alice's work
+- Lock is acquired automatically
+- Terminal 1 shows: `🔒 LOCKED | alice | password hashing with bcrypt`
 
-Alice never needs to call Neo—it's automatic.
+Terminal 2 shows Claude's generated code being added to auth.py.
 
 **Expected output in Terminal 1**:
 ```
@@ -158,14 +157,13 @@ Update src/auth.py to add JWT token support:
 Just add these functions to the auth module.
 ```
 
-**What happens automatically** (Neo hooks intercept):
-- **Before Bob's edit**: Neo's hook calls `neo_check_conflicts` on src/auth.py
-- **Result**: `MEDIUM_CONFLICT - Alice is working on this file`
-- Neo blocks the edit and shows: `⚠️ Alice is working on src/auth.py. Waiting...`
-- Neo logs Bob as WAITING in activity log
-- Terminal 1 shows: `⏳ BLOCKED | bob | Add JWT token support [waiting for alice]`
+**What happens automatically**:
+- Neo checks for conflicts → **MEDIUM_CONFLICT: Alice is working on this file**
+- Lock is **NOT** acquired (Bob waits)
+- Terminal 3 shows a notification: `⚠️ Alice is working on src/auth.py. Waiting...`
+- Terminal 1 shows: `⏳ BLOCKED | bob | JWT token support [waiting for alice]`
 
-Bob's IDE shows he's queued and prevented from editing (conflict prevented before generation).
+Bob's IDE shows he's queued and waiting.
 
 **Expected output in Terminal 1**:
 ```

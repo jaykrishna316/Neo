@@ -1,0 +1,53 @@
+{
+  "name": "Neo",
+  "version": "1.0.0",
+  "description": "Semantic Developer Coordination Engine - eliminates Git merge conflicts at the semantic layer before code generation happens",
+  "author": "Jay Krishna",
+  "license": "MIT",
+  "keywords": ["coordination", "merge-conflicts", "mcp", "multi-developer", "semantic"],
+  "repository": "https://github.com/jaykrishna316/Neo",
+  "bugs": "https://github.com/jaykrishna316/Neo/issues",
+  "homepage": "https://github.com/jaykrishna316/Neo#readme",
+  "mcpServers": {
+    "neo-conflict-detection": {
+      "command": "python3",
+      "args": ["-m", "ide.mcp_neo_server"],
+      "env": {
+        "PYTHONPATH": "${pluginDir}",
+        "NEO_MULTITENANCY": "false",
+        "CLAUDE_TENANT_ID": "default"
+      }
+    }
+  },
+  "capabilities": {
+    "tools": {
+      "neo_check_conflicts": {
+        "description": "Check for conflicts before code generation at semantic layer",
+        "input": {
+          "agent_id": "Agent identifier",
+          "file_path": "File being modified",
+          "intent": "Description of intended work",
+          "region": "Optional code region"
+        }
+      },
+      "neo_log_activity": {
+        "description": "Log developer intent and track coordination",
+        "input": {
+          "agent_id": "Developer identifier",
+          "file_path": "File being modified",
+          "intent": "Description of work",
+          "intent_category": "Type of work (feature/refactor/bugfix)"
+        }
+      },
+      "neo_get_active_work": {
+        "description": "View all active developers coordinating work"
+      },
+      "neo_get_status": {
+        "description": "Check Neo server status and version"
+      }
+    }
+  },
+  "requirements": {
+    "python": "3.8+"
+  }
+}
