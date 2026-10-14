@@ -1,5 +1,5 @@
 {
-  "name": "Neo",
+  "name": "neo",
   "tagline": "Eliminate Git merge conflicts by coordinating developers at the semantic layer",
   "category": "Development Tools",
   "description": "Neo is a semantic multi-developer coordination engine that prevents merge conflicts BEFORE they reach Git. Instead of detecting conflicts at merge time (wasting tokens), Neo detects them at the semantic layer during intent declaration. With Neo, multiple developers can coordinate work on shared codebases without conflicts, saving 98-99% of tokens in multi-developer AI workflows.",

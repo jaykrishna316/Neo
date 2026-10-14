@@ -1,8 +1,12 @@
 {
-  "name": "Neo",
+  "name": "neo",
   "version": "1.0.0",
   "description": "Semantic Developer Coordination Engine - eliminates Git merge conflicts at the semantic layer before code generation happens",
-  "author": "Jay Krishna",
+  "author": {
+    "name": "Jay Krishna",
+    "email": "jaykrishna.i13@gmail.com",
+    "url": "https://github.com/jaykrishna316"
+  },
   "license": "MIT",
   "keywords": ["coordination", "merge-conflicts", "mcp", "multi-developer", "semantic"],
   "repository": "https://github.com/jaykrishna316/Neo",
