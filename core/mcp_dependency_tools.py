@@ -1,17 +1,25 @@
 """
 MCP tools for Neo dependency tracking
 Provides neo_* tools for checking and managing cross-repo dependencies
+Includes Phases 1-4: Detection, Test Triggering, Auto-Comments, Merge Gates
 """
 
 from core.dependency_tracker import DependencyTracker
+from core.test_triggering import TestTrigger
+from core.github_pr_integration import GitHubPRIntegration
+from core.merge_gate import MergeGate
 from typing import Dict, List, Any
+import os
 
 
 class NeoDependencyTools:
-    """MCP tool implementations for dependency management"""
+    """MCP tool implementations for dependency management (Phases 1-4)"""
 
     def __init__(self, repo_path: str = "."):
         self.tracker = DependencyTracker(repo_path)
+        self.test_trigger = TestTrigger(repo_path)
+        self.github_integration = GitHubPRIntegration(repo_path)
+        self.merge_gate = MergeGate(repo_path)
 
     def neo_check_dependent_repos(self,
                                    changed_files: List[str],
@@ -141,6 +149,132 @@ class NeoDependencyTools:
             "ready_to_post": True
         }
 
+    # Phase 2: Test Triggering
+    def neo_trigger_dependent_repo_tests(self,
+                                        pr_number: int,
+                                        repo_name: str,
+                                        ci_trigger_url: str,
+                                        changed_files: List[str],
+                                        test_command: str) -> Dict[str, Any]:
+        """
+        Trigger tests in dependent repository via CI webhook
+
+        MCP Tool: neo_trigger_dependent_repo_tests
+        Input: {pr_number, repo_name, ci_trigger_url, changed_files, test_command}
+        Output: {status, repo, timestamp}
+        """
+        return self.test_trigger.trigger_dependent_repo_tests(
+            pr_number=pr_number,
+            repo_name=repo_name,
+            ci_trigger_url=ci_trigger_url,
+            changed_files=changed_files,
+            test_command=test_command
+        )
+
+    def neo_trigger_github_actions(self,
+                                  repo_owner: str,
+                                  repo_name: str,
+                                  workflow_file: str,
+                                  ref: str = "main",
+                                  inputs: Dict[str, str] = None) -> Dict[str, Any]:
+        """
+        Trigger GitHub Actions workflow in dependent repo
+
+        MCP Tool: neo_trigger_github_actions
+        Input: {repo_owner, repo_name, workflow_file, ref, inputs}
+        Output: {status, workflow, timestamp}
+        """
+        return self.test_trigger.trigger_github_actions(
+            repo_owner=repo_owner,
+            repo_name=repo_name,
+            workflow_file=workflow_file,
+            ref=ref,
+            github_token=os.getenv("GITHUB_TOKEN"),
+            inputs=inputs
+        )
+
+    # Phase 3: GitHub PR Auto-Comments
+    def neo_post_pr_comment(self,
+                           owner: str,
+                           repo: str,
+                           pr_number: int,
+                           comment_body: str) -> Dict[str, Any]:
+        """
+        Post or update comment on PR with dependency status
+
+        MCP Tool: neo_post_pr_comment
+        Input: {owner, repo, pr_number, comment_body}
+        Output: {status, comment_id, url}
+        """
+        return self.github_integration.post_dependency_comment(
+            owner=owner,
+            repo=repo,
+            pr_number=pr_number,
+            comment_body=comment_body
+        )
+
+    def neo_request_pr_review(self,
+                             owner: str,
+                             repo: str,
+                             pr_number: int,
+                             reviewers: List[str]) -> Dict[str, Any]:
+        """
+        Request review from specific users on PR
+
+        MCP Tool: neo_request_pr_review
+        Input: {owner, repo, pr_number, reviewers}
+        Output: {status, reviewers_added}
+        """
+        return self.github_integration.request_review(
+            owner=owner,
+            repo=repo,
+            pr_number=pr_number,
+            reviewers=reviewers
+        )
+
+    # Phase 4: Merge Gate
+    def neo_check_merge_gate(self, pr_number: int) -> Dict[str, Any]:
+        """
+        Check if PR can merge based on dependency test results
+
+        MCP Tool: neo_check_merge_gate
+        Input: {pr_number: int}
+        Output: {can_merge: bool, blocking_issues, warnings}
+        """
+        can_merge, details = self.merge_gate.can_merge_to_main(pr_number)
+        return {
+            "status": "checked",
+            "pr": pr_number,
+            "can_merge": can_merge,
+            **details
+        }
+
+    def neo_get_merge_status(self, pr_number: int) -> Dict[str, Any]:
+        """
+        Get detailed merge gate status for a PR
+
+        MCP Tool: neo_get_merge_status
+        Input: {pr_number: int}
+        Output: {status, can_merge, blocking_issues}
+        """
+        return self.merge_gate.get_merge_status(pr_number)
+
+    def neo_generate_merge_comment(self, pr_number: int) -> Dict[str, Any]:
+        """
+        Generate merge gate status comment for PR
+
+        MCP Tool: neo_generate_merge_comment
+        Input: {pr_number: int}
+        Output: {comment: markdown_string}
+        """
+        comment = self.merge_gate.generate_merge_gate_comment(pr_number)
+        return {
+            "status": "generated",
+            "pr": pr_number,
+            "comment": comment,
+            "ready_to_post": True
+        }
+
 
 # Initialize tools for MCP server integration
 def get_mcp_tools() -> List[Dict]:
@@ -239,6 +373,165 @@ def get_mcp_tools() -> List[Dict]:
         {
             "name": "neo_generate_pr_comment",
             "description": "Generate markdown comment with dependency status for PR",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "pr_number": {
+                        "type": "integer",
+                        "description": "PR number"
+                    }
+                },
+                "required": ["pr_number"]
+            }
+        },
+        # Phase 2: Test Triggering
+        {
+            "name": "neo_trigger_dependent_repo_tests",
+            "description": "Trigger tests in dependent repository via CI webhook",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "pr_number": {
+                        "type": "integer",
+                        "description": "PR number that triggered this"
+                    },
+                    "repo_name": {
+                        "type": "string",
+                        "description": "Dependent repo name"
+                    },
+                    "ci_trigger_url": {
+                        "type": "string",
+                        "description": "Webhook URL for CI trigger"
+                    },
+                    "changed_files": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Files changed in parent repo"
+                    },
+                    "test_command": {
+                        "type": "string",
+                        "description": "Command to run tests"
+                    }
+                },
+                "required": ["pr_number", "repo_name", "ci_trigger_url", "changed_files", "test_command"]
+            }
+        },
+        {
+            "name": "neo_trigger_github_actions",
+            "description": "Trigger GitHub Actions workflow in dependent repo",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "repo_owner": {
+                        "type": "string",
+                        "description": "Repository owner"
+                    },
+                    "repo_name": {
+                        "type": "string",
+                        "description": "Repository name"
+                    },
+                    "workflow_file": {
+                        "type": "string",
+                        "description": "GitHub Actions workflow filename"
+                    },
+                    "ref": {
+                        "type": "string",
+                        "description": "Branch/tag to trigger on (default: main)"
+                    },
+                    "inputs": {
+                        "type": "object",
+                        "description": "Workflow input parameters"
+                    }
+                },
+                "required": ["repo_owner", "repo_name", "workflow_file"]
+            }
+        },
+        # Phase 3: GitHub PR Auto-Comments
+        {
+            "name": "neo_post_pr_comment",
+            "description": "Post or update comment on PR with dependency status",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "owner": {
+                        "type": "string",
+                        "description": "Repository owner"
+                    },
+                    "repo": {
+                        "type": "string",
+                        "description": "Repository name"
+                    },
+                    "pr_number": {
+                        "type": "integer",
+                        "description": "PR number"
+                    },
+                    "comment_body": {
+                        "type": "string",
+                        "description": "Markdown comment body"
+                    }
+                },
+                "required": ["owner", "repo", "pr_number", "comment_body"]
+            }
+        },
+        {
+            "name": "neo_request_pr_review",
+            "description": "Request review from specific users on PR",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "owner": {
+                        "type": "string",
+                        "description": "Repository owner"
+                    },
+                    "repo": {
+                        "type": "string",
+                        "description": "Repository name"
+                    },
+                    "pr_number": {
+                        "type": "integer",
+                        "description": "PR number"
+                    },
+                    "reviewers": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "GitHub usernames to request review from"
+                    }
+                },
+                "required": ["owner", "repo", "pr_number", "reviewers"]
+            }
+        },
+        # Phase 4: Merge Gate
+        {
+            "name": "neo_check_merge_gate",
+            "description": "Check if PR can merge based on dependency test results",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "pr_number": {
+                        "type": "integer",
+                        "description": "PR number"
+                    }
+                },
+                "required": ["pr_number"]
+            }
+        },
+        {
+            "name": "neo_get_merge_status",
+            "description": "Get detailed merge gate status for a PR",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "pr_number": {
+                        "type": "integer",
+                        "description": "PR number"
+                    }
+                },
+                "required": ["pr_number"]
+            }
+        },
+        {
+            "name": "neo_generate_merge_comment",
+            "description": "Generate merge gate status comment for PR",
             "input": {
                 "type": "object",
                 "properties": {

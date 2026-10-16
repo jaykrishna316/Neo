@@ -48,30 +48,30 @@ class DependencyTracker:
         self.dependencies = self._load_dependencies()
 
     def _load_dependencies(self) -> Dict[str, DependencyConfig]:
-        """Load dependency configuration from .neo-dependencies.yml"""
-        if not self.dependency_file.exists():
-            return {}
+        """Load dependency configuration from .neo-dependencies.yml or .neo-dependencies.json"""
+        if self.dependency_file.exists():
+            try:
+                import yaml
+                with open(self.dependency_file) as f:
+                    config = yaml.safe_load(f) or {}
 
-        try:
-            import yaml
-            with open(self.dependency_file) as f:
-                config = yaml.safe_load(f) or {}
-
-            deps = {}
-            for dep_data in config.get("depends_on", []):
-                repo = dep_data.get("repo")
-                if repo:
-                    deps[repo] = DependencyConfig(
-                        repo=repo,
-                        imports=dep_data.get("imports", []),
-                        test_command=dep_data.get("test_command", "pytest"),
-                        ci_trigger_url=dep_data.get("ci_trigger_url"),
-                        critical=dep_data.get("critical", False),
-                        risk_level=dep_data.get("risk_level", "MEDIUM")
-                    )
-            return deps
-        except ImportError:
-            print("⚠️  PyYAML not installed. Using JSON fallback.")
+                deps = {}
+                for dep_data in config.get("depends_on", []):
+                    repo = dep_data.get("repo")
+                    if repo:
+                        deps[repo] = DependencyConfig(
+                            repo=repo,
+                            imports=dep_data.get("imports", []),
+                            test_command=dep_data.get("test_command", "pytest"),
+                            ci_trigger_url=dep_data.get("ci_trigger_url"),
+                            critical=dep_data.get("critical", False),
+                            risk_level=dep_data.get("risk_level", "MEDIUM")
+                        )
+                return deps
+            except ImportError:
+                print("⚠️  PyYAML not installed. Using JSON fallback.")
+                return self._load_dependencies_json()
+        else:
             return self._load_dependencies_json()
 
     def _load_dependencies_json(self) -> Dict[str, DependencyConfig]:
