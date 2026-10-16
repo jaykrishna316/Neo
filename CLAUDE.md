@@ -172,12 +172,23 @@ Each team gets an isolated activity log.
 
 ---
 
+## Planned Features (Neo 4.1+)
+
+- **GitHub PR Auto-Approver Bridge** - Automatically add required reviewers to PRs based on HIGH conflicts detected in activity log
+  - Implementation: Code complete and archived
+  - Location: `docs/archived-features/`
+  - Details: See `docs/archived-features/README.md`
+
+---
+
 ## Status
 
 ✅ **MCP Server:** Operational and ready  
 ✅ **Conflict Detection:** Working  
 ✅ **Activity Logging:** File-based (no DB required)  
 ✅ **IDE Integration:** Automatic pre-generation conflict checking  
+
+🔄 **GitHub Integration:** Implementation ready, awaiting full feature release  
 
 ---
 
