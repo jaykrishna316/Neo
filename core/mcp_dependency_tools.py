@@ -2,24 +2,27 @@
 MCP tools for Neo dependency tracking
 Provides neo_* tools for checking and managing cross-repo dependencies
 Includes Phases 1-4: Detection, Test Triggering, Auto-Comments, Merge Gates
+Plus Impact Alerts: Unresolved dependency impact tracking
 """
 
 from core.dependency_tracker import DependencyTracker
 from core.test_triggering import TestTrigger
 from core.github_pr_integration import GitHubPRIntegration
 from core.merge_gate import MergeGate
+from core.impact_alerts import ImpactAlertManager
 from typing import Dict, List, Any
 import os
 
 
 class NeoDependencyTools:
-    """MCP tool implementations for dependency management (Phases 1-4)"""
+    """MCP tool implementations for dependency management (Phases 1-4 + Impact Alerts)"""
 
     def __init__(self, repo_path: str = "."):
         self.tracker = DependencyTracker(repo_path)
         self.test_trigger = TestTrigger(repo_path)
         self.github_integration = GitHubPRIntegration(repo_path)
         self.merge_gate = MergeGate(repo_path)
+        self.impact_alerts = ImpactAlertManager(repo_path)
 
     def neo_check_dependent_repos(self,
                                    changed_files: List[str],
@@ -273,6 +276,81 @@ class NeoDependencyTools:
             "pr": pr_number,
             "comment": comment,
             "ready_to_post": True
+        }
+
+    # Impact Alerts - Track unresolved dependency impacts
+    def neo_check_impact_alerts(self, file_path: str) -> Dict[str, Any]:
+        """
+        Check for unresolved impact alerts on a file
+
+        Called when developer declares intent to edit a file
+        Returns any upstream changes that impact this file
+
+        MCP Tool: neo_check_impact_alerts
+        Input: {file_path: string}
+        Output: {has_impacts: bool, alerts: [{...}]}
+        """
+        result = self.impact_alerts.check_impacts_on_file(file_path)
+        return result
+
+    def neo_create_impact_alert(self,
+                               source_file: str,
+                               target_file: str,
+                               changed_by: str,
+                               change_summary: str,
+                               impact_reason: str,
+                               pr_number: int = None) -> Dict[str, Any]:
+        """
+        Create an impact alert for unresolved dependency
+
+        Called when a change impacts another file that hasn't addressed it yet
+
+        MCP Tool: neo_create_impact_alert
+        Input: {source_file, target_file, changed_by, change_summary, impact_reason, pr_number}
+        Output: {status, alert_id}
+        """
+        return self.impact_alerts.create_alert(
+            source_file=source_file,
+            target_file=target_file,
+            changed_by=changed_by,
+            change_summary=change_summary,
+            impact_reason=impact_reason,
+            pr_number=pr_number
+        )
+
+    def neo_resolve_impact_alert(self,
+                                target_file: str,
+                                resolved_by: str,
+                                resolution_notes: str = "") -> Dict[str, Any]:
+        """
+        Resolve an impact alert
+
+        Called when a developer addresses the unresolved impact
+
+        MCP Tool: neo_resolve_impact_alert
+        Input: {target_file, resolved_by, resolution_notes}
+        Output: {status, resolved_at}
+        """
+        return self.impact_alerts.resolve_alert(
+            target_file=target_file,
+            resolved_by=resolved_by,
+            resolution_notes=resolution_notes
+        )
+
+    def neo_get_impact_summary(self, file_path: str) -> Dict[str, Any]:
+        """
+        Get human-readable summary of impact alerts
+
+        MCP Tool: neo_get_impact_summary
+        Input: {file_path: string}
+        Output: {summary: markdown_string}
+        """
+        summary = self.impact_alerts.get_alert_summary(file_path)
+        return {
+            "status": "generated",
+            "file": file_path,
+            "summary": summary,
+            "has_alerts": bool(summary)
         }
 
 
@@ -541,6 +619,91 @@ def get_mcp_tools() -> List[Dict]:
                     }
                 },
                 "required": ["pr_number"]
+            }
+        },
+        # Impact Alerts
+        {
+            "name": "neo_check_impact_alerts",
+            "description": "Check for unresolved impact alerts on a file when developer declares intent to edit",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "File path to check for impact alerts"
+                    }
+                },
+                "required": ["file_path"]
+            }
+        },
+        {
+            "name": "neo_create_impact_alert",
+            "description": "Create an impact alert for unresolved dependency impacts",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "source_file": {
+                        "type": "string",
+                        "description": "File that was changed"
+                    },
+                    "target_file": {
+                        "type": "string",
+                        "description": "File that is impacted by the change"
+                    },
+                    "changed_by": {
+                        "type": "string",
+                        "description": "Developer who made the change"
+                    },
+                    "change_summary": {
+                        "type": "string",
+                        "description": "Summary of what changed"
+                    },
+                    "impact_reason": {
+                        "type": "string",
+                        "description": "Why this change impacts the target file"
+                    },
+                    "pr_number": {
+                        "type": "integer",
+                        "description": "Optional PR number"
+                    }
+                },
+                "required": ["source_file", "target_file", "changed_by", "change_summary", "impact_reason"]
+            }
+        },
+        {
+            "name": "neo_resolve_impact_alert",
+            "description": "Resolve an impact alert when dependency impact is addressed",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "target_file": {
+                        "type": "string",
+                        "description": "File where impact was resolved"
+                    },
+                    "resolved_by": {
+                        "type": "string",
+                        "description": "Developer who resolved the impact"
+                    },
+                    "resolution_notes": {
+                        "type": "string",
+                        "description": "Notes about how the impact was resolved"
+                    }
+                },
+                "required": ["target_file", "resolved_by"]
+            }
+        },
+        {
+            "name": "neo_get_impact_summary",
+            "description": "Get human-readable summary of impact alerts for a file",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "File path to get impact summary for"
+                    }
+                },
+                "required": ["file_path"]
             }
         }
     ]
