@@ -8,11 +8,14 @@ from core.risk_classifier import RiskLevel, classify_risk
 from core.lock_manager import LockManager
 from core.symbol_hasher import StalenessChecker, snapshot_file, extract_dependencies
 
-# Staleness detection constants
-STALE_THRESHOLD_SECONDS = 0.3  # 300ms - context older than this is considered stale
+# Staleness detection constants - CRITICAL: These must align with activity_log.py
+# STALE_THRESHOLD_SECONDS: When entries should be refreshed from disk
+#   - Set to 30 minutes (1800s) to match activity_log.py get_active_entries() default expiry
+#   - Too small (e.g., 0.3s) causes constant unnecessary refreshes and system log pollution
+# SYMBOL_STALENESS_FALLBACK_MS: Only used in optimized tests, not in main coordination
+STALE_THRESHOLD_SECONDS = 1800  # 30 minutes - must match activity_log.py expiry_minutes=30
 MAX_REFRESH_ATTEMPTS = 2  # Retry up to 2 times when stale
-# C1 (symbol-level staleness): Use 1000ms fallback per optimized_activity_log.py
-SYMBOL_STALENESS_FALLBACK_MS = 1000
+SYMBOL_STALENESS_FALLBACK_MS = 1000  # Used only in test optimizations, not main path
 
 
 def _detect_and_refresh_stale_entries(entries: list, tenant_id: str) -> Tuple[list, Dict[str, Any]]:
@@ -176,21 +179,8 @@ def check_for_conflicts(
     # This ensures we detect the latest state even if log entries are slightly old
     active_entries, staleness_report = _detect_and_refresh_stale_entries(active_entries, resolved_tenant)
 
-    # Log staleness events if any were found
-    if staleness_report['stale_count'] > 0:
-        log_activity(
-            developer_id="_neo_system",
-            file_path=file_path,
-            intent=f"Staleness detection: {staleness_report['stale_count']} entries were stale, refreshed {staleness_report['refresh_count']}",
-            region=region,
-            intent_category="system",
-            agent_metadata={
-                "system_event": "staleness_detection",
-                "stale_count": staleness_report['stale_count'],
-                "refresh_count": staleness_report['refresh_count'],
-                "details": staleness_report['details']
-            }
-        )
+    # Note: Staleness events are internal to the system and not logged to activity log
+    # to avoid polluting the activity log with system metadata
 
     # Filter entries for the same file from other agents (same tenant only)
     # Keep only the LATEST entry per developer (handles duplicate log entries)
