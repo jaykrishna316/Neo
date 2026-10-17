@@ -195,7 +195,8 @@ class DependencyTracker:
             repo: Dependent repo name
             test_result: Test result data {passed: bool, message: str, logs: str}
         """
-        log_file = self.tracking_dir / f"test_result_{pr_number}_{repo}.json"
+        repo_safe = repo.replace("/", "_")
+        log_file = self.tracking_dir / f"test_result_{pr_number}_{repo_safe}.json"
         with open(log_file, "w") as f:
             json.dump({
                 "repo": repo,
