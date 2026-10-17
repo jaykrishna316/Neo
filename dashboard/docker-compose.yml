@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # Neo MCP Server (Python backend - existing)
+  neo-mcp:
+    build:
+      context: ..
+      dockerfile: Dockerfile.mcp
+    environment:
+      PYTHONPATH: /app
+      NEO_MULTITENANCY: 'false'
+      CLAUDE_TENANT_ID: 'default'
+      NEO_DEBUG: 'true'
+    volumes:
+      - ..:/app
+      - ../.devsync:/app/.devsync
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('localhost', 9090), timeout=2)"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+
+  # Dashboard API Server (Node.js)
+  dashboard-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      NODE_ENV: development
+      NEO_MCP_PATH: /app/ide/mcp_neo_server.py
+      PYTHONPATH: /app
+      REDIS_URL: redis://redis:6379
+      PORT: 3001
+      LOG_LEVEL: debug
+    ports:
+      - "3001:3001"
+    depends_on:
+      redis:
+        condition: service_healthy
+      neo-mcp:
+        condition: service_healthy
+    volumes:
+      - ./api:/app/api
+      - ../.devsync:/app/.devsync
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Dashboard UI (React)
+  dashboard-ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: development
+      REACT_APP_API_URL: http://localhost:3001
+      REACT_APP_WS_URL: ws://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      dashboard-api:
+        condition: service_healthy
+    volumes:
+      - ./ui/src:/app/src
+      - ./ui/public:/app/public
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+
+  # File Watcher (watches activity log and triggers cache invalidation)
+  activity-watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.watcher
+    environment:
+      REDIS_URL: redis://redis:6379
+      ACTIVITY_LOG_PATH: /app/.devsync/activity-log.json
+    volumes:
+      - ../.devsync:/app/.devsync
+      - /app/node_modules
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis-data:
+
+networks:
+  default:
+    name: neo-dashboard
