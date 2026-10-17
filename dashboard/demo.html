@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neo Mission Control Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #0f172a;
+      --secondary: #1e293b;
+      --accent: #06b6d4;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --border: #334155;
+      --success: #22c55e;
+      --warning: #f97316;
+      --danger: #ef4444;
+      --bg-hover: #0f172a;
+    }
+
+    body {
+      background-color: var(--primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .dashboard {
+      max-width: 1920px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: var(--accent);
+    }
+
+    .status {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background-color: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    .status-badge.online { color: var(--success); }
+    .status-badge.warning { color: var(--warning); }
+    .status-badge.error { color: var(--danger); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .grid.wide {
+      grid-column: 1 / -1;
+    }
+
+    .card {
+      background-color: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .card-content {
+      flex: 1;
+    }
+
+    .health-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+
+    .health-indicator {
+      background-color: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .health-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 0.5rem 0;
+    }
+
+    .health-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .health-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .health-badge.ok { background-color: rgba(34, 197, 94, 0.1); color: var(--success); }
+    .health-badge.warning { background-color: rgba(245, 158, 11, 0.1); color: var(--warning); }
+
+    #service-network {
+      width: 100%;
+      height: 400px;
+      background-color: var(--primary);
+      border-radius: 6px;
+    }
+
+    .activity-entry {
+      display: flex;
+      gap: 1rem;
+      padding: 0.75rem;
+      background-color: rgba(6, 182, 212, 0.05);
+      border-left: 2px solid var(--accent);
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .activity-entry:hover {
+      background-color: rgba(6, 182, 212, 0.1);
+      transform: translateX(4px);
+    }
+
+    .entry-time {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      padding-top: 2px;
+    }
+
+    .entry-content {
+      flex: 1;
+    }
+
+    .entry-agent {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .entry-file {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .entry-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    .entry-badge.modification { background-color: rgba(34, 197, 94, 0.1); color: var(--success); }
+    .entry-badge.creation { background-color: rgba(6, 182, 212, 0.1); color: var(--accent); }
+    .entry-badge.deletion { background-color: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+    .heatmap-file {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background-color: rgba(6, 182, 212, 0.05);
+      border-left: 3px solid transparent;
+      margin-bottom: 0.75rem;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .heatmap-file:hover {
+      background-color: rgba(6, 182, 212, 0.1);
+      transform: translateX(4px);
+    }
+
+    .heatmap-file.high { border-left-color: var(--danger); }
+    .heatmap-file.medium { border-left-color: var(--warning); }
+    .heatmap-file.low { border-left-color: var(--success); }
+
+    .file-info {
+      flex: 1;
+    }
+
+    .file-path {
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .file-service {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .risk-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .risk-badge.high { background-color: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .risk-badge.medium { background-color: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    .risk-badge.low { background-color: rgba(34, 197, 94, 0.1); color: var(--success); }
+
+    .metric-box {
+      background-color: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 0.5rem;
+    }
+
+    .footer {
+      text-align: center;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    svg text { fill: var(--text-primary); }
+    svg circle { stroke: var(--border); }
+    svg line { stroke: var(--border); }
+
+    @media (max-width: 768px) {
+      .health-grid { grid-template-columns: repeat(2, 1fr); }
+      #service-network { height: 300px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <header>
+      <h1>🚀 Neo Mission Control</h1>
+      <div class="status">
+        <div class="status-badge online">● Connected</div>
+        <div class="status-badge warning" id="update-time">Last: Just now</div>
+      </div>
+    </header>
+
+    <!-- Health Indicators -->
+    <div class="grid">
+      <div class="card wide">
+        <div class="card-header">
+          <h2 class="card-title">📊 System Health</h2>
+        </div>
+        <div class="card-content">
+          <div class="health-grid">
+            <div class="health-indicator">
+              <div class="health-label">Conflict Risk</div>
+              <div class="health-value" id="conflict-risk">MEDIUM</div>
+              <span class="health-badge warning">⚠️ 3 high-risk files</span>
+            </div>
+            <div class="health-indicator">
+              <div class="health-label">Active Developers</div>
+              <div class="health-value" id="dev-count">4</div>
+              <span class="health-badge ok">✓ Coordinating</span>
+            </div>
+            <div class="health-indicator">
+              <div class="health-label">Entropy Level</div>
+              <div class="health-value" id="entropy-level">0.72</div>
+              <span class="health-badge warning">⚠️ Above threshold</span>
+            </div>
+            <div class="health-indicator">
+              <div class="health-label">Server Status</div>
+              <div class="health-value" id="server-status">OK</div>
+              <span class="health-badge ok">✓ Operational</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service Network -->
+    <div class="grid">
+      <div class="card wide">
+        <div class="card-header">
+          <h2 class="card-title">🕸️ Service Coupling Network</h2>
+        </div>
+        <div class="card-content">
+          <svg id="service-network"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Feed & Conflict Heatmap -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📈 Recent Activity</h2>
+        </div>
+        <div class="card-content" id="activity-feed" style="overflow-y: auto;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🔥 Conflict Hotspots</h2>
+        </div>
+        <div class="card-content" id="heatmap-list" style="overflow-y: auto;"></div>
+      </div>
+    </div>
+
+    <!-- Coupling Metrics -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📈 Coupling Metrics</h2>
+        </div>
+        <div class="card-content" id="metrics"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">🔬 Entropy Analysis</h2>
+        </div>
+        <div class="card-content" id="entropy-analysis"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Neo Mission Control Dashboard • All Neo features visualized with mock data</p>
+      <p>Real-time service coupling • Conflict detection • Activity coordination • Entropy analysis</p>
+    </div>
+  </div>
+
+  <script>
+    const mockData = {
+      overview: {
+        conflict_summary: { total_conflicts: 12, high_risk_files: 3, risk_level: 'MEDIUM' },
+        activity_summary: { total_entries: 156, active_developers: 4 },
+        entropy_summary: { current_entropy: 0.72, threshold: 0.65, architectural_issues: 8 },
+        status: { status: 'ok', message: 'All systems operational' }
+      },
+      graph: {
+        nodes: [
+          { id: 'dashboard', label: 'Dashboard UI', size: 30 },
+          { id: 'api', label: 'API Server', size: 28 },
+          { id: 'core', label: 'Neo Core', size: 32 },
+          { id: 'cache', label: 'Redis Cache', size: 20 },
+          { id: 'activity', label: 'Activity Log', size: 22 },
+          { id: 'auth', label: 'Auth Service', size: 18 }
+        ],
+        links: [
+          { source: 'dashboard', target: 'api', value: 0.85 },
+          { source: 'api', target: 'core', value: 0.92 },
+          { source: 'api', target: 'cache', value: 0.78 },
+          { source: 'core', target: 'activity', value: 0.88 },
+          { source: 'dashboard', target: 'cache', value: 0.65 },
+          { source: 'api', target: 'auth', value: 0.71 }
+        ]
+      },
+      activity: {
+        entries: [
+          { timestamp: new Date(Date.now() - 1 * 60000).toISOString(), agent_id: 'claude-haiku-frontend', file_path: 'dashboard/ui/src/components/Dashboard.jsx', intent: 'Add WebSocket support', intent_category: 'modification' },
+          { timestamp: new Date(Date.now() - 3 * 60000).toISOString(), agent_id: 'claude-opus-backend', file_path: 'dashboard/api/services/neoClient.js', intent: 'Optimize response time', intent_category: 'modification' },
+          { timestamp: new Date(Date.now() - 7 * 60000).toISOString(), agent_id: 'claude-sonnet-data', file_path: 'core/analysis/entropy.py', intent: 'Implement 90-day rolling window', intent_category: 'modification' },
+          { timestamp: new Date(Date.now() - 15 * 60000).toISOString(), agent_id: 'claude-haiku-frontend', file_path: 'dashboard/ui/src/components/BlastRadiusExplorer.jsx', intent: 'Create impact visualization', intent_category: 'creation' },
+          { timestamp: new Date(Date.now() - 32 * 60000).toISOString(), agent_id: 'claude-opus-backend', file_path: 'dashboard/api/routes/services.routes.js', intent: 'Add blast radius endpoint', intent_category: 'creation' },
+          { timestamp: new Date(Date.now() - 1 * 3600000).toISOString(), agent_id: 'claude-sonnet-data', file_path: 'core/models/service_graph.py', intent: 'Refactor coupling algorithm', intent_category: 'modification' },
+          { timestamp: new Date(Date.now() - 2 * 3600000).toISOString(), agent_id: 'human-developer', file_path: 'dashboard/api/services/cacheService.js', intent: 'Fix Redis timeout', intent_category: 'modification' }
+        ]
+      },
+      heatmap: {
+        heatmap: [
+          { file: 'dashboard/ui/src/pages/Dashboard.jsx', service: 'dashboard', risk_level: 'HIGH', developers: ['claude-haiku', 'human-reviewer'] },
+          { file: 'core/conflict_detection.py', service: 'core', risk_level: 'HIGH', developers: ['claude-opus', 'claude-sonnet'] },
+          { file: 'dashboard/api/services/neoClient.js', service: 'api', risk_level: 'HIGH', developers: ['claude-opus'] },
+          { file: 'dashboard/api/services/aggregator.js', service: 'api', risk_level: 'MEDIUM', developers: ['claude-opus', 'human-dev'] },
+          { file: 'core/analysis/entropy.py', service: 'core', risk_level: 'MEDIUM', developers: ['claude-sonnet'] },
+          { file: 'dashboard/ui/src/components/ActivityFeed.jsx', service: 'dashboard', risk_level: 'MEDIUM', developers: ['claude-haiku'] },
+          { file: 'dashboard/api/routes/activity.routes.js', service: 'api', risk_level: 'MEDIUM', developers: ['claude-opus'] }
+        ]
+      }
+    };
+
+    function formatTime(iso) {
+      const date = new Date(iso);
+      const now = new Date();
+      const diff = now - date;
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+
+      if (minutes < 1) return 'Just now';
+      if (minutes < 60) return `${minutes}m ago`;
+      if (hours < 24) return `${hours}h ago`;
+      return `${days}d ago`;
+    }
+
+    // Populate activity feed
+    function populateActivity() {
+      const feed = document.getElementById('activity-feed');
+      mockData.activity.entries.slice(0, 5).forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'activity-entry';
+        div.innerHTML = `
+          <div class="entry-time">${formatTime(entry.timestamp)}</div>
+          <div class="entry-content">
+            <div class="entry-agent">${entry.agent_id}</div>
+            <div class="entry-file">${entry.file_path}</div>
+            <span class="entry-badge ${entry.intent_category}">${entry.intent_category}</span>
+          </div>
+        `;
+        feed.appendChild(div);
+      });
+    }
+
+    // Populate heatmap
+    function populateHeatmap() {
+      const list = document.getElementById('heatmap-list');
+      mockData.heatmap.heatmap.slice(0, 5).forEach(file => {
+        const div = document.createElement('div');
+        div.className = `heatmap-file ${file.risk_level.toLowerCase()}`;
+        div.innerHTML = `
+          <div class="file-info">
+            <div class="file-path">${file.file_path}</div>
+            <div class="file-service">${file.service}</div>
+          </div>
+          <span class="risk-badge ${file.risk_level.toLowerCase()}">${file.risk_level}</span>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    // Populate metrics
+    function populateMetrics() {
+      const metrics = document.getElementById('metrics');
+      metrics.innerHTML = `
+        <div class="metric-box">
+          <div class="metric-label">Data Window</div>
+          <div class="metric-value">90 days</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Meaningful Data</div>
+          <div class="metric-value">94%</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Status</div>
+          <div class="metric-value" style="font-size: 1.5rem;">✓</div>
+        </div>
+      `;
+    }
+
+    // Populate entropy analysis
+    function populateEntropy() {
+      const analysis = document.getElementById('entropy-analysis');
+      analysis.innerHTML = `
+        <div class="metric-box">
+          <div class="metric-label">Current Entropy</div>
+          <div class="metric-value">0.72</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Threshold</div>
+          <div class="metric-value">0.65</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Issues Found</div>
+          <div class="metric-value">8</div>
+        </div>
+      `;
+    }
+
+    // Draw service network with D3
+    function drawNetwork() {
+      const width = 900;
+      const height = 400;
+
+      const svg = d3.select('#service-network')
+        .attr('width', width)
+        .attr('height', height);
+
+      const simulation = d3.forceSimulation(mockData.graph.nodes)
+        .force('link', d3.forceLink(mockData.graph.links).id(d => d.id).distance(100))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2));
+
+      // Draw links
+      const links = svg.selectAll('line')
+        .data(mockData.graph.links)
+        .enter()
+        .append('line')
+        .attr('stroke', d => {
+          const val = d.value;
+          if (val > 0.85) return 'rgba(239, 68, 68, 0.6)';
+          if (val > 0.75) return 'rgba(245, 158, 11, 0.6)';
+          return 'rgba(34, 197, 94, 0.6)';
+        })
+        .attr('stroke-width', d => Math.sqrt(d.value) * 3);
+
+      // Draw nodes
+      const nodes = svg.selectAll('circle')
+        .data(mockData.graph.nodes)
+        .enter()
+        .append('circle')
+        .attr('r', d => d.size)
+        .attr('fill', '#06b6d4')
+        .attr('opacity', 0.8);
+
+      // Draw labels
+      const labels = svg.selectAll('text')
+        .data(mockData.graph.nodes)
+        .enter()
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.3em')
+        .attr('font-size', '12px')
+        .attr('fill', '#0f172a')
+        .attr('font-weight', 'bold')
+        .text(d => d.label);
+
+      simulation.on('tick', () => {
+        links
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+
+        nodes
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y);
+
+        labels
+          .attr('x', d => d.x)
+          .attr('y', d => d.y);
+      });
+    }
+
+    // Initialize dashboard
+    populateActivity();
+    populateHeatmap();
+    populateMetrics();
+    populateEntropy();
+    drawNetwork();
+
+    // Update time
+    setInterval(() => {
+      document.getElementById('update-time').textContent = 'Last: Just now';
+    }, 60000);
+  </script>
+</body>
+</html>
