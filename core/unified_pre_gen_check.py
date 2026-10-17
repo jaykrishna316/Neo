@@ -7,6 +7,8 @@ from typing import Dict, Tuple, List, Any, Optional
 from core.pre_gen_check import check_for_conflicts
 from core.impact_alerts import ImpactAlertManager
 from core.risk_classifier import RiskLevel
+from core.blast_radius import BlastRadiusCalculator, BlastRadiusReport
+from core.coupling_metrics import CouplingMetricsCollector, record_developer_change
 
 
 def check_all_pre_gen_risks(
@@ -174,3 +176,147 @@ def _format_display_message(status: str,
     lines.append("=" * 80)
 
     return "\n".join(lines)
+
+
+def calculate_blast_radius(
+    file_path: str,
+    change_type: str = "general",
+    dependencies: Optional[Dict[str, List[str]]] = None,
+    repo_path: str = "."
+) -> Dict[str, Any]:
+    """
+    Calculate blast radius for a file change.
+
+    Shows estimated impact scope and cost in dev-hours and tokens.
+
+    Args:
+        file_path: File that changed
+        change_type: Type of change ("signature", "logic", "refactor", "general")
+        dependencies: Optional dependency map (file -> [dependents])
+        repo_path: Repository path
+
+    Returns:
+        {
+            "success": boolean,
+            "blast_radius": BlastRadiusReport dict,
+            "summary": formatted string,
+            "easy_count": int,
+            "medium_count": int,
+            "hard_count": int,
+            "total_hours": float,
+            "total_token_cost": int
+        }
+    """
+    try:
+        calculator = BlastRadiusCalculator(dependencies or {})
+        report = calculator.calculate(file_path, change_type)
+
+        return {
+            "success": True,
+            "blast_radius": report.to_dict(),
+            "summary": calculator.format_report(report),
+            "easy_count": report.easy_fixes,
+            "medium_count": report.medium_fixes,
+            "hard_count": report.hard_fixes,
+            "total_hours": report.total_estimated_hours,
+            "total_token_cost": report.total_token_cost
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+def get_coupling_trends(
+    window_days: int = 90,
+    repo_path: str = "."
+) -> Dict[str, Any]:
+    """
+    Get coupling trends between services.
+
+    Shows which services are becoming increasingly coupled (regressions),
+    and which are stable/decreasing.
+
+    Args:
+        window_days: Analysis window (default 90 days)
+        repo_path: Repository path
+
+    Returns:
+        {
+            "success": boolean,
+            "trends": list of trend dicts,
+            "summary": formatted string,
+            "regressions": list of regression trends,
+            "increasing": list of increasing coupling trends
+        }
+    """
+    try:
+        collector = CouplingMetricsCollector(f"{repo_path}/.devsync/coupling")
+        trends = collector.compute_trends(window_days)
+
+        regressions = [t for t in trends if t.regression]
+        increasing = [t for t in trends if t.direction == "increasing" and t.velocity > 0.01]
+
+        return {
+            "success": True,
+            "trends": [
+                {
+                    "service_a": t.service_a,
+                    "service_b": t.service_b,
+                    "current_score": round(t.current_score, 2),
+                    "previous_score": round(t.previous_score, 2),
+                    "velocity": round(t.velocity, 3),
+                    "direction": t.direction,
+                    "age_days": t.age_days,
+                    "regression": t.regression
+                }
+                for t in trends
+            ],
+            "summary": collector.format_trends_report(trends),
+            "regressions": len(regressions),
+            "increasing": len(increasing)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+def record_change_set(
+    changed_files: List[str],
+    developer_id: str,
+    intent: str,
+    repo_path: str = "."
+) -> Dict[str, Any]:
+    """
+    Record a set of files changed together.
+
+    Used to build coupling metrics over time.
+
+    Args:
+        changed_files: List of files modified in this change
+        developer_id: Developer who made the change
+        intent: Intent of the change
+        repo_path: Repository path
+
+    Returns:
+        {"success": boolean, "message": string}
+    """
+    try:
+        record_developer_change(
+            changed_files,
+            developer_id,
+            intent,
+            f"{repo_path}/.devsync/coupling"
+        )
+        return {
+            "success": True,
+            "message": f"Recorded {len(changed_files)} files for coupling analysis"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
