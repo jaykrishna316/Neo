@@ -38,7 +38,17 @@ class DependencyChange:
 
 
 class DependencyTracker:
-    """Track and analyze cross-repository dependencies"""
+    """Track and analyze cross-repository dependencies
+
+    Implements Phase 1 of Neo Extension: Dependency Graph Detection
+
+    Detects which dependent repositories are impacted by code changes
+    and initiates the multi-phase workflow:
+    - Phase 1: Dependency detection (this class)
+    - Phase 2: Test triggering in dependent repos
+    - Phase 3: Auto-comments with results
+    - Phase 4: Merge gates based on test outcomes
+    """
 
     def __init__(self, repo_path: str = "."):
         self.repo_path = Path(repo_path)
