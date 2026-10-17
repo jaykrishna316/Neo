@@ -9,6 +9,7 @@ from core.impact_alerts import ImpactAlertManager
 from core.risk_classifier import RiskLevel
 from core.blast_radius import BlastRadiusCalculator, BlastRadiusReport
 from core.coupling_metrics import CouplingMetricsCollector, record_developer_change
+from core.entropy_coupling import analyze_entropy_coupling
 
 
 def check_all_pre_gen_risks(
@@ -320,3 +321,65 @@ def record_change_set(
             "success": False,
             "error": str(e)
         }
+
+
+def analyze_entropy_couplings(
+    history_file: str = ".devsync/coupling/coupling_history.jsonl",
+    actual_imports: Optional[Dict[str, List[str]]] = None,
+    repo_path: str = "."
+) -> Dict[str, Any]:
+    """
+    Analyze service coupling using entropy (information theory).
+
+    Discovers implicit coupling that isn't visible in imports.
+    Identifies:
+    - Services that change together (high mutual information)
+    - Natural service clusters (cohesive groups)
+    - Architectural misalignments (hidden coupling, unnecessary imports)
+
+    Requires 3-6 months of change history to be meaningful.
+
+    Args:
+        history_file: Path to change history (JSONL format)
+        actual_imports: Optional import graph (service -> [imports])
+        repo_path: Repository path
+
+    Returns:
+        {
+            "success": boolean,
+            "coupling_matrix": dict of mutual information scores,
+            "clusters": list of service clusters,
+            "misalignments": list of architectural problems,
+            "report": formatted analysis string,
+            "data_age_status": string describing data readiness
+        }
+    """
+    from datetime import datetime
+    from pathlib import Path
+
+    result = analyze_entropy_coupling(
+        history_file=f"{repo_path}/{history_file}",
+        actual_imports=actual_imports
+    )
+
+    if not result["success"]:
+        return result
+
+    # Check data age
+    history_path = f"{repo_path}/{history_file}"
+    try:
+        stat = Path(history_path).stat()
+        age_days = (datetime.utcnow() - datetime.fromtimestamp(stat.st_ctime)).days
+
+        if age_days < 30:
+            data_status = "⏳ Insufficient data (need 3-6 months for meaningful analysis)"
+        elif age_days < 90:
+            data_status = "📊 Early stage (30-90 days collected, analysis starting)"
+        else:
+            data_status = "✅ Mature analysis (3+ months of data)"
+    except:
+        data_status = "❓ Data age unknown"
+
+    result["data_age_status"] = data_status
+
+    return result
