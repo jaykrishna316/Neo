@@ -6,7 +6,14 @@ import ActivityFeed from '../components/ActivityFeed';
 import CouplingMetrics from '../components/CouplingMetrics';
 import ConflictHeatmap from '../components/ConflictHeatmap';
 import HealthIndicators from '../components/HealthIndicators';
+import EntropyDeepDive from '../components/EntropyDeepDive';
+import BlastRadiusExplorer from '../components/BlastRadiusExplorer';
+import TrendAnalysis from '../components/TrendAnalysis';
+import FilterPanel from '../components/FilterPanel';
+import ThemeToggle from '../components/ThemeToggle';
+import ExportDialog from '../components/ExportDialog';
 import '../styles/Dashboard.css';
+import '../styles/modals.css';
 
 function Dashboard() {
   const [overview, setOverview] = useState(null);
@@ -16,6 +23,12 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [socket, setSocket] = useState(null);
+  const [filters, setFilters] = useState(null);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [selectedEntropy, setSelectedEntropy] = useState(null);
+  const [selectedBlastRadius, setSelectedBlastRadius] = useState(null);
+  const [selectedTrend, setSelectedTrend] = useState(null);
 
   // Initialize WebSocket connection
   useEffect(() => {
@@ -104,15 +117,31 @@ function Dashboard() {
     );
   }
 
+  const dashboardData = { overview, graph, activity, heatmap };
+
   return (
     <div className="dashboard">
       {error && <div className="error-banner">{error}</div>}
+
+      {/* Header Controls */}
+      <div className="dashboard-controls">
+        <div className="controls-left">
+          <button className="btn-small" onClick={() => setShowFilterPanel(true)} title="Filters">
+            🔍 Filters
+          </button>
+          <button className="btn-small" onClick={() => setShowExport(true)} title="Export">
+            📥 Export
+          </button>
+        </div>
+        <ThemeToggle />
+      </div>
 
       {/* Health Indicators */}
       {overview && (
         <HealthIndicators
           overview={overview}
           onRefresh={() => handleRefresh('overview')}
+          onDrillDown={() => setSelectedEntropy(true)}
         />
       )}
 
@@ -128,13 +157,25 @@ function Dashboard() {
           )}
         </div>
 
-        {/* Coupling Metrics */}
+        {/* Coupling Metrics with Drill-down */}
         <div className="dashboard-cell">
           {overview && overview.entropy_summary && (
-            <CouplingMetrics
-              entropy={overview.entropy_summary}
-              onRefresh={() => handleRefresh('coupling')}
-            />
+            <div className="component-card">
+              <div className="cell-header">
+                <h3 className="cell-title">📈 Coupling Metrics</h3>
+                <button
+                  className="btn-small"
+                  onClick={() => setSelectedEntropy(true)}
+                  title="Deep dive"
+                >
+                  🔬
+                </button>
+              </div>
+              <CouplingMetrics
+                entropy={overview.entropy_summary}
+                onRefresh={() => handleRefresh('coupling')}
+              />
+            </div>
           )}
         </div>
 
@@ -144,17 +185,27 @@ function Dashboard() {
             <ActivityFeed
               data={activity}
               onRefresh={() => handleRefresh('activity')}
+              onSelectFile={(file) => setSelectedTrend(file)}
             />
           )}
         </div>
 
-        {/* Conflict Heatmap */}
+        {/* Conflict Heatmap with Drill-downs */}
         <div className="dashboard-cell dashboard-cell-wide">
           {heatmap && (
-            <ConflictHeatmap
-              data={heatmap}
-              onRefresh={() => handleRefresh('heatmap')}
-            />
+            <div className="component-card">
+              <div className="cell-header">
+                <h3 className="cell-title">🔥 Conflict Heatmap</h3>
+                <button className="btn-small" onClick={() => handleRefresh('heatmap')}>
+                  🔄
+                </button>
+              </div>
+              <ConflictHeatmap
+                data={heatmap}
+                onRefresh={() => handleRefresh('heatmap')}
+                onSelectFile={(file) => setSelectedBlastRadius(file)}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -176,6 +227,41 @@ function Dashboard() {
           </span>
         </div>
       </div>
+
+      {/* Phase 2: Drill-down Modals */}
+      {selectedEntropy && (
+        <EntropyDeepDive onClose={() => setSelectedEntropy(null)} />
+      )}
+
+      {selectedBlastRadius && (
+        <BlastRadiusExplorer
+          filePath={selectedBlastRadius}
+          onClose={() => setSelectedBlastRadius(null)}
+        />
+      )}
+
+      {selectedTrend && (
+        <TrendAnalysis
+          filePath={selectedTrend}
+          onClose={() => setSelectedTrend(null)}
+        />
+      )}
+
+      {/* Phase 3: Filter Panel */}
+      {showFilterPanel && (
+        <FilterPanel
+          onFilter={setFilters}
+          onClose={() => setShowFilterPanel(false)}
+        />
+      )}
+
+      {/* Phase 3: Export Dialog */}
+      {showExport && (
+        <ExportDialog
+          dashboardData={dashboardData}
+          onClose={() => setShowExport(false)}
+        />
+      )}
     </div>
   );
 }
