@@ -1,7 +1,7 @@
 import json, os, time
 from pathlib import Path
 from typing import Optional, Dict, List
-from core.symbol_hasher import snapshot_file, FileSnapshot, SymbolInfo
+from core.symbol_hasher import snapshot_file, FileSnapshot, SymbolHash
 
 class FreshnessTracker:
     def __init__(self, state_dir: Optional[str] = None):
