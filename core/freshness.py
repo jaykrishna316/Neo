@@ -39,7 +39,7 @@ class FreshnessTracker:
             "agent_id": snap.agent_id,
             "timestamp": snap.timestamp,
             "content_hash": snap.content_hash,
-            "symbols": {n: {"name": s.name, "type": s.type, "lineno": s.lineno, "body_hash": s.body_hash, "signature": s.signature} for n, s in snap.symbols.items()},
+            "symbols": {n: {"name": s.name, "type": s.type, "lineno": s.lineno, "body_hash": s.body_hash} for n, s in snap.symbols.items()},
             "file_content": snap.file_content
         }
         snap_file.write_text(json.dumps(data))
@@ -51,8 +51,8 @@ class FreshnessTracker:
         if not snap_file.exists(): return None
         try:
             data = json.loads(snap_file.read_text())
-            symbols = {n: SymbolInfo(s["name"], s["type"], s["lineno"], s["body_hash"], s["signature"]) for n, s in data.get("symbols", {}).items()}
-            snap = FileSnapshot(data["file_path"], data["agent_id"], data["timestamp"], symbols, data["content_hash"], data.get("file_content"))
+            symbols = {n: SymbolHash(s["name"], s["type"], s["body_hash"], s["lineno"]) for n, s in data.get("symbols", {}).items()}
+            snap = FileSnapshot(data["file_path"], data["content_hash"], symbols, data["timestamp"], data["agent_id"], None)
             if agent_id not in self.snapshots: self.snapshots[agent_id] = {}
             self.snapshots[agent_id][file_path] = snap
             return snap
