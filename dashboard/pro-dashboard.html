@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neo Mission Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1628 100%);
+      color: #e0e7ff;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    .dashboard {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #00d4ff, #0099cc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #00d4ff, #0099cc);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .time-range {
+      display: flex;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 0.5rem;
+    }
+
+    .time-range button {
+      padding: 0.4rem 0.8rem;
+      background: transparent;
+      border: none;
+      color: #a5b4fc;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .time-range button.active {
+      background: rgba(0, 212, 255, 0.2);
+      color: #00d4ff;
+    }
+
+    .refresh-btn {
+      width: 32px;
+      height: 32px;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #00d4ff;
+      transition: all 0.2s;
+      font-size: 16px;
+    }
+
+    .refresh-btn:hover {
+      background: rgba(0, 212, 255, 0.2);
+      transform: rotate(180deg);
+      transition: transform 0.6s;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      background: #10b981;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Grid Layout */
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .grid.full {
+      grid-column: 1 / -1;
+    }
+
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    /* Cards */
+    .card {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1.25rem;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      min-height: fit-content;
+    }
+
+    .card:hover {
+      border-color: rgba(0, 212, 255, 0.3);
+      background: rgba(30, 41, 59, 0.95);
+      box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #e0e7ff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-subtitle {
+      font-size: 0.75rem;
+      color: #a5b4fc;
+      margin-top: 0.25rem;
+    }
+
+    .card-action {
+      width: 28px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #a5b4fc;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .card-action:hover {
+      background: rgba(0, 212, 255, 0.1);
+      color: #00d4ff;
+    }
+
+    /* Metrics */
+    .metric {
+      margin-bottom: 1.5rem;
+    }
+
+    .metric:last-child {
+      margin-bottom: 0;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: #a5b4fc;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #00d4ff;
+      font-family: 'Fira Code', monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .metric-change {
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .metric-change.positive {
+      color: #10b981;
+    }
+
+    .metric-change.negative {
+      color: #ef4444;
+    }
+
+    .metric-change.neutral {
+      color: #a5b4fc;
+    }
+
+    /* Sparkline */
+    .sparkline {
+      width: 100%;
+      height: 40px;
+      margin-top: 1rem;
+    }
+
+    /* Charts */
+    .chart-container {
+      position: relative;
+      height: 250px;
+      margin-top: 1rem;
+    }
+
+    .mini-chart {
+      position: relative;
+      height: 60px;
+      margin-top: 1rem;
+    }
+
+    /* Heatmap */
+    .heatmap {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .heatmap-cell {
+      aspect-ratio: 1;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .heatmap-cell:hover {
+      border-color: rgba(0, 212, 255, 0.5);
+      background: rgba(0, 212, 255, 0.2);
+    }
+
+    .heatmap-cell.intensity-1 { background: rgba(16, 185, 129, 0.1); }
+    .heatmap-cell.intensity-2 { background: rgba(16, 185, 129, 0.2); }
+    .heatmap-cell.intensity-3 { background: rgba(16, 185, 129, 0.3); }
+    .heatmap-cell.intensity-4 { background: rgba(16, 185, 129, 0.5); }
+    .heatmap-cell.intensity-5 { background: rgba(16, 185, 129, 0.8); }
+
+    /* Risk Indicators */
+    .risk-bar {
+      height: 24px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.75rem;
+    }
+
+    .risk-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    /* Data Table */
+    .table-container {
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: #a5b4fc;
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #e0e7ff;
+    }
+
+    tr:hover {
+      background: rgba(0, 212, 255, 0.05);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 0.5rem;
+    }
+
+    .status-dot.high { background: #ef4444; }
+    .status-dot.medium { background: #f59e0b; }
+    .status-dot.low { background: #10b981; }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: rgba(0, 212, 255, 0.1);
+      color: #00d4ff;
+      border: 1px solid rgba(0, 212, 255, 0.2);
+    }
+
+    .badge.positive { background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); }
+    .badge.negative { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
+
+    /* Activity Log */
+    .activity-log {
+      margin-top: 1rem;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-left: 2px solid transparent;
+      margin-bottom: 0.75rem;
+      transition: all 0.2s;
+    }
+
+    .activity-item:hover {
+      border-left-color: #00d4ff;
+      background: rgba(0, 212, 255, 0.05);
+      padding-left: 1rem;
+    }
+
+    .activity-time {
+      font-size: 0.7rem;
+      color: #a5b4fc;
+      white-space: nowrap;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-label {
+      font-weight: 500;
+      color: #e0e7ff;
+      font-size: 0.85rem;
+    }
+
+    .activity-detail {
+      font-size: 0.75rem;
+      color: #a5b4fc;
+      margin-top: 0.25rem;
+    }
+
+    /* Service Health */
+    .service-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 6px;
+      margin-bottom: 0.75rem;
+    }
+
+    .service-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .service-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .service-name {
+      font-weight: 500;
+      color: #e0e7ff;
+    }
+
+    .service-status {
+      font-size: 0.7rem;
+      color: #a5b4fc;
+    }
+
+    .service-metric {
+      text-align: right;
+    }
+
+    .service-value {
+      font-weight: 600;
+      color: #00d4ff;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .service-sublabel {
+      font-size: 0.7rem;
+      color: #a5b4fc;
+    }
+
+    /* Network Graph */
+    #network-graph {
+      width: 100%;
+      height: 300px;
+    }
+
+    svg text {
+      fill: #e0e7ff;
+      font-size: 11px;
+    }
+
+    svg line, svg path {
+      stroke: rgba(0, 212, 255, 0.2);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 212, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 212, 255, 0.5);
+    }
+
+    @media (max-width: 1024px) {
+      .grid.cols-2, .grid.cols-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">⚙️</div>
+        <span>Neo Mission Control</span>
+      </div>
+      <div class="header-controls">
+        <div class="time-range">
+          <button>1H</button>
+          <button class="active">24H</button>
+          <button>7D</button>
+          <button>30D</button>
+        </div>
+        <button class="refresh-btn">⟳</button>
+        <div style="display: flex; align-items: center; gap: 0.5rem; color: #10b981;">
+          <div class="status-indicator"></div>
+          <span style="font-size: 0.75rem;">Live</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Metrics Row -->
+    <div class="grid cols-4">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Conflict Risk</div>
+            <div class="card-subtitle">Semantic Layer</div>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Current Level</div>
+          <div class="metric-value">34%</div>
+          <div class="metric-change positive">↓ 12% from 24h ago</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Active Developers</div>
+            <div class="card-subtitle">Real-time</div>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Currently Working</div>
+          <div class="metric-value">7</div>
+          <div class="metric-change positive">+3 in last hour</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Architecture Entropy</div>
+            <div class="card-subtitle">Complexity Index</div>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Entropy Score</div>
+          <div class="metric-value">0.68</div>
+          <div class="metric-change negative">↑ 0.08 from baseline</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Token Savings</div>
+            <div class="card-subtitle">Pre-generation Detection</div>
+          </div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Saved Today</div>
+          <div class="metric-value">18.4K</div>
+          <div class="metric-change positive">Prevented conflicts</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid cols-3">
+      <!-- Service Network -->
+      <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Service Coupling Graph</div>
+            <div class="card-subtitle">Dependency Network & Coupling Strength</div>
+          </div>
+          <div class="card-action">⚙️</div>
+        </div>
+        <svg id="network-graph"></svg>
+      </div>
+
+      <!-- Risk Distribution -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Risk Distribution</div>
+            <div class="card-subtitle">File-level Assessment</div>
+          </div>
+        </div>
+        <div style="margin-top: 1.5rem;">
+          <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: #e0e7ff;">Critical</span>
+              <span style="color: #ef4444; font-weight: 600;">3 files</span>
+            </div>
+            <div class="risk-bar"><div class="risk-fill" style="width: 15%"></div></div>
+          </div>
+          <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: #e0e7ff;">High</span>
+              <span style="color: #f59e0b; font-weight: 600;">8 files</span>
+            </div>
+            <div class="risk-bar"><div class="risk-fill" style="width: 40%; background: linear-gradient(90deg, #f59e0b, #ef4444)"></div></div>
+          </div>
+          <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: #e0e7ff;">Medium</span>
+              <span style="color: #f59e0b; font-weight: 600;">14 files</span>
+            </div>
+            <div class="risk-bar"><div class="risk-fill" style="width: 70%; background: linear-gradient(90deg, #10b981, #f59e0b)"></div></div>
+          </div>
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: #e0e7ff;">Low</span>
+              <span style="color: #10b981; font-weight: 600;">45 files</span>
+            </div>
+            <div class="risk-bar"><div class="risk-fill" style="width: 100%; background: #10b981"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Real-time Activity Stream</div>
+            <div class="card-subtitle">Multi-developer Coordination</div>
+          </div>
+          <div class="card-action">📡</div>
+        </div>
+        <div class="activity-log">
+          <div class="activity-item">
+            <div class="activity-time">12:47:23</div>
+            <div class="activity-content">
+              <div class="activity-label">claude-opus-backend modified core/conflict_detection.py</div>
+              <div class="activity-detail">Optimized semantic layer detection algorithm • 342 lines changed • Conflict check: LOW</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-time">12:45:18</div>
+            <div class="activity-content">
+              <div class="activity-label">claude-haiku-frontend created BlastRadiusExplorer.jsx</div>
+              <div class="activity-detail">New component for impact analysis • 8 dependencies identified • Complexity: MEDIUM</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-time">12:41:55</div>
+            <div class="activity-content">
+              <div class="activity-label">claude-sonnet-data updated entropy.py</div>
+              <div class="activity-detail">Implemented 90-day rolling window • Coupled services: 4 • Entropy change: +0.08</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-time">12:38:42</div>
+            <div class="activity-content">
+              <div class="activity-label">human-developer fixed cacheService.js</div>
+              <div class="activity-detail">Resolved Redis timeout • Affected: 3 services • Token cost: 240</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-time">12:35:10</div>
+            <div class="activity-content">
+              <div class="activity-label">claude-haiku-frontend updated modals.css</div>
+              <div class="activity-detail">Added animations & styling • Modal rendering performance: +23%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Entropy Heat Map -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Coupling Heatmap</div>
+            <div class="card-subtitle">Service Interaction Matrix</div>
+          </div>
+        </div>
+        <div class="heatmap">
+          <div class="heatmap-cell intensity-2">DA</div>
+          <div class="heatmap-cell intensity-5">AP</div>
+          <div class="heatmap-cell intensity-4">CO</div>
+          <div class="heatmap-cell intensity-1">CH</div>
+          <div class="heatmap-cell intensity-2">AC</div>
+          <div class="heatmap-cell intensity-3">CT</div>
+          <div class="heatmap-cell intensity-1">HS</div>
+          <div class="heatmap-cell intensity-1">DA</div>
+          <div class="heatmap-cell intensity-4">AP</div>
+          <div class="heatmap-cell intensity-3">CO</div>
+          <div class="heatmap-cell intensity-2">CH</div>
+          <div class="heatmap-cell intensity-3">AC</div>
+          <div class="heatmap-cell intensity-4">CT</div>
+          <div class="heatmap-cell intensity-2">HS</div>
+          <div class="heatmap-cell intensity-3">DA</div>
+          <div class="heatmap-cell intensity-2">AP</div>
+          <div class="heatmap-cell intensity-5">CO</div>
+          <div class="heatmap-cell intensity-1">CH</div>
+          <div class="heatmap-cell intensity-2">AC</div>
+          <div class="heatmap-cell intensity-1">CT</div>
+          <div class="heatmap-cell intensity-3">HS</div>
+          <div class="heatmap-cell intensity-1">DA</div>
+          <div class="heatmap-cell intensity-3">AP</div>
+          <div class="heatmap-cell intensity-2">CO</div>
+          <div class="heatmap-cell intensity-4">CH</div>
+          <div class="heatmap-cell intensity-3">AC</div>
+          <div class="heatmap-cell intensity-2">CT</div>
+          <div class="heatmap-cell intensity-1">HS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Section: Detailed Analytics -->
+    <div class="grid cols-2">
+      <!-- Service Health -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Service Health Status</div>
+            <div class="card-subtitle">Component Metrics & Performance</div>
+          </div>
+          <div class="card-action">📊</div>
+        </div>
+        <div style="margin-top: 1rem;">
+          <div class="service-item">
+            <div class="service-info">
+              <div class="service-dot"></div>
+              <div>
+                <div class="service-name">Dashboard UI</div>
+                <div class="service-status">React • 4 components</div>
+              </div>
+            </div>
+            <div class="service-metric">
+              <div class="service-value">98.2%</div>
+              <div class="service-sublabel">Uptime</div>
+            </div>
+          </div>
+
+          <div class="service-item">
+            <div class="service-info">
+              <div class="service-dot" style="background: #10b981;"></div>
+              <div>
+                <div class="service-name">API Server</div>
+                <div class="service-status">Node.js • 6 endpoints</div>
+              </div>
+            </div>
+            <div class="service-metric">
+              <div class="service-value">245ms</div>
+              <div class="service-sublabel">Latency p95</div>
+            </div>
+          </div>
+
+          <div class="service-item">
+            <div class="service-info">
+              <div class="service-dot" style="background: #f59e0b;"></div>
+              <div>
+                <div class="service-name">Neo Core</div>
+                <div class="service-status">Python • Conflict detection</div>
+              </div>
+            </div>
+            <div class="service-metric">
+              <div class="service-value">0.68</div>
+              <div class="service-sublabel">Entropy</div>
+            </div>
+          </div>
+
+          <div class="service-item">
+            <div class="service-info">
+              <div class="service-dot" style="background: #10b981;"></div>
+              <div>
+                <div class="service-name">Redis Cache</div>
+                <div class="service-status">In-memory store • 6 patterns</div>
+              </div>
+            </div>
+            <div class="service-metric">
+              <div class="service-value">2.3ms</div>
+              <div class="service-sublabel">Hit rate 94%</div>
+            </div>
+          </div>
+
+          <div class="service-item">
+            <div class="service-info">
+              <div class="service-dot" style="background: #10b981;"></div>
+              <div>
+                <div class="service-name">Activity Logger</div>
+                <div class="service-status">File-based • Real-time sync</div>
+              </div>
+            </div>
+            <div class="service-metric">
+              <div class="service-value">8</div>
+              <div class="service-sublabel">Entries/min</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- High Risk Files -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Critical Path Files</div>
+            <div class="card-subtitle">Requiring Coordination</div>
+          </div>
+          <div class="card-action">⚠️</div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Risk</th>
+                <th>Devs</th>
+                <th>Changes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>core/conflict_detection.py</td>
+                <td><span class="status-dot high"></span>Critical</td>
+                <td>2</td>
+                <td><span class="badge negative">4</span></td>
+              </tr>
+              <tr>
+                <td>dashboard/ui/src/Dashboard.jsx</td>
+                <td><span class="status-dot high"></span>Critical</td>
+                <td>3</td>
+                <td><span class="badge negative">6</span></td>
+              </tr>
+              <tr>
+                <td>dashboard/api/services/neoClient.js</td>
+                <td><span class="status-dot high"></span>Critical</td>
+                <td>1</td>
+                <td><span class="badge negative">3</span></td>
+              </tr>
+              <tr>
+                <td>core/analysis/entropy.py</td>
+                <td><span class="status-dot medium"></span>High</td>
+                <td>1</td>
+                <td><span class="badge">2</span></td>
+              </tr>
+              <tr>
+                <td>dashboard/api/services/aggregator.js</td>
+                <td><span class="status-dot medium"></span>High</td>
+                <td>2</td>
+                <td><span class="badge">1</span></td>
+              </tr>
+              <tr>
+                <td>dashboard/api/services/cacheService.js</td>
+                <td><span class="status-dot low"></span>Medium</td>
+                <td>2</td>
+                <td><span class="badge positive">0</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coupling Trend Charts -->
+    <div class="grid cols-3">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Core-to-API Coupling</div>
+            <div class="card-subtitle">Last 7 days trend</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart1"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Entropy Trajectory</div>
+            <div class="card-subtitle">90-day window</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart2"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Conflict Prevention</div>
+            <div class="card-subtitle">Detected & Prevented</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart3"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Service Network
+    function drawNetwork() {
+      const nodes = [
+        { id: 'dashboard', label: 'Dashboard', x: 200, y: 150, size: 20 },
+        { id: 'api', label: 'API', x: 450, y: 150, size: 22 },
+        { id: 'core', label: 'Core', x: 700, y: 150, size: 25 },
+        { id: 'cache', label: 'Cache', x: 350, y: 280, size: 18 },
+        { id: 'activity', label: 'Activity', x: 550, y: 280, size: 19 }
+      ];
+
+      const links = [
+        { source: 'dashboard', target: 'api', value: 0.85 },
+        { source: 'api', target: 'core', value: 0.92 },
+        { source: 'api', target: 'cache', value: 0.78 },
+        { source: 'core', target: 'activity', value: 0.88 },
+        { source: 'dashboard', target: 'cache', value: 0.65 }
+      ];
+
+      const simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(150))
+        .force('charge', d3.forceManyBody().strength(-400))
+        .force('center', d3.forceCenter(450, 150));
+
+      const svg = d3.select('#network-graph');
+      const width = svg.style('width').replace('px', '');
+      const height = svg.style('height').replace('px', '');
+
+      // Links
+      const linkElements = svg.selectAll('line')
+        .data(links)
+        .enter()
+        .append('line')
+        .attr('stroke', d => {
+          if (d.value > 0.85) return 'rgba(239, 68, 68, 0.5)';
+          if (d.value > 0.75) return 'rgba(245, 158, 11, 0.5)';
+          return 'rgba(16, 185, 129, 0.5)';
+        })
+        .attr('stroke-width', d => d.value * 3);
+
+      // Nodes
+      const nodeElements = svg.selectAll('circle')
+        .data(nodes)
+        .enter()
+        .append('circle')
+        .attr('r', d => d.size)
+        .attr('fill', 'url(#gradient)')
+        .attr('opacity', 0.9);
+
+      svg.append('defs').append('linearGradient')
+        .attr('id', 'gradient')
+        .attr('x1', '0%').attr('y1', '0%')
+        .attr('x2', '100%').attr('y2', '100%')
+        .selectAll('stop')
+        .data(['#00d4ff', '#0099cc'])
+        .enter().append('stop')
+        .attr('offset', (d, i) => i * 100 + '%')
+        .attr('stop-color', d => d);
+
+      // Labels
+      const labels = svg.selectAll('text')
+        .data(nodes)
+        .enter()
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.3em')
+        .attr('font-size', '12px')
+        .attr('font-weight', '600')
+        .text(d => d.label);
+
+      simulation.on('tick', () => {
+        linkElements
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+
+        nodeElements
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y);
+
+        labels
+          .attr('x', d => d.x)
+          .attr('y', d => d.y);
+      });
+    }
+
+    // Chart 1: Core-to-API Coupling
+    const ctx1 = document.getElementById('chart1').getContext('2d');
+    new Chart(ctx1, {
+      type: 'line',
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+          label: 'Coupling Strength',
+          data: [0.89, 0.91, 0.88, 0.92, 0.90, 0.87, 0.85],
+          borderColor: '#00d4ff',
+          backgroundColor: 'rgba(0, 212, 255, 0.1)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointBackgroundColor: '#00d4ff',
+          pointRadius: 4,
+          pointBorderColor: 'rgba(0, 212, 255, 0.5)',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 1, ticks: { color: '#a5b4fc', font: { size: 10 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+          x: { ticks: { color: '#a5b4fc', font: { size: 10 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+        }
+      }
+    });
+
+    // Chart 2: Entropy Trajectory
+    const ctx2 = document.getElementById('chart2').getContext('2d');
+    new Chart(ctx2, {
+      type: 'line',
+      data: {
+        labels: Array.from({length: 30}, (_, i) => `Day ${i + 1}`),
+        datasets: [{
+          label: 'Entropy',
+          data: [0.45, 0.46, 0.48, 0.50, 0.52, 0.54, 0.55, 0.56, 0.58, 0.60, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67, 0.68, 0.69, 0.68, 0.67, 0.68, 0.69, 0.68, 0.67, 0.68, 0.67, 0.68, 0.69, 0.68, 0.68],
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 0,
+          spanGaps: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 1, ticks: { color: '#a5b4fc', font: { size: 10 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+          x: { ticks: { color: '#a5b4fc', font: { size: 10 }, maxRotation: 0, maxTicksLimit: 5 }, grid: { display: false } }
+        }
+      }
+    });
+
+    // Chart 3: Conflict Prevention
+    const ctx3 = document.getElementById('chart3').getContext('2d');
+    new Chart(ctx3, {
+      type: 'bar',
+      data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+          label: 'Prevented',
+          data: [4, 6, 3, 8, 5, 2, 7],
+          backgroundColor: 'rgba(16, 185, 129, 0.6)',
+          borderColor: '#10b981',
+          borderWidth: 1
+        }, {
+          label: 'Detected',
+          data: [2, 3, 2, 4, 3, 1, 3],
+          backgroundColor: 'rgba(0, 212, 255, 0.6)',
+          borderColor: '#00d4ff',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#a5b4fc', font: { size: 11 } } } },
+        scales: {
+          y: { ticks: { color: '#a5b4fc', font: { size: 10 } }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+          x: { ticks: { color: '#a5b4fc', font: { size: 10 } }, grid: { display: false } }
+        }
+      }
+    });
+
+    drawNetwork();
+  </script>
+</body>
+</html>
