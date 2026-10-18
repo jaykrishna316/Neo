@@ -19,7 +19,6 @@ from core.risk_classifier import classify_risk, RiskLevel
 from core.freshness import check_freshness, delta_since_base
 from core.impact_alerts import ImpactAlertManager
 from core.semantic_conflict_detector import SemanticAnalyzer
-from core.cross_file_impact import CrossFileImpactAnalyzer
 
 
 class CompleteNeoMonitor:
