@@ -10,11 +10,17 @@ Enhanced with support for:
 
 import json
 import os
+import threading
 import time
 from pathlib import Path
 from dataclasses import dataclass, asdict
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime, timedelta
+
+try:
+    import fcntl  # POSIX only; cross-process locking is skipped elsewhere
+except ImportError:  # pragma: no cover
+    fcntl = None
 
 # Multitenancy configuration
 MULTITENANCY_ENABLED = os.getenv("NEO_MULTITENANCY", "false").lower() == "true"
@@ -124,6 +130,84 @@ def ensure_log_exists(tenant_id: Optional[str] = None) -> Path:
     return log_file
 
 
+class _GroupCommitWriter:
+    """Coalesces concurrent appends to activity log files into batched writes.
+
+    When several threads log at once, the first one to arrive becomes the
+    leader: it takes every line queued so far, appends them to each file in a
+    single locked write, and wakes the others. Every caller still returns only
+    after its own line is on disk, so a write is visible to readers exactly as
+    soon as it was before batching existed. Batches are ordered by arrival, so
+    lines land in the file in the order they were submitted.
+    """
+
+    def __init__(self) -> None:
+        self._cond = threading.Condition()
+        self._pending: List[Tuple[int, Path, str]] = []
+        self._next_seq = 0
+        self._flushed_seq = -1  # highest seq durably written so far
+        self._failed: Dict[int, BaseException] = {}
+        self._flushing = False
+
+    def append(self, log_file: Path, line: str) -> None:
+        with self._cond:
+            seq = self._next_seq
+            self._next_seq += 1
+            self._pending.append((seq, log_file, line))
+
+            while self._flushed_seq < seq and seq not in self._failed:
+                if self._flushing:
+                    self._cond.wait()
+                else:
+                    self._flush_pending_locked()
+
+            error = self._failed.pop(seq, None)
+        if error is not None:
+            raise error
+
+    def _flush_pending_locked(self) -> None:
+        # Caller holds self._cond. Release it during I/O so new writers can queue.
+        batch, self._pending = self._pending, []
+        self._flushing = True
+        self._cond.release()
+        error: Optional[BaseException] = None
+        try:
+            _write_batch(batch)
+        except BaseException as exc:  # propagated to each caller in the batch
+            error = exc
+        finally:
+            self._cond.acquire()
+            self._flushing = False
+            if error is None:
+                self._flushed_seq = batch[-1][0]
+            else:
+                for seq, _, _ in batch:
+                    self._failed[seq] = error
+            self._cond.notify_all()
+
+
+def _write_batch(batch: List[Tuple[int, Path, str]]) -> None:
+    """Write queued lines, grouped per file, with one open/lock/write per file."""
+    by_file: Dict[Path, List[str]] = {}
+    for _, log_file, line in batch:
+        by_file.setdefault(log_file, []).append(line)
+
+    for log_file, lines in by_file.items():
+        with open(log_file, "a") as f:
+            if fcntl is not None:
+                # Serialize against other processes (e.g. other developers' tools)
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                f.write("".join(lines))
+                f.flush()
+            finally:
+                if fcntl is not None:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+
+_writer = _GroupCommitWriter()
+
+
 def log_activity(
     developer_id: str,
     file_path: str,
@@ -196,8 +280,7 @@ def log_activity(
         waiting_for=waiting_for,
     )
 
-    with open(log_file, "a") as f:
-        f.write(json.dumps(entry.to_dict()) + "\n")
+    _writer.append(log_file, json.dumps(entry.to_dict()) + "\n")
     return entry
 
 
