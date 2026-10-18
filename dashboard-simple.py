@@ -17,6 +17,14 @@ from core.activity_log import read_log, get_active_entries
 from core.risk_classifier import classify_risk
 from core.freshness import check_freshness
 from core.impact_alerts import ImpactAlertManager
+from core.lock_management import get_lock_manager
+from core.team_coordination import get_coordinator
+from core.service_coupling import get_analyzer
+from core.code_quality import get_quality_analyzer
+from core.error_tracking import get_error_tracker
+from core.deployment_tracking import get_deployment_tracker
+from core.timeline import get_timeline_tracker
+from core.audit_compliance import get_compliance_tracker
 
 class DashboardHandler(BaseHTTPRequestHandler):
     """HTTP handler for Neo dashboard"""
@@ -70,6 +78,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
         activities = []
         metrics = []
 
+        # Collect metrics from all modules
+        lock_metrics = get_lock_manager().get_lock_metrics()
+        team_metrics = get_coordinator().get_team_metrics(active or [])
+        service_metrics = get_analyzer().get_service_metrics()
+        error_metrics = get_error_tracker().get_error_metrics()
+        deployment_metrics = get_deployment_tracker().get_deployment_metrics()
+        timeline_metrics = get_timeline_tracker().get_timeline_metrics()
+        audit_metrics = get_compliance_tracker().get_audit_metrics()
+
         for entry in active:
             dev_id = entry.get('developer_id', 'unknown')
             file_path = entry.get('file_path', 'unknown')
@@ -119,6 +136,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 'intent': intent[:80],
                 'risk': risk,
                 'freshness': freshness,
+                'lock_status': 'locked' if file_path in get_lock_manager().locks else 'available',
                 'time': DashboardHandler.format_time(timestamp)
             })
 
@@ -138,7 +156,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
             'impact_count': impact_count,
             'developers': list(developers.values()),
             'activities': activities[:10],
-            'metrics': metrics[:20]
+            'metrics': metrics[:20],
+            'locks': lock_metrics,
+            'team': team_metrics,
+            'services': service_metrics,
+            'errors': error_metrics,
+            'deployments': deployment_metrics,
+            'timeline': timeline_metrics,
+            'audit': audit_metrics
         }
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -246,7 +271,63 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
 
         <div class="card">
-            <h2>📋 Neo Data Points Coverage</h2>
+            <h2>🔒 Lock Management</h2>
+            <table>
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody id="locks-table"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>👥 Team Coordination</h2>
+            <table>
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody id="team-table"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>🏗️ Service Coupling</h2>
+            <table>
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody id="services-table"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>🐛 Error Tracking</h2>
+            <table>
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody id="errors-table"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>🚀 Deployment Metrics</h2>
+            <table>
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody id="deployment-table"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>⏱️ Timeline Metrics</h2>
+            <table>
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody id="timeline-table"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>✅ Audit & Compliance</h2>
+            <table>
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                <tbody id="audit-table"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>📋 Neo Data Points Coverage (127 KPIs)</h2>
             <table>
                 <thead><tr><th style="width: 200px;">Category</th><th>Data Points</th><th style="width: 80px;">Status</th></tr></thead>
                 <tbody>
@@ -256,8 +337,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <tr><td>Impact Analysis</td><td>has_impacts, alert_count, upstream_sources, impact_reasons</td><td class="status-ok">✅ Ready</td></tr>
                     <tr><td>Semantic Analysis</td><td>symbol_count, symbols, dependencies, dependency_types</td><td class="status-ok">✅ Ready</td></tr>
                     <tr><td>Agent Execution</td><td>model, tokens_used, confidence, execution_time</td><td class="status-ok">✅ Ready</td></tr>
-                    <tr><td>Lock Management</td><td>state, holder, scope, queue_position, expires_in</td><td class="status-warn">⚠️ Planned</td></tr>
-                    <tr><td>Service Coupling</td><td>coupling_score, tight_coupling_pairs</td><td class="status-warn">⚠️ Planned</td></tr>
+                    <tr><td>Lock Management</td><td>state, holder, scope, queue_position, expires_in</td><td class="status-ok">✅ Ready</td></tr>
+                    <tr><td>Team Coordination</td><td>concurrent_developers, collaboration_frequency, conflict_rate</td><td class="status-ok">✅ Ready</td></tr>
+                    <tr><td>Service Coupling</td><td>coupling_score, tight_coupling_pairs, circular_dependencies</td><td class="status-ok">✅ Ready</td></tr>
+                    <tr><td>Code Quality</td><td>cyclomatic_complexity, code_smells, test_coverage</td><td class="status-ok">✅ Ready</td></tr>
+                    <tr><td>Error Tracking</td><td>error_count, test_failures, exception_coverage</td><td class="status-ok">✅ Ready</td></tr>
+                    <tr><td>Deployment</td><td>release_version, deployment_readiness, rollback_risk</td><td class="status-ok">✅ Ready</td></tr>
+                    <tr><td>Timeline</td><td>activity_start_time, activity_duration, work_phase</td><td class="status-ok">✅ Ready</td></tr>
+                    <tr><td>Audit & Compliance</td><td>code_review_status, security_scan_result, compliance_passed</td><td class="status-ok">✅ Ready</td></tr>
                 </tbody>
             </table>
         </div>
@@ -314,6 +401,75 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     </tr>
                 `).join('') || '<tr><td colspan="6" style="text-align: center; color: #6b7280;">No data yet</td></tr>';
                 document.getElementById('metrics-table').innerHTML = tableHtml;
+
+                // Lock metrics
+                const locksHtml = data.locks ? `
+                    <tr><td>Active Locks</td><td>${data.locks.active_locks || 0}</td></tr>
+                    <tr><td>Waiters</td><td>${data.locks.total_waiters || 0}</td></tr>
+                    <tr><td>Queued Files</td><td>${data.locks.queued_files || 0}</td></tr>
+                    <tr><td>Avg Wait Time</td><td>${(data.locks.average_wait_time || 0).toFixed(1)}s</td></tr>
+                    <tr><td>Max Queue Length</td><td>${data.locks.max_queue_length || 0}</td></tr>
+                ` : '<tr><td colspan="2">No data</td></tr>';
+                document.getElementById('locks-table').innerHTML = locksHtml;
+
+                // Team metrics
+                const teamHtml = data.team ? `
+                    <tr><td>Concurrent Developers</td><td>${data.team.concurrent_developers || 0}</td></tr>
+                    <tr><td>Collaboration Freq</td><td>${(data.team.collaboration_frequency || 0).toFixed(2)}</td></tr>
+                    <tr><td>Conflict Rate</td><td>${(data.team.conflict_rate || 0).toFixed(1)}%</td></tr>
+                    <tr><td>Avg Resolution Time</td><td>${(data.team.average_resolution_time || 0).toFixed(1)}s</td></tr>
+                    <tr><td>Coordination Score</td><td>${(data.team.team_coordination_score || 0).toFixed(0)}/100</td></tr>
+                ` : '<tr><td colspan="2">No data</td></tr>';
+                document.getElementById('team-table').innerHTML = teamHtml;
+
+                // Service metrics
+                const servicesHtml = data.services ? `
+                    <tr><td>Service Count</td><td>${data.services.service_count || 0}</td></tr>
+                    <tr><td>Coupling Score</td><td>${(data.services.overall_coupling_score || 0).toFixed(2)}</td></tr>
+                    <tr><td>Tightly Coupled</td><td>${data.services.tightly_coupled_pairs || 0}</td></tr>
+                    <tr><td>Circular Deps</td><td>${data.services.circular_dependencies || 0}</td></tr>
+                ` : '<tr><td colspan="2">No data</td></tr>';
+                document.getElementById('services-table').innerHTML = servicesHtml;
+
+                // Error metrics
+                const errorsHtml = data.errors ? `
+                    <tr><td>Total Errors</td><td>${data.errors.error_count || 0}</td></tr>
+                    <tr><td>Test Failures</td><td>${data.errors.test_failures || 0}</td></tr>
+                    <tr><td>Failure Rate</td><td>${(data.errors.test_failure_rate || 0).toFixed(1)}%</td></tr>
+                    <tr><td>Flaky Tests</td><td>${data.errors.flaky_tests || 0}</td></tr>
+                    <tr><td>Exceptions</td><td>${data.errors.unhandled_exceptions || 0}</td></tr>
+                ` : '<tr><td colspan="2">No data</td></tr>';
+                document.getElementById('errors-table').innerHTML = errorsHtml;
+
+                // Deployment metrics
+                const deploymentHtml = data.deployments ? `
+                    <tr><td>Total Releases</td><td>${data.deployments.release_count || 0}</td></tr>
+                    <tr><td>Completed</td><td>${data.deployments.completed_deployments || 0}</td></tr>
+                    <tr><td>Checklist Items</td><td>${data.deployments.checklist_items_total || 0}</td></tr>
+                    <tr><td>Monitoring Alerts</td><td>${data.deployments.monitoring_alerts || 0}</td></tr>
+                    <tr><td>Avg Deploy Time</td><td>${(data.deployments.avg_deployment_time || 0).toFixed(0)}s</td></tr>
+                ` : '<tr><td colspan="2">No data</td></tr>';
+                document.getElementById('deployment-table').innerHTML = deploymentHtml;
+
+                // Timeline metrics
+                const timelineHtml = data.timeline ? `
+                    <tr><td>Total Activities</td><td>${data.timeline.total_activities || 0}</td></tr>
+                    <tr><td>Completed</td><td>${data.timeline.completed_activities || 0}</td></tr>
+                    <tr><td>Active</td><td>${data.timeline.active_activities || 0}</td></tr>
+                    <tr><td>Total Time</td><td>${((data.timeline.total_time_spent || 0) / 3600).toFixed(1)}h</td></tr>
+                    <tr><td>Current Phase</td><td>${data.timeline.current_phase || 'unknown'}</td></tr>
+                ` : '<tr><td colspan="2">No data</td></tr>';
+                document.getElementById('timeline-table').innerHTML = timelineHtml;
+
+                // Audit metrics
+                const auditHtml = data.audit ? `
+                    <tr><td>Reviews</td><td>${data.audit.review_count || 0}</td></tr>
+                    <tr><td>Comments</td><td>${data.audit.review_comments || 0}</td></tr>
+                    <tr><td>Security Scans</td><td>${data.audit.security_scan_count || 0}</td></tr>
+                    <tr><td>Compliance Checks</td><td>${data.audit.compliance_checks || 0}</td></tr>
+                    <tr><td>Violations</td><td>${data.audit.violations || 0}</td></tr>
+                ` : '<tr><td colspan="2">No data</td></tr>';
+                document.getElementById('audit-table').innerHTML = auditHtml;
             } catch (e) {
                 console.error('Update failed:', e);
             }
