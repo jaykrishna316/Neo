@@ -8,11 +8,13 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 class Aggregator {
-  constructor(neoClient, cacheService, logger) {
+  constructor(neoClient, cacheService, conflictCacheManager, logger) {
     this.neo = neoClient;
     this.cache = cacheService;
+    this.conflictCache = conflictCacheManager;
     this.logger = logger;
     this.activityLogPath = path.join(__dirname, '../../.devsync/activity-log.json');
+    this.lastActivityCheck = Date.now();
   }
 
   async readActivityLog() {
@@ -153,13 +155,20 @@ class Aggregator {
       // Check cache first
       let overview = await this.cache.get('dashboard', 'overview');
       if (overview) {
+        overview.fromCache = true;
         return overview;
       }
 
-      // Fetch fresh data
+      // Fetch fresh data with conflict caching
       const [activity, conflicts, entropy, status] = await Promise.all([
         this.getActivityFeed(10),
-        this.neo.checkConflicts('dashboard', '*', 'overview'),
+        this.conflictCache.getOrCheckConflict(
+          this.neo,
+          'dashboard',
+          '*',
+          'overview',
+          'all'
+        ),
         this.neo.analyzeEntropyCoupling(),
         this.neo.getStatus()
       ]);
@@ -180,7 +189,8 @@ class Aggregator {
           is_meaningful: entropy.is_meaningful,
           data_age_days: entropy.data_age_days,
           issue_count: (entropy.architectural_issues || []).length
-        }
+        },
+        fromCache: false
       };
 
       // Cache for 1 minute
@@ -193,7 +203,8 @@ class Aggregator {
         status: { status: 'ERROR' },
         activity_summary: { total_entries: 0, recent_entries: 0, entries: [] },
         conflict_summary: { risk_level: 'UNKNOWN', message: 'Error fetching data' },
-        entropy_summary: { is_meaningful: false, data_age_days: null, issue_count: 0 }
+        entropy_summary: { is_meaningful: false, data_age_days: null, issue_count: 0 },
+        fromCache: false
       };
     }
   }
@@ -229,14 +240,26 @@ class Aggregator {
       const activity = await this.readActivityLog();
       const entries = activity.entries || [];
 
-      // Build heatmap: file -> developers -> conflict risk
+      // Prepare batch conflict checks
+      const conflictEntries = entries.map(entry => ({
+        agentId: entry.agent_id,
+        filePath: entry.file_path,
+        intent: entry.intent || 'modification',
+        region: 'all'
+      }));
+
+      // Use batch conflict checking with caching
+      const conflictResults = await this.conflictCache.getOrCheckMultipleConflicts(
+        this.neo,
+        conflictEntries
+      );
+
+      // Build heatmap from results
       const heatmap = new Map();
-
-      for (const entry of entries) {
+      conflictResults.forEach((result, idx) => {
+        const entry = entries[idx];
         const file = entry.file_path;
-
-        // Get conflict check for this file
-        const conflict = await this.neo.checkConflicts(entry.agent_id, file, entry.intent);
+        const conflict = result.conflict;
 
         if (!heatmap.has(file)) {
           heatmap.set(file, {
@@ -245,7 +268,8 @@ class Aggregator {
             risk_level: 'LOW',
             developers: new Set(),
             last_activity: entry.timestamp,
-            conflict_details: []
+            conflict_details: [],
+            cache_source: result.source
           });
         }
 
@@ -254,7 +278,8 @@ class Aggregator {
         entry_data.conflict_details.push({
           agent_id: entry.agent_id,
           risk_level: conflict.risk_level,
-          timestamp: entry.timestamp
+          timestamp: entry.timestamp,
+          cache_source: result.source
         });
 
         // Update overall risk level to highest
@@ -263,7 +288,7 @@ class Aggregator {
         } else if (conflict.risk_level === 'MEDIUM' && entry_data.risk_level !== 'HIGH') {
           entry_data.risk_level = 'MEDIUM';
         }
-      }
+      });
 
       const heatmapArray = Array.from(heatmap.values()).map(h => ({
         ...h,
@@ -272,7 +297,8 @@ class Aggregator {
 
       return {
         heatmap: heatmapArray,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        cacheStats: this.conflictCache.getAccessStats()
       };
     } catch (err) {
       this.logger.error('Conflict heatmap fetch error:', err);
@@ -291,6 +317,26 @@ class Aggregator {
     } catch (err) {
       this.logger.error('Metrics fetch error:', err);
       return { metric: metricName, data_points: [], timestamp: new Date().toISOString() };
+    }
+  }
+
+  async handleActivityChange(activityEntry) {
+    try {
+      // Invalidate caches based on the activity change
+      await this.conflictCache.invalidateBasedOnActivityChange(activityEntry);
+
+      // Invalidate dashboard overview cache
+      await this.cache.invalidate('dashboard', 'overview');
+
+      // Invalidate service graph cache
+      await this.cache.invalidatePattern('graph:services');
+
+      // Track this activity for monitoring
+      await this.cache.trackActivityForInvalidation(activityEntry);
+
+      this.logger.info(`Handled activity change for file: ${activityEntry.file_path}`);
+    } catch (err) {
+      this.logger.error('Activity change handling error:', err);
     }
   }
 
@@ -326,5 +372,5 @@ class Aggregator {
   }
 }
 
-module.exports = (neoClient, cacheService, logger) =>
-  new Aggregator(neoClient, cacheService, logger);
+module.exports = (neoClient, cacheService, conflictCacheManager, logger) =>
+  new Aggregator(neoClient, cacheService, conflictCacheManager, logger);

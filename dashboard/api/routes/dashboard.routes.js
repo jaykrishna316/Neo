@@ -68,5 +68,74 @@ module.exports = (aggregator, logger) => {
     }
   });
 
+  // GET /api/dashboard/cache/stats
+  router.get('/cache/stats', async (req, res) => {
+    try {
+      const stats = await aggregator.cache.getStats();
+      const conflictStats = aggregator.conflictCache.getAccessStats();
+      res.json({
+        success: true,
+        data: {
+          redis: stats,
+          conflicts: conflictStats,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (err) {
+      logger.error('Cache stats error:', err);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch cache stats',
+        message: err.message
+      });
+    }
+  });
+
+  // POST /api/dashboard/cache/invalidate/:prefix
+  router.post('/cache/invalidate/:prefix', async (req, res) => {
+    try {
+      const { prefix } = req.params;
+      const count = await aggregator.cache.invalidateByPattern(`${prefix}:*`);
+      res.json({
+        success: true,
+        data: {
+          invalidated: count,
+          prefix,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (err) {
+      logger.error('Cache invalidation error:', err);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to invalidate cache',
+        message: err.message
+      });
+    }
+  });
+
+  // POST /api/dashboard/cache/clear
+  router.post('/cache/clear', async (req, res) => {
+    try {
+      const count = await aggregator.cache.invalidateByPattern('neo:*');
+      aggregator.conflictCache.resetAccessPatterns();
+      res.json({
+        success: true,
+        data: {
+          invalidated: count,
+          message: 'All caches cleared',
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (err) {
+      logger.error('Cache clear error:', err);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to clear cache',
+        message: err.message
+      });
+    }
+  });
+
   return router;
 };

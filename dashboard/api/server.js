@@ -60,6 +60,7 @@ const logger = {
 // Import services
 const NeoClient = require('./services/neoClient');
 const cacheService = require('./services/cacheService')(redisClient, logger);
+const conflictCacheManager = require('./services/conflictCacheManager')(cacheService, logger);
 
 // Initialize Neo client
 let neoClient;
@@ -75,7 +76,12 @@ const initializeNeoClient = async () => {
   }
 };
 
-const aggregator = require('./services/aggregator')(neoClient, cacheService, logger);
+const aggregator = require('./services/aggregator')(
+  neoClient,
+  cacheService,
+  conflictCacheManager,
+  logger
+);
 
 // Import routes
 const dashboardRoutes = require('./routes/dashboard.routes');
@@ -139,6 +145,37 @@ io.on('connection', (socket) => {
   });
 });
 
+// Activity monitoring setup
+const setupActivityMonitoring = async () => {
+  const fs = require('fs').promises;
+  const pathModule = require('path');
+  let lastActivityLogMTime = 0;
+
+  const checkActivityLog = async () => {
+    try {
+      const logPath = pathModule.join(__dirname, '../../.devsync/activity-log.json');
+      const stats = await fs.stat(logPath).catch(() => null);
+
+      if (stats && stats.mtime.getTime() > lastActivityLogMTime) {
+        lastActivityLogMTime = stats.mtime.getTime();
+        const data = await fs.readFile(logPath, 'utf8');
+        const activityLog = JSON.parse(data);
+
+        if (activityLog.entries && activityLog.entries.length > 0) {
+          const latestEntry = activityLog.entries[activityLog.entries.length - 1];
+          await aggregator.handleActivityChange(latestEntry);
+        }
+      }
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        logger.debug('Activity monitoring check error:', err.message);
+      }
+    }
+  };
+
+  setInterval(checkActivityLog, 5000);
+};
+
 // Redis connection and startup
 (async () => {
   try {
@@ -148,6 +185,9 @@ io.on('connection', (socket) => {
 
     // Initialize Neo client
     await initializeNeoClient();
+
+    // Setup activity monitoring
+    await setupActivityMonitoring();
 
     // Start server
     server.listen(PORT, () => {

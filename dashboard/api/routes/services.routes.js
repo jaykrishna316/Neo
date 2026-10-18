@@ -33,16 +33,26 @@ module.exports = (aggregator, logger) => {
     try {
       const { service } = req.params;
       const { window = 90 } = req.query;
+      const windowInt = parseInt(window);
 
-      // For demo, return coupling trends
-      const trends = await aggregator.neo.getCouplingTrends(service, parseInt(window));
+      // Try cache first
+      const cacheKey = `trends:${service}:${windowInt}`;
+      let trends = await aggregator.cache.get('trends', cacheKey);
+
+      if (!trends) {
+        // Fetch from Neo
+        trends = await aggregator.neo.getCouplingTrends(service, windowInt);
+        // Cache for 5 minutes
+        await aggregator.cache.set('trends', cacheKey, trends, 300);
+      }
 
       res.json({
         success: true,
         data: {
           service,
-          window: parseInt(window),
-          ...trends
+          window: windowInt,
+          ...trends,
+          fromCache: !!trends
         }
       });
     } catch (err) {
@@ -61,18 +71,28 @@ module.exports = (aggregator, logger) => {
       const { service } = req.params;
       const { change_type = 'modification' } = req.query;
 
-      const radius = await aggregator.neo.calculateBlastRadius(
-        'dashboard',
-        service,
-        change_type
-      );
+      // Try cache first
+      const cacheKey = `radius:${service}:${change_type}`;
+      let radius = await aggregator.cache.get('blast_radius', cacheKey);
+
+      if (!radius) {
+        // Fetch from Neo
+        radius = await aggregator.neo.calculateBlastRadius(
+          'dashboard',
+          service,
+          change_type
+        );
+        // Cache for 10 minutes
+        await aggregator.cache.set('blast_radius', cacheKey, radius, 600);
+      }
 
       res.json({
         success: true,
         data: {
           service,
           change_type,
-          ...radius
+          ...radius,
+          fromCache: !!radius
         }
       });
     } catch (err) {
@@ -89,14 +109,25 @@ module.exports = (aggregator, logger) => {
   router.get('/entropy/analysis', async (req, res) => {
     try {
       const { window = 90 } = req.query;
+      const windowInt = parseInt(window);
 
-      const analysis = await aggregator.neo.analyzeEntropyCoupling(parseInt(window));
+      // Try cache first
+      const cacheKey = `analysis:${windowInt}`;
+      let analysis = await aggregator.cache.get('entropy', cacheKey);
+
+      if (!analysis) {
+        // Fetch from Neo
+        analysis = await aggregator.neo.analyzeEntropyCoupling(windowInt);
+        // Cache for 1 hour
+        await aggregator.cache.set('entropy', cacheKey, analysis, 3600);
+      }
 
       res.json({
         success: true,
         data: {
-          window: parseInt(window),
-          ...analysis
+          window: windowInt,
+          ...analysis,
+          fromCache: !!analysis
         }
       });
     } catch (err) {

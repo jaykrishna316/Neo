@@ -69,6 +69,21 @@ class CacheService {
     }
   }
 
+  async invalidateByPattern(pattern) {
+    try {
+      const fullPattern = `${this.namespace}:${pattern}`;
+      const keys = await this.redis.keys(fullPattern);
+      if (keys.length > 0) {
+        await this.redis.del(keys);
+        this.logger.debug(`Cache invalidated ${keys.length} keys matching: ${fullPattern}`);
+      }
+      return keys.length;
+    } catch (err) {
+      this.logger.error('Cache pattern invalidate error:', err);
+      return 0;
+    }
+  }
+
   async getOrSet(prefix, identifier, fetchFn, ttl = TTL.MEDIUM) {
     let cached = await this.get(prefix, identifier);
     if (cached) {
@@ -173,6 +188,71 @@ class CacheService {
     } catch (err) {
       this.logger.error('Cache stats error:', err);
       return { namespace: this.namespace, total_keys: 0 };
+    }
+  }
+
+  // Activity tracking for invalidation
+  async trackActivityForInvalidation(activityEntry) {
+    try {
+      const key = this.key('activity_track', `${activityEntry.file_path}|${Date.now()}`);
+      await this.redis.setEx(key, 3600, JSON.stringify(activityEntry));
+      this.logger.debug(`Tracked activity for invalidation: ${activityEntry.file_path}`);
+    } catch (err) {
+      this.logger.error('Activity tracking error:', err);
+    }
+  }
+
+  // Get recently tracked activities
+  async getRecentActivities(minutesBack = 5) {
+    try {
+      const pattern = this.key('activity_track', '*');
+      const keys = await this.redis.keys(pattern);
+      const activities = [];
+
+      for (const key of keys) {
+        const data = await this.redis.get(key);
+        if (data) {
+          activities.push(JSON.parse(data));
+        }
+      }
+
+      return activities;
+    } catch (err) {
+      this.logger.error('Get recent activities error:', err);
+      return [];
+    }
+  }
+
+  // Batch set multiple cache entries
+  async batchSet(entries) {
+    try {
+      const pipeline = this.redis.multi();
+
+      for (const { prefix, identifier, data, ttl = TTL.MEDIUM } of entries) {
+        const cacheKey = this.key(prefix, identifier);
+        pipeline.setEx(cacheKey, ttl, JSON.stringify(data));
+      }
+
+      await pipeline.exec();
+      this.logger.debug(`Batch set ${entries.length} cache entries`);
+    } catch (err) {
+      this.logger.error('Batch set error:', err);
+    }
+  }
+
+  // Batch get multiple cache entries
+  async batchGet(entries) {
+    try {
+      const keys = entries.map(({ prefix, identifier }) => this.key(prefix, identifier));
+      const values = await this.redis.mGet(keys);
+
+      return entries.map((entry, idx) => ({
+        ...entry,
+        data: values[idx] ? JSON.parse(values[idx]) : null
+      }));
+    } catch (err) {
+      this.logger.error('Batch get error:', err);
+      return entries.map(e => ({ ...e, data: null }));
     }
   }
 }
