@@ -19,13 +19,19 @@ class ImpactAlert:
                  changed_by: str,
                  change_summary: str,
                  impact_reason: str,
-                 pr_number: Optional[int] = None):
+                 pr_number: Optional[int] = None,
+                 changed_symbols: Optional[List[str]] = None,
+                 consumed_symbols: Optional[List[str]] = None,
+                 cross_service: bool = False):
         self.source_file = source_file
         self.target_file = target_file
         self.changed_by = changed_by
         self.change_summary = change_summary
         self.impact_reason = impact_reason
         self.pr_number = pr_number
+        self.changed_symbols = changed_symbols or []  # symbols changed in source_file
+        self.consumed_symbols = consumed_symbols or []  # changed symbols target_file uses
+        self.cross_service = cross_service
         self.created_at = datetime.utcnow().isoformat()
         self.resolved_at = None
         self.resolved_by = None
@@ -45,6 +51,9 @@ class ImpactAlert:
             "change_summary": self.change_summary,
             "impact_reason": self.impact_reason,
             "pr_number": self.pr_number,
+            "changed_symbols": self.changed_symbols,
+            "consumed_symbols": self.consumed_symbols,
+            "cross_service": self.cross_service,
             "created_at": self.created_at,
             "resolved_at": self.resolved_at,
             "resolved_by": self.resolved_by,
@@ -66,7 +75,10 @@ class ImpactAlertManager:
                     changed_by: str,
                     change_summary: str,
                     impact_reason: str,
-                    pr_number: Optional[int] = None) -> Dict:
+                    pr_number: Optional[int] = None,
+                    changed_symbols: Optional[List[str]] = None,
+                    consumed_symbols: Optional[List[str]] = None,
+                    cross_service: bool = False) -> Dict:
         """Create a new impact alert for unresolved dependency"""
         alert = ImpactAlert(
             source_file=source_file,
@@ -74,7 +86,10 @@ class ImpactAlertManager:
             changed_by=changed_by,
             change_summary=change_summary,
             impact_reason=impact_reason,
-            pr_number=pr_number
+            pr_number=pr_number,
+            changed_symbols=changed_symbols,
+            consumed_symbols=consumed_symbols,
+            cross_service=cross_service,
         )
 
         # Save alert
@@ -89,6 +104,50 @@ class ImpactAlertManager:
             "alert_id": alert_file.name,
             "created_at": alert.created_at
         }
+
+    def has_open_alert(self, source_file: str, target_file: str) -> bool:
+        """True if an unresolved alert already links source_file to target_file"""
+        for alert_file in self.alerts_dir.glob("alert_*.json"):
+            with open(alert_file) as f:
+                alert_data = json.load(f)
+                if (alert_data.get("source_file") == source_file and
+                    alert_data.get("target_file") == target_file and
+                    alert_data.get("status") == "unresolved"):
+                    return True
+        return False
+
+    def create_alert_if_new(self,
+                            source_file: str,
+                            target_file: str,
+                            changed_by: str,
+                            change_summary: str,
+                            impact_reason: str,
+                            pr_number: Optional[int] = None,
+                            changed_symbols: Optional[List[str]] = None,
+                            consumed_symbols: Optional[List[str]] = None,
+                            cross_service: bool = False) -> Dict:
+        """Create an alert unless one is already open for this source/target pair.
+
+        A repeat change to the same source does not stack a second alert on the
+        consumer. The existing alert keeps its original summary.
+        """
+        if self.has_open_alert(source_file, target_file):
+            return {
+                "status": "duplicate",
+                "target_file": target_file,
+                "source_file": source_file,
+            }
+        return self.create_alert(
+            source_file=source_file,
+            target_file=target_file,
+            changed_by=changed_by,
+            change_summary=change_summary,
+            impact_reason=impact_reason,
+            pr_number=pr_number,
+            changed_symbols=changed_symbols,
+            consumed_symbols=consumed_symbols,
+            cross_service=cross_service,
+        )
 
     def get_alerts_for_file(self, file_path: str) -> List[Dict]:
         """Get all unresolved alerts for a specific file"""
@@ -188,6 +247,10 @@ class ImpactAlertManager:
             summary += f"**Changed by:** {alert['changed_by']}\n"
             summary += f"**Change:** {alert['change_summary']}\n"
             summary += f"**Impact:** {alert['impact_reason']}\n"
+            if alert.get("consumed_symbols"):
+                summary += f"**Uses:** {', '.join(alert['consumed_symbols'])}\n"
+            if alert.get("cross_service"):
+                summary += "**Scope:** crosses a service boundary\n"
             summary += f"**Created:** {alert['created_at']}\n"
             if alert.get("pr_number"):
                 summary += f"**PR:** #{alert['pr_number']}\n"

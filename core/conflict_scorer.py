@@ -25,6 +25,8 @@ def calculate_conflict_score(
     overlap_severity: float = 0.5,  # 0-1, how much code overlaps
     is_git_detected: bool = False,
     active_time_minutes: int = 0,
+    downstream_consumers: int = 0,  # files outside the change that consume it
+    cross_service_consumers: int = 0,  # consumers across a service boundary
 ) -> ConflictScore:
     """
     Calculate numerical conflict impact score (0-100).
@@ -36,6 +38,8 @@ def calculate_conflict_score(
         overlap_severity: How much of the code overlaps (0-1)
         is_git_detected: Whether git detected real function overlap
         active_time_minutes: How long conflict has been active
+        downstream_consumers: Files that import or use the changed symbols
+        cross_service_consumers: Of those, how many cross a service boundary
 
     Returns:
         ConflictScore with detailed breakdown
@@ -103,8 +107,24 @@ def calculate_conflict_score(
 
     factors["velocity_impact"] = velocity_score
 
-    # Calculate total
-    total_score = sum(factors.values())
+    # Factor 7: Blast radius (0-10 points)
+    # Each downstream consumer adds rework, and cross-service consumers add more
+    # because their owners may not be in this conversation at all
+    blast_score = downstream_consumers * 2 + cross_service_consumers * 3
+    factors["blast_radius"] = min(blast_score, 10)
+
+    if cross_service_consumers > 0:
+        warnings.append(
+            f"Change reaches {cross_service_consumers} consumer(s) across a service boundary"
+        )
+    if downstream_consumers > 0:
+        recommendations.append(
+            f"Notify {downstream_consumers} downstream consumer(s) before merging"
+        )
+
+    # Calculate total (capped at 100: the factor maxima above sum to exactly 100
+    # without blast radius, so the cap only matters once that factor is non-zero)
+    total_score = min(sum(factors.values()), 100)
 
     # Determine risk category (aligned with line/function-level detection)
     if total_score < 25:

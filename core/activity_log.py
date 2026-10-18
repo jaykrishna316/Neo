@@ -109,6 +109,8 @@ class ActivityEntry:
     lock_scope: Optional[str] = None       # "file", "function", "region"
     queue_position: Optional[int] = None   # Position in queue if waiting (0=next)
     waiting_for: Optional[str] = None      # developer_id this one is waiting for
+    # Function/class names whose body changed (e.g. "Greeter.greet"), for blast radius
+    changed_symbols: Optional[List[str]] = None
 
     def to_dict(self):
         return asdict(self)
@@ -229,6 +231,7 @@ def log_activity(
     lock_scope: Optional[str] = None,
     queue_position: Optional[int] = None,
     waiting_for: Optional[str] = None,
+    changed_symbols: Optional[List[str]] = None,
 ) -> ActivityEntry:
     """Log a developer's or agent's intent to work on a file (tenant-isolated).
 
@@ -252,6 +255,7 @@ def log_activity(
         lock_scope: Lock scope ("file", "function", "region")
         queue_position: Position in waiting queue (0=next)
         waiting_for: Developer ID this one is waiting for
+        changed_symbols: Function/class names whose body changed in this file
     """
     resolved_tenant = tenant_id or DEFAULT_TENANT_ID
     ensure_tenant_isolation(resolved_tenant)
@@ -278,6 +282,7 @@ def log_activity(
         lock_scope=lock_scope,
         queue_position=queue_position,
         waiting_for=waiting_for,
+        changed_symbols=changed_symbols,
     )
 
     _writer.append(log_file, json.dumps(entry.to_dict()) + "\n")
@@ -399,3 +404,15 @@ def get_entries_by_category(
     """Get entries by intent category (feature/bugfix/refactor/etc)."""
     entries = get_active_entries(expiry_minutes=expiry_minutes)
     return [e for e in entries if e.get("intent_category") == category]
+
+
+def get_changed_symbols(file_path: str, expiry_minutes: int = 30) -> List[str]:
+    """Symbols recently recorded as changed in file_path, across all developers.
+
+    Lets a pre-generation check see that another developer already changed a
+    function they are about to call, before the change reaches git.
+    """
+    names = set()
+    for entry in get_active_entries(file_path=file_path, expiry_minutes=expiry_minutes):
+        names.update(entry.get("changed_symbols") or [])
+    return sorted(names)
