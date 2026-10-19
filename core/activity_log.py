@@ -316,3 +316,203 @@ def get_entries_by_category(
     """Get entries by intent category (feature/bugfix/refactor/etc)."""
     entries = get_active_entries(expiry_minutes=expiry_minutes)
     return [e for e in entries if e.get("intent_category") == category]
+
+
+def validate_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate an activity log entry for required fields and correct types.
+
+    Checks:
+    - developer_id: non-empty string
+    - file_path: non-empty string
+    - timestamp: positive number, not more than 5 minutes in the future
+
+    Args:
+        entry: Dictionary representing an activity log entry
+
+    Returns:
+        Dict with keys:
+            - "status": "valid" or "invalid"
+            - "errors": List of error messages (empty if valid)
+    """
+    errors = []
+
+    if not isinstance(entry, dict):
+        return {
+            "status": "invalid",
+            "errors": ["Entry must be a dictionary"],
+        }
+
+    # Validate developer_id
+    developer_id = entry.get("developer_id")
+    if not developer_id:
+        errors.append("developer_id is required")
+    elif not isinstance(developer_id, str):
+        errors.append("developer_id must be a string")
+    elif not developer_id.strip():
+        errors.append("developer_id cannot be empty or whitespace")
+
+    # Validate file_path
+    file_path = entry.get("file_path")
+    if not file_path:
+        errors.append("file_path is required")
+    elif not isinstance(file_path, str):
+        errors.append("file_path must be a string")
+    elif not file_path.strip():
+        errors.append("file_path cannot be empty or whitespace")
+
+    # Validate timestamp
+    timestamp = entry.get("timestamp")
+    if timestamp is None:
+        errors.append("timestamp is required")
+    elif not isinstance(timestamp, (int, float)):
+        errors.append("timestamp must be a number (int or float)")
+    elif timestamp < 0:
+        errors.append("timestamp cannot be negative")
+    else:
+        now = time.time()
+        max_future_drift = 300  # Allow 5 minutes clock drift
+        if timestamp > now + max_future_drift:
+            errors.append(
+                f"timestamp is too far in the future "
+                f"(more than {max_future_drift} seconds from now)"
+            )
+
+    # Validate optional intent if developer_id and file_path are valid
+    if not errors or (developer_id and file_path):
+        intent = entry.get("intent")
+        if not intent:
+            errors.append("intent is required")
+        elif not isinstance(intent, str):
+            errors.append("intent must be a string")
+        elif not intent.strip():
+            errors.append("intent cannot be empty or whitespace")
+
+    return {
+        "status": "valid" if not errors else "invalid",
+        "errors": errors,
+    }
+
+
+def get_summary(
+    expiry_minutes: int = 30,
+    tenant_id: Optional[str] = None,
+    max_entries_per_developer: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Get a summary of recent activities grouped by developer.
+
+    Groups active entries by developer and returns a structured summary showing
+    who is working on what files, when they last worked, and their intent.
+    Optimized for efficient O(n) grouping with minimal memory overhead.
+
+    Args:
+        expiry_minutes: How old entries can be before expiring (default 30)
+        tenant_id: Tenant ID (company). Defaults to CLAUDE_TENANT_ID env var.
+        max_entries_per_developer: Limit entries per developer (None = all).
+                                   If set, returns most recent entries.
+
+    Returns:
+        Dict with structure:
+        {
+            "summary": {
+                "total_developers": int,
+                "total_activities": int,
+                "time_window_minutes": int,
+                "generated_at": ISO8601 timestamp,
+            },
+            "developers": {
+                "developer_id": {
+                    "activity_count": int,
+                    "files": [
+                        {
+                            "file_path": str,
+                            "timestamp": float,
+                            "age_seconds": float,
+                            "time_ago": str (e.g., "2 minutes ago"),
+                            "intent": str,
+                            "region": str or None,
+                            "intent_category": str or None,
+                        },
+                        ...
+                    ]
+                },
+                ...
+            }
+        }
+    """
+    entries = get_active_entries(
+        expiry_minutes=expiry_minutes,
+        tenant_id=tenant_id,
+    )
+
+    # Group entries by developer (single pass O(n))
+    developer_activities: Dict[str, List[dict]] = {}
+    for entry in entries:
+        dev_id = entry["developer_id"]
+        if dev_id not in developer_activities:
+            developer_activities[dev_id] = []
+        developer_activities[dev_id].append(entry)
+
+    # Build summary with human-readable timestamps
+    now = time.time()
+    developers_summary = {}
+
+    for dev_id, dev_entries in developer_activities.items():
+        # Sort by timestamp (most recent first)
+        sorted_entries = sorted(dev_entries, key=lambda e: e["timestamp"], reverse=True)
+
+        # Limit entries if requested
+        if max_entries_per_developer:
+            sorted_entries = sorted_entries[:max_entries_per_developer]
+
+        # Format activity details
+        files_list = []
+        for entry in sorted_entries:
+            age_seconds = now - entry["timestamp"]
+            time_ago = _format_time_ago(age_seconds)
+
+            files_list.append({
+                "file_path": entry["file_path"],
+                "timestamp": entry["timestamp"],
+                "age_seconds": age_seconds,
+                "time_ago": time_ago,
+                "intent": entry["intent"],
+                "region": entry.get("region"),
+                "intent_category": entry.get("intent_category"),
+            })
+
+        developers_summary[dev_id] = {
+            "activity_count": len(dev_entries),  # Total activities (not limited)
+            "files": files_list,
+        }
+
+    return {
+        "summary": {
+            "total_developers": len(developers_summary),
+            "total_activities": len(entries),
+            "time_window_minutes": expiry_minutes,
+            "generated_at": datetime.fromtimestamp(now).isoformat(),
+        },
+        "developers": developers_summary,
+    }
+
+
+def _format_time_ago(seconds: float) -> str:
+    """Convert seconds to human-readable time string (e.g., '2 minutes ago').
+
+    Args:
+        seconds: Time difference in seconds
+
+    Returns:
+        Human-readable string like "2 minutes ago", "1 hour ago", etc.
+    """
+    if seconds < 60:
+        return f"{int(seconds)} seconds ago"
+    elif seconds < 3600:
+        minutes = int(seconds / 60)
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    elif seconds < 86400:
+        hours = int(seconds / 3600)
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    else:
+        days = int(seconds / 86400)
+        return f"{days} day{'s' if days != 1 else ''} ago"
