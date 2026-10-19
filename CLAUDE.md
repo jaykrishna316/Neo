@@ -8,9 +8,11 @@ Neo is a semantic coordination engine that eliminates Git merge conflicts **befo
 
 ## Git Development Branch
 
-**Designated Feature Branch**: `neo-4.0`
+**Designated Feature Branch**: `Extension`
 
-All development and feature work should be committed and pushed to the `neo-4.0` branch. Changes are merged to `main` when ready for release.
+All development and feature work should be committed and pushed to the `Extension` branch. Changes are merged to `main` when ready for release.
+
+**IMPORTANT:** Always push to `Extension`. Never push to `claude/zealous-thompson-zvdoyf` or any other branch without explicit permission.
 
 ---
 
