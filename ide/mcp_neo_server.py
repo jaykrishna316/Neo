@@ -26,6 +26,9 @@ from core.activity_log import ActivityEntry
 from core.pre_gen_check import check_for_conflicts, check_source_staleness
 from core.delta_refresh import DeltaGenerator, ContextRefreshBuilder
 from core.symbol_hasher import snapshot_file
+from core.blast_radius import BlastRadiusCalculator
+from core.coupling_metrics import CouplingMetricsCollector
+from core.entropy_coupling import EntropyCouplingDetector, analyze_entropy_coupling
 
 TENANT_ID = os.getenv("CLAUDE_TENANT_ID", "default")
 MULTITENANCY = os.getenv("NEO_MULTITENANCY", "false").lower() == "true"
@@ -410,8 +413,282 @@ def neo_get_status() -> Dict[str, Any]:
         "multitenancy_enabled": MULTITENANCY,
         "tenant_id": TENANT_ID,
         "version": "1.0",
-        "features": ["conflict_detection", "activity_logging", "c1_staleness", "c2_delta_refresh"],
+        "features": ["conflict_detection", "activity_logging", "c1_staleness", "c2_delta_refresh", "blast_radius", "coupling_trends", "entropy_coupling"],
     }
+
+
+@mcp.tool(name="neo_calculate_blast_radius")
+def neo_calculate_blast_radius(
+    file_path: str,
+    change_type: str = "general",
+    dependencies: Optional[dict] = None,
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Calculate blast radius (impact assessment) for a file change.
+
+    Args:
+        file_path: File that changed
+        change_type: Type of change ("signature", "logic", "refactor", "general")
+        dependencies: Optional dependency map {file -> [dependents]}
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        calculator = BlastRadiusCalculator(dependencies or {})
+        report = calculator.calculate(file_path, change_type)
+
+        return {
+            "success": True,
+            "source_file": report.source_file,
+            "total_affected_files": report.total_dependents,
+            "easy_fixes": report.easy_fixes,
+            "medium_fixes": report.medium_fixes,
+            "hard_fixes": report.hard_fixes,
+            "estimated_hours": round(report.total_estimated_hours, 1),
+            "estimated_token_cost": report.total_token_cost,
+            "affected_files": [
+                {
+                    "file": d.file_path,
+                    "complexity": d.complexity,
+                    "estimated_minutes": d.estimated_minutes,
+                    "token_estimate": d.token_estimate,
+                    "fix_type": d.fix_type,
+                    "reason": d.reason,
+                }
+                for d in report.details
+            ],
+            "tenant_id": final_tenant,
+        }
+    except Exception as e:
+        logger.warning(f"Blast radius calculation failed: {e}")
+        return {
+            "success": False,
+            "error": f"Blast radius calculation failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
+
+
+@mcp.tool(name="neo_record_change_set")
+def neo_record_change_set(
+    changed_files: list,
+    developer_id: str,
+    intent: str,
+    timestamp: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Record a set of files changed together for coupling analysis.
+
+    Args:
+        changed_files: List of files that changed together
+        developer_id: Developer who made changes
+        intent: Description of intent
+        timestamp: Optional timestamp (defaults to now)
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        metrics_dir = f".devsync/coupling" if not MULTITENANCY else f".devsync/{final_tenant}/coupling"
+        collector = CouplingMetricsCollector(metrics_dir)
+        collector.record_change_set(changed_files, developer_id, intent, timestamp)
+
+        return {
+            "success": True,
+            "files_recorded": len(changed_files),
+            "developer": developer_id,
+            "intent": intent,
+            "tenant_id": final_tenant,
+        }
+    except Exception as e:
+        logger.warning(f"Change set recording failed: {e}")
+        return {
+            "success": False,
+            "error": f"Change set recording failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
+
+
+@mcp.tool(name="neo_get_coupling_trends")
+def neo_get_coupling_trends(
+    window_days: int = 90,
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Get coupling trends between services over time.
+
+    Args:
+        window_days: Time window for analysis (default 90 days)
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        metrics_dir = f".devsync/coupling" if not MULTITENANCY else f".devsync/{final_tenant}/coupling"
+        collector = CouplingMetricsCollector(metrics_dir)
+
+        # Get trends
+        trends = collector.compute_trends(window_days)
+        coupling_matrix = collector.compute_coupling_matrix(window_days)
+
+        # Identify regressions
+        regressions = [t for t in trends if t.regression]
+        increasing = [t for t in trends if t.direction == "increasing" and t.velocity > 0.01]
+
+        return {
+            "success": True,
+            "window_days": window_days,
+            "total_trends": len(trends),
+            "regressions": [
+                {
+                    "services": [t.service_a, t.service_b],
+                    "previous_score": round(t.previous_score, 2),
+                    "current_score": round(t.current_score, 2),
+                    "age_days": t.age_days,
+                }
+                for t in regressions
+            ],
+            "increasing_coupling": [
+                {
+                    "services": [t.service_a, t.service_b],
+                    "current_score": round(t.current_score, 2),
+                    "velocity": round(t.velocity, 3),
+                    "direction": t.direction,
+                }
+                for t in increasing[:10]
+            ],
+            "coupling_matrix": {
+                f"{k[0]},{k[1]}": round(v, 2)
+                for k, v in coupling_matrix.items()
+                if v > 0.3  # Only include significant couplings
+            },
+            "tenant_id": final_tenant,
+        }
+    except Exception as e:
+        logger.warning(f"Coupling trends analysis failed: {e}")
+        return {
+            "success": False,
+            "error": f"Coupling trends analysis failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
+
+
+@mcp.tool(name="neo_analyze_entropy_coupling")
+def neo_analyze_entropy_coupling(
+    actual_imports: Optional[dict] = None,
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Analyze hidden coupling using entropy-based detection.
+
+    Args:
+        actual_imports: Optional import graph {service -> [imports]}
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        history_file = ".devsync/coupling/coupling_history.jsonl"
+        if MULTITENANCY:
+            history_file = f".devsync/{final_tenant}/coupling/coupling_history.jsonl"
+
+        result = analyze_entropy_coupling(history_file, actual_imports)
+
+        if result["success"]:
+            return {
+                "success": True,
+                "coupling_matrix_size": len(result.get("coupling_matrix", {})),
+                "clusters": result.get("clusters", []),
+                "hidden_couplings": [
+                    m for m in result.get("misalignments", [])
+                    if m["type"] == "hidden_coupling"
+                ],
+                "unnecessary_separations": [
+                    m for m in result.get("misalignments", [])
+                    if m["type"] == "unnecessary_separation"
+                ],
+                "tenant_id": final_tenant,
+            }
+        else:
+            return {
+                "success": False,
+                "error": result.get("error", "Unknown error"),
+                "status_code": 500,
+                "tenant_id": final_tenant,
+            }
+    except Exception as e:
+        logger.warning(f"Entropy coupling analysis failed: {e}")
+        return {
+            "success": False,
+            "error": f"Entropy coupling analysis failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
 
 
 def main() -> None:
