@@ -12,7 +12,9 @@ Neo is a semantic coordination engine that eliminates Git merge conflicts **befo
 
 All development and feature work should be committed and pushed to the `Extension` branch. Changes are merged to `main` when ready for release.
 
-**IMPORTANT:** Always push to `Extension`. Never push to `claude/zealous-thompson-zvdoyf` or any other branch without explicit permission.
+**CRITICAL REQUIREMENT:** Before EVERY git push operation, Claude MUST immediately ask the user which branch to push to and wait for explicit confirmation. Do not assume, do not push without asking first.
+
+**IMPORTANT:** Never push to `claude/zealous-thompson-zvdoyf` or any other branch without explicit permission.
 
 ---
 
