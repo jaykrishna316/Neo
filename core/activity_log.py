@@ -516,3 +516,219 @@ def _format_time_ago(seconds: float) -> str:
     else:
         days = int(seconds / 86400)
         return f"{days} day{'s' if days != 1 else ''} ago"
+
+
+@dataclass
+class ProcessedBatchResult:
+    """Result of batch activity processing."""
+    developer_summaries: Dict[str, Dict[str, Any]]
+    file_summaries: Dict[str, Dict[str, Any]]
+    category_breakdown: Dict[str, int]
+    timestamp_aggregate: Dict[str, Any]
+    blocking_count: int
+
+
+def process_batch_activities(
+    entries: List[dict],
+    group_by: str = "developer"
+) -> ProcessedBatchResult:
+    """Process and aggregate multiple activity entries.
+
+    Args:
+        entries: List of activity entries to process
+        group_by: Aggregation key ("developer" or "file")
+
+    Returns:
+        ProcessedBatchResult with aggregated metrics
+    """
+    developer_summaries = {}
+    file_summaries = {}
+    category_breakdown = {}
+    blocking_entries = []
+    timestamps = []
+
+    for entry in entries:
+        dev_id = entry.get("developer_id")
+        file_path = entry.get("file_path")
+        category = entry.get("intent_category", "uncategorized")
+        timestamp = entry.get("timestamp", 0)
+
+        # Developer aggregation
+        if dev_id not in developer_summaries:
+            developer_summaries[dev_id] = {
+                "activity_count": 0,
+                "files_touched": set(),
+                "first_activity": timestamp,
+                "last_activity": timestamp,
+                "blocking_count": 0
+            }
+
+        dev_summary = developer_summaries[dev_id]
+        dev_summary["activity_count"] += 1
+        if file_path:
+            dev_summary["files_touched"].add(file_path)
+        dev_summary["last_activity"] = max(dev_summary["last_activity"], timestamp)
+        dev_summary["first_activity"] = min(dev_summary["first_activity"], timestamp)
+
+        if entry.get("blocking_others"):
+            dev_summary["blocking_count"] += 1
+            blocking_entries.append(dev_id)
+
+        # File aggregation
+        if file_path not in file_summaries:
+            file_summaries[file_path] = {
+                "developer_count": set(),
+                "activity_count": 0,
+                "first_activity": timestamp,
+                "last_activity": timestamp
+            }
+
+        file_summary = file_summaries[file_path]
+        file_summary["developer_count"].add(dev_id)
+        file_summary["activity_count"] += 1
+        file_summary["last_activity"] = max(file_summary["last_activity"], timestamp)
+        file_summary["first_activity"] = min(file_summary["first_activity"], timestamp)
+
+        # Category breakdown
+        category_breakdown[category] = category_breakdown.get(category, 0) + 1
+
+        # Timestamps
+        if timestamp:
+            timestamps.append(timestamp)
+
+    # Convert sets to counts in summaries
+    for dev_id in developer_summaries:
+        developer_summaries[dev_id]["files_touched"] = len(
+            developer_summaries[dev_id]["files_touched"]
+        )
+
+    for file_path in file_summaries:
+        file_summaries[file_path]["developer_count"] = len(
+            file_summaries[file_path]["developer_count"]
+        )
+
+    # Calculate timestamp metrics
+    timestamp_aggregate = {}
+    if timestamps:
+        timestamp_aggregate = {
+            "earliest": min(timestamps),
+            "latest": max(timestamps),
+            "range_seconds": max(timestamps) - min(timestamps),
+            "entry_count": len(timestamps)
+        }
+
+    return ProcessedBatchResult(
+        developer_summaries=developer_summaries,
+        file_summaries=file_summaries,
+        category_breakdown=category_breakdown,
+        timestamp_aggregate=timestamp_aggregate,
+        blocking_count=len(set(blocking_entries))
+    )
+
+
+def cleanup_expired_activities(
+    days: int = 7,
+    tenant_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Clean up expired activity log entries.
+
+    Args:
+        days: Remove entries older than this many days
+        tenant_id: Tenant ID for multitenancy mode
+
+    Returns:
+        Dict with cleanup statistics (entries_removed, bytes_freed, etc.)
+    """
+    log_path = get_tenant_log_path(tenant_id)
+
+    if not log_path.exists():
+        return {
+            "total_entries_before": 0,
+            "total_entries_after": 0,
+            "entries_removed": 0,
+            "bytes_freed": 0,
+            "oldest_remaining_entry_age_days": None,
+            "newest_removed_entry_age_days": None,
+            "tenants_cleaned": 0,
+            "empty_tenants_removed": 0
+        }
+
+    # Load current entries
+    entries = []
+    try:
+        with open(log_path, 'r') as f:
+            for line in f:
+                if line.strip():
+                    entries.append(json.loads(line))
+    except (json.JSONDecodeError, IOError):
+        return {
+            "total_entries_before": 0,
+            "total_entries_after": 0,
+            "entries_removed": 0,
+            "bytes_freed": 0,
+            "oldest_remaining_entry_age_days": None,
+            "newest_removed_entry_age_days": None,
+            "tenants_cleaned": 0,
+            "empty_tenants_removed": 0
+        }
+
+    total_before = len(entries)
+    cutoff_time = time.time() - (days * 86400)
+
+    # Filter out expired entries
+    expired_entries = []
+    remaining_entries = []
+
+    for entry in entries:
+        entry_time = entry.get("timestamp", 0)
+        if entry_time < cutoff_time:
+            expired_entries.append(entry)
+        else:
+            remaining_entries.append(entry)
+
+    # Write back remaining entries
+    bytes_before = log_path.stat().st_size if log_path.exists() else 0
+
+    with open(log_path, 'w') as f:
+        for entry in remaining_entries:
+            f.write(json.dumps(entry) + '\n')
+
+    bytes_after = log_path.stat().st_size if log_path.exists() else 0
+    bytes_freed = bytes_before - bytes_after
+
+    # Calculate age metrics
+    oldest_remaining_age = None
+    newest_removed_age = None
+
+    if remaining_entries:
+        oldest_remaining = min(e.get("timestamp", 0) for e in remaining_entries)
+        oldest_remaining_age = (time.time() - oldest_remaining) / 86400
+
+    if expired_entries:
+        newest_removed = max(e.get("timestamp", 0) for e in expired_entries)
+        newest_removed_age = (time.time() - newest_removed) / 86400
+
+    # Clean up empty tenant directories if multitenancy enabled
+    empty_tenants_removed = 0
+    if MULTITENANCY_ENABLED:
+        tenants_dir = ACTIVITY_LOG_DIR / "tenants"
+        if tenants_dir.exists():
+            for tenant_dir in tenants_dir.iterdir():
+                if tenant_dir.is_dir():
+                    try:
+                        if not any(tenant_dir.iterdir()):
+                            tenant_dir.rmdir()
+                            empty_tenants_removed += 1
+                    except OSError:
+                        pass
+
+    return {
+        "total_entries_before": total_before,
+        "total_entries_after": len(remaining_entries),
+        "entries_removed": len(expired_entries),
+        "bytes_freed": bytes_freed,
+        "oldest_remaining_entry_age_days": oldest_remaining_age,
+        "newest_removed_entry_age_days": newest_removed_age,
+        "tenants_cleaned": 1 if tenant_id else 0,
+        "empty_tenants_removed": empty_tenants_removed
+    }
