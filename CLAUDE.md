@@ -10,6 +10,8 @@ Neo is a semantic coordination engine that eliminates Git merge conflicts **befo
 
 **Designated Feature Branch**: `neo-4.0`
 
+**CRITICAL REQUIREMENT:** Before EVERY git push operation, Claude MUST immediately ask the user which branch to push to and wait for explicit confirmation. Do not assume, do not push without asking first.
+
 All development and feature work should be committed and pushed to the `neo-4.0` branch. Changes are merged to `main` when ready for release.
 
 ---
