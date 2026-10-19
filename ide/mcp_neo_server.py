@@ -29,6 +29,8 @@ from core.symbol_hasher import snapshot_file
 from core.blast_radius import BlastRadiusCalculator
 from core.coupling_metrics import CouplingMetricsCollector
 from core.entropy_coupling import EntropyCouplingDetector, analyze_entropy_coupling
+from core.breaking_change_tracker import BreakingChangeTracker
+from core.dependency_resolver import DependencyResolver
 
 TENANT_ID = os.getenv("CLAUDE_TENANT_ID", "default")
 MULTITENANCY = os.getenv("NEO_MULTITENANCY", "false").lower() == "true"
@@ -412,8 +414,19 @@ def neo_get_status() -> Dict[str, Any]:
         "status": "ok",
         "multitenancy_enabled": MULTITENANCY,
         "tenant_id": TENANT_ID,
-        "version": "1.0",
-        "features": ["conflict_detection", "activity_logging", "c1_staleness", "c2_delta_refresh", "blast_radius", "coupling_trends", "entropy_coupling"],
+        "version": "2.0",
+        "features": [
+            "conflict_detection",
+            "activity_logging",
+            "c1_staleness",
+            "c2_delta_refresh",
+            "blast_radius",
+            "coupling_trends",
+            "entropy_coupling",
+            "breaking_change_tracking",
+            "dependency_resolution",
+            "cross_repo_validation",
+        ],
     }
 
 
@@ -686,6 +699,252 @@ def neo_analyze_entropy_coupling(
         return {
             "success": False,
             "error": f"Entropy coupling analysis failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
+
+
+@mcp.tool(name="neo_record_breaking_change")
+def neo_record_breaking_change(
+    repo: str,
+    file_path: str,
+    symbol: str,
+    change_type: str,
+    old_value: str,
+    new_value: str,
+    severity: str,
+    affected_services: Optional[list] = None,
+    description: str = "",
+    auto_detect: bool = False,
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Record a breaking change in a service.
+
+    Args:
+        repo: Service/repo name
+        file_path: File where change occurred
+        symbol: Function/class/API endpoint name
+        change_type: "signature", "return_type", "removed", "deprecated"
+        old_value: Previous signature/value
+        new_value: New signature/value
+        severity: "LOW", "MEDIUM", "HIGH"
+        affected_services: List of services affected by this change
+        description: Human-readable description
+        auto_detect: If true, auto-detect other breaking changes
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        tracker_dir = ".devsync/breaking-changes" if not MULTITENANCY else f".devsync/{final_tenant}/breaking-changes"
+        tracker = BreakingChangeTracker(tracker_dir)
+
+        change = tracker.record_breaking_change(
+            repo=repo,
+            file_path=file_path,
+            symbol=symbol,
+            change_type=change_type,
+            old_value=old_value,
+            new_value=new_value,
+            severity=severity,
+            affected_services=affected_services or [],
+            recorded_by=TENANT_ID,
+            description=description,
+        )
+
+        return {
+            "success": True,
+            "breaking_change": {
+                "repo": change.repo,
+                "symbol": change.symbol,
+                "change_type": change.change_type,
+                "severity": change.severity,
+                "status": change.status,
+                "affected_services": change.affected_services,
+                "description": change.description,
+            },
+            "message": f"Breaking change recorded: {change.symbol} in {change.repo}",
+            "tenant_id": final_tenant,
+        }
+    except Exception as e:
+        logger.warning(f"Breaking change recording failed: {e}")
+        return {
+            "success": False,
+            "error": f"Breaking change recording failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
+
+
+@mcp.tool(name="neo_check_unresolved_dependencies")
+def neo_check_unresolved_dependencies(
+    service: str,
+    file_path: str = "",
+    intent: str = "",
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Check if a service has unresolved upstream breaking changes.
+
+    Args:
+        service: Service name to check
+        file_path: File being modified (optional)
+        intent: Developer intent (optional)
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        resolver_dir = ".devsync/dependencies" if not MULTITENANCY else f".devsync/{final_tenant}/dependencies"
+        resolver = DependencyResolver(resolver_dir)
+
+        unresolved = resolver.check_unresolved_dependencies(service)
+
+        if unresolved:
+            # HARD BLOCK: Cannot proceed if unresolved deps exist
+            blocking_services = set(dep.blocking_repo for dep in unresolved)
+            high_severity = [d for d in unresolved if d.severity == "HIGH"]
+
+            return {
+                "success": True,
+                "has_unresolved_deps": True,
+                "blocks_work": True,
+                "status": "BLOCKED",
+                "service": service,
+                "blocking_services": list(blocking_services),
+                "unresolved_count": len(unresolved),
+                "high_severity_count": len(high_severity),
+                "blocking_changes": [
+                    {
+                        "repo": dep.blocking_repo,
+                        "symbol": dep.breaking_change.symbol,
+                        "change_type": dep.breaking_change.change_type,
+                        "severity": dep.severity,
+                        "description": dep.breaking_change.description,
+                        "affected": service,
+                    }
+                    for dep in unresolved
+                ],
+                "message": f"🚫 BLOCKED: {service} has {len(unresolved)} unresolved upstream breaking changes. "
+                          f"Cannot proceed with work until resolved.",
+                "tenant_id": final_tenant,
+            }
+        else:
+            return {
+                "success": True,
+                "has_unresolved_deps": False,
+                "blocks_work": False,
+                "status": "CLEAR",
+                "service": service,
+                "message": f"✅ {service} has no unresolved dependencies. Safe to proceed.",
+                "tenant_id": final_tenant,
+            }
+    except Exception as e:
+        logger.warning(f"Dependency check failed: {e}")
+        return {
+            "success": False,
+            "error": f"Dependency check failed: {str(e)}",
+            "status_code": 500,
+            "tenant_id": final_tenant,
+        }
+
+
+@mcp.tool(name="neo_resolve_dependency")
+def neo_resolve_dependency(
+    repo: str,
+    symbol: str,
+    resolution_notes: str,
+    tenant_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Resolve a breaking change (auto or manual).
+
+    Args:
+        repo: Repo that had the breaking change
+        symbol: Symbol that was changed
+        resolution_notes: How it was resolved
+        tenant_id: Optional tenant for multitenancy
+    """
+    final_tenant = tenant_id if tenant_id else _tenant()
+
+    if not _validate_tenant_id(final_tenant):
+        return {
+            "success": False,
+            "error": "Invalid tenant_id format",
+            "status_code": 403,
+        }
+
+    if not rate_limiter.is_allowed(final_tenant or "default"):
+        remaining = rate_limiter.get_remaining(final_tenant or "default")
+        return {
+            "success": False,
+            "error": f"Rate limit exceeded (remaining: {remaining})",
+            "status_code": 429,
+            "tenant_id": final_tenant,
+        }
+
+    try:
+        tracker_dir = ".devsync/breaking-changes" if not MULTITENANCY else f".devsync/{final_tenant}/breaking-changes"
+        tracker = BreakingChangeTracker(tracker_dir)
+
+        resolved = tracker.resolve_breaking_change(
+            repo=repo,
+            symbol=symbol,
+            resolution_notes=resolution_notes,
+        )
+
+        if resolved:
+            return {
+                "success": True,
+                "status": "RESOLVED",
+                "repo": repo,
+                "symbol": symbol,
+                "message": f"✅ Breaking change {symbol} in {repo} marked as resolved",
+                "resolution_notes": resolution_notes,
+                "tenant_id": final_tenant,
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"Breaking change {symbol} in {repo} not found or already resolved",
+                "status_code": 404,
+                "tenant_id": final_tenant,
+            }
+    except Exception as e:
+        logger.warning(f"Dependency resolution failed: {e}")
+        return {
+            "success": False,
+            "error": f"Dependency resolution failed: {str(e)}",
             "status_code": 500,
             "tenant_id": final_tenant,
         }
