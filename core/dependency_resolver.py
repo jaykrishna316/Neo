@@ -36,12 +36,12 @@ class UnresolvedDependency:
 class DependencyResolver:
     """Resolve and validate service dependencies."""
 
-    def __init__(self, config_dir: str = ".devsync/dependencies"):
+    def __init__(self, config_dir: str = ".devsync/dependencies", breaking_changes_dir: str = ".devsync/breaking-changes"):
         """Initialize dependency resolver."""
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config_file = self.config_dir / "dependencies.json"
-        self.breaking_change_tracker = BreakingChangeTracker()
+        self.breaking_change_tracker = BreakingChangeTracker(breaking_changes_dir)
         self.dependencies = self._load_dependencies()
 
     def _load_dependencies(self) -> Dict[str, ServiceDependency]:
