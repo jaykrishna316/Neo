@@ -76,11 +76,11 @@ Choose between:
 
 ---
 
-### 💻 Manual Test (20 minutes)
+### 💻 Manual Test: 2-Developer Coordination (10 minutes)
 
-For a deeper hands-on experience with real terminals:
+For hands-on experience with real terminals:
 
-**Setup**: Open 4 terminals and follow [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
+**Setup**: Open 2 terminals and follow [docs/LOCAL_TWO_DEVELOPER_TEST.md](docs/LOCAL_TWO_DEVELOPER_TEST.md)
 
 **What you'll see:**
 - ✅ File watcher detects changes automatically
@@ -88,6 +88,22 @@ For a deeper hands-on experience with real terminals:
 - ✅ Activity log tracks who's working on what with explicit lock states
 - ✅ Fresh context flows to next developer
 - ✅ Zero conflicts in real multi-developer workflow
+
+---
+
+### 💻 Extended Manual Test: 3-Developer + Dependency Tracking (10 minutes)
+
+For a complete coordination flow with staleness detection and impact resolution:
+
+**Setup**: Open 2 terminals and follow [docs/LOCAL_THREE_DEVELOPER_TEST.md](docs/LOCAL_THREE_DEVELOPER_TEST.md)
+
+**What you'll see:**
+- ✅ Intent declaration across 3 developers simultaneously
+- ✅ Lock coordination with automatic queue promotion
+- ✅ Downstream file dependency detection
+- ✅ Staleness detection when upstream files change
+- ✅ Impact alert creation and resolution workflow
+- ✅ Zero conflicts across 3 developers, 2 files, 1 dependency chain
 
 ---
 

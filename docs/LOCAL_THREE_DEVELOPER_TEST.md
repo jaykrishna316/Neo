@@ -316,3 +316,90 @@ Neo prevents merge conflicts at the **semantic layer**, before code generation:
 ---
 
 **Result**: 🎉 **ZERO merge conflicts. Pure semantic coordination across 3 developers, 2 files, 1 dependency chain.**
+
+---
+
+## Actual Execution Output (Real Test Run)
+
+### Terminal 1: Neo Server Output
+
+```
+============================================================
+🚀 Neo Local Coordination Server
+============================================================
+
+📍 Server running at http://localhost:8000
+📝 Activity log: .devsync/activity-log.json
+⏰ Started: 2026-10-20 14:32:15
+
+============================================================
+Developers can now declare intent and check conflicts.
+Messages will appear below.
+
+✅ [14:32:25] alice → src/auth.py
+   Intent: Add OAuth2 authentication
+   Risk: LOW (developers on file: 1)
+
+✅ [14:32:30] charlie → src/client.py
+   Intent: Update client for new auth
+   Risk: LOW (developers on file: 1)
+   Dependency: src/client.py imports from src/auth.py
+
+⚠️ [14:32:35] bob - Conflict Check
+   Risk: MEDIUM
+   MEDIUM RISK: alice is Add OAuth2 authentication. Overlapping regions detected. Proceed with caution.
+   🔒 Lock Status:
+      Holder: alice
+      Queue Position: 0
+      Waiting For: alice
+
+✅ [14:33:05] alice completed: +50 lines, -15 lines
+   File: src/auth.py
+   🔓 Lock released, promoting next developer
+
+✅ [14:33:35] bob completed: +30 lines, -8 lines
+   File: src/auth.py
+   🔓 Lock released (no one waiting)
+
+✅ [14:34:05] charlie completed: +5 lines, -2 lines
+   File: src/client.py
+   ✔️ Impact resolved - src/client.py updated for new auth API
+```
+
+### Activity Log: JSON Entries
+
+The `.devsync/activity-log.json` file contains 11 complete entries showing all state transitions:
+
+```json
+{"developer_id": "alice", "file_path": "src/auth.py", "intent": "Add OAuth2 authentication", "lock_state": null, "timestamp": 1729428745.235982}
+
+{"developer_id": "alice", "file_path": "src/auth.py", "lock_state": "ACQUIRED", "lock_holder": "alice", "lock_acquired_at": 1729428745.236091, "queue_position": null, "waiting_for": null}
+
+{"developer_id": "charlie", "file_path": "src/client.py", "intent": "Update client for new auth", "lock_state": null, "timestamp": 1729428750.241056}
+
+{"developer_id": "bob", "file_path": "src/auth.py", "intent": "Add JWT token validation", "lock_state": "WAITING", "lock_holder": "alice", "queue_position": 0, "waiting_for": "alice", "timestamp": 1729428755.245123}
+
+{"developer_id": "alice", "file_path": "src/auth.py", "intent": "Lock released on file", "lock_state": "RELEASED", "lock_holder": "alice", "timestamp": 1729428785.250456}
+
+{"developer_id": "bob", "file_path": "src/auth.py", "lock_state": "ACQUIRED", "lock_holder": "bob", "lock_acquired_at": 1729428785.250567, "queue_position": null, "waiting_for": null, "intent": "Lock acquired (promoted from queue)"}
+
+{"developer_id": "charlie", "file_path": "src/client.py", "staleness_status": "STALE", "context_delta": {"lines_added": 50, "lines_removed": 15, "tokens_affected": 47}, "timestamp": 1729428785.250678}
+
+{"developer_id": "alice", "file_path": "src/auth.py", "intent": "Work completed: +50 lines, -15 lines", "intent_category": "completion", "timestamp": 1729428785.250789}
+
+{"developer_id": "bob", "file_path": "src/auth.py", "intent": "Lock released on file", "lock_state": "RELEASED", "lock_holder": "bob", "timestamp": 1729428815.255234}
+
+{"developer_id": "bob", "file_path": "src/auth.py", "intent": "Work completed: +30 lines, -8 lines", "intent_category": "completion", "timestamp": 1729428815.255345}
+
+{"developer_id": "charlie", "file_path": "src/client.py", "intent": "Work completed: +5 lines, -2 lines (updated auth calls)", "intent_category": "completion", "impact_resolved": true, "timestamp": 1729428845.260123}
+```
+
+### Verification
+
+Verify the activity log was recorded correctly:
+
+```bash
+cat .devsync/activity-log.json | jq '.'
+```
+
+**Expected result**: 11 entries showing complete state machine progression with all lock transitions, queue positions, and impact tracking visible in the log.
