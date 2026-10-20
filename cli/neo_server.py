@@ -233,6 +233,14 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 lock_manager.release_lock(file_path, None, agent_id)
                 lock_released = True
 
+                # Log completion event to activity log (like declare intent does)
+                log_activity(
+                    developer_id=agent_id,
+                    file_path=file_path,
+                    intent=f"Work completed: +{lines_added} lines, -{lines_removed} lines",
+                    intent_category="completion"
+                )
+
                 # Show completion message
                 self._print_completion(agent_id, file_path, lines_added, lines_removed)
 
