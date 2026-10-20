@@ -53,3 +53,9 @@ lock_*
 *.secret
 secrets.json
 credentials.json
+
+# Test and demo files
+.neo-test*/
+.neo-demo/
+*.whl
+*.tar.gz

@@ -316,3 +316,419 @@ def get_entries_by_category(
     """Get entries by intent category (feature/bugfix/refactor/etc)."""
     entries = get_active_entries(expiry_minutes=expiry_minutes)
     return [e for e in entries if e.get("intent_category") == category]
+
+
+def validate_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate an activity log entry for required fields and correct types.
+
+    Checks:
+    - developer_id: non-empty string
+    - file_path: non-empty string
+    - timestamp: positive number, not more than 5 minutes in the future
+
+    Args:
+        entry: Dictionary representing an activity log entry
+
+    Returns:
+        Dict with keys:
+            - "status": "valid" or "invalid"
+            - "errors": List of error messages (empty if valid)
+    """
+    errors = []
+
+    if not isinstance(entry, dict):
+        return {
+            "status": "invalid",
+            "errors": ["Entry must be a dictionary"],
+        }
+
+    # Validate developer_id
+    developer_id = entry.get("developer_id")
+    if not developer_id:
+        errors.append("developer_id is required")
+    elif not isinstance(developer_id, str):
+        errors.append("developer_id must be a string")
+    elif not developer_id.strip():
+        errors.append("developer_id cannot be empty or whitespace")
+
+    # Validate file_path
+    file_path = entry.get("file_path")
+    if not file_path:
+        errors.append("file_path is required")
+    elif not isinstance(file_path, str):
+        errors.append("file_path must be a string")
+    elif not file_path.strip():
+        errors.append("file_path cannot be empty or whitespace")
+
+    # Validate timestamp
+    timestamp = entry.get("timestamp")
+    if timestamp is None:
+        errors.append("timestamp is required")
+    elif not isinstance(timestamp, (int, float)):
+        errors.append("timestamp must be a number (int or float)")
+    elif timestamp < 0:
+        errors.append("timestamp cannot be negative")
+    else:
+        now = time.time()
+        max_future_drift = 300  # Allow 5 minutes clock drift
+        if timestamp > now + max_future_drift:
+            errors.append(
+                f"timestamp is too far in the future "
+                f"(more than {max_future_drift} seconds from now)"
+            )
+
+    # Validate optional intent if developer_id and file_path are valid
+    if not errors or (developer_id and file_path):
+        intent = entry.get("intent")
+        if not intent:
+            errors.append("intent is required")
+        elif not isinstance(intent, str):
+            errors.append("intent must be a string")
+        elif not intent.strip():
+            errors.append("intent cannot be empty or whitespace")
+
+    return {
+        "status": "valid" if not errors else "invalid",
+        "errors": errors,
+    }
+
+
+def get_summary(
+    expiry_minutes: int = 30,
+    tenant_id: Optional[str] = None,
+    max_entries_per_developer: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Get a summary of recent activities grouped by developer.
+
+    Groups active entries by developer and returns a structured summary showing
+    who is working on what files, when they last worked, and their intent.
+    Optimized for efficient O(n) grouping with minimal memory overhead.
+
+    Args:
+        expiry_minutes: How old entries can be before expiring (default 30)
+        tenant_id: Tenant ID (company). Defaults to CLAUDE_TENANT_ID env var.
+        max_entries_per_developer: Limit entries per developer (None = all).
+                                   If set, returns most recent entries.
+
+    Returns:
+        Dict with structure:
+        {
+            "summary": {
+                "total_developers": int,
+                "total_activities": int,
+                "time_window_minutes": int,
+                "generated_at": ISO8601 timestamp,
+            },
+            "developers": {
+                "developer_id": {
+                    "activity_count": int,
+                    "files": [
+                        {
+                            "file_path": str,
+                            "timestamp": float,
+                            "age_seconds": float,
+                            "time_ago": str (e.g., "2 minutes ago"),
+                            "intent": str,
+                            "region": str or None,
+                            "intent_category": str or None,
+                        },
+                        ...
+                    ]
+                },
+                ...
+            }
+        }
+    """
+    entries = get_active_entries(
+        expiry_minutes=expiry_minutes,
+        tenant_id=tenant_id,
+    )
+
+    # Group entries by developer (single pass O(n))
+    developer_activities: Dict[str, List[dict]] = {}
+    for entry in entries:
+        dev_id = entry["developer_id"]
+        if dev_id not in developer_activities:
+            developer_activities[dev_id] = []
+        developer_activities[dev_id].append(entry)
+
+    # Build summary with human-readable timestamps
+    now = time.time()
+    developers_summary = {}
+
+    for dev_id, dev_entries in developer_activities.items():
+        # Sort by timestamp (most recent first)
+        sorted_entries = sorted(dev_entries, key=lambda e: e["timestamp"], reverse=True)
+
+        # Limit entries if requested
+        if max_entries_per_developer:
+            sorted_entries = sorted_entries[:max_entries_per_developer]
+
+        # Format activity details
+        files_list = []
+        for entry in sorted_entries:
+            age_seconds = now - entry["timestamp"]
+            time_ago = _format_time_ago(age_seconds)
+
+            files_list.append({
+                "file_path": entry["file_path"],
+                "timestamp": entry["timestamp"],
+                "age_seconds": age_seconds,
+                "time_ago": time_ago,
+                "intent": entry["intent"],
+                "region": entry.get("region"),
+                "intent_category": entry.get("intent_category"),
+            })
+
+        developers_summary[dev_id] = {
+            "activity_count": len(dev_entries),  # Total activities (not limited)
+            "files": files_list,
+        }
+
+    return {
+        "summary": {
+            "total_developers": len(developers_summary),
+            "total_activities": len(entries),
+            "time_window_minutes": expiry_minutes,
+            "generated_at": datetime.fromtimestamp(now).isoformat(),
+        },
+        "developers": developers_summary,
+    }
+
+
+def _format_time_ago(seconds: float) -> str:
+    """Convert seconds to human-readable time string (e.g., '2 minutes ago').
+
+    Args:
+        seconds: Time difference in seconds
+
+    Returns:
+        Human-readable string like "2 minutes ago", "1 hour ago", etc.
+    """
+    if seconds < 60:
+        return f"{int(seconds)} seconds ago"
+    elif seconds < 3600:
+        minutes = int(seconds / 60)
+        return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    elif seconds < 86400:
+        hours = int(seconds / 3600)
+        return f"{hours} hour{'s' if hours != 1 else ''} ago"
+    else:
+        days = int(seconds / 86400)
+        return f"{days} day{'s' if days != 1 else ''} ago"
+
+
+@dataclass
+class ProcessedBatchResult:
+    """Result of batch activity processing."""
+    developer_summaries: Dict[str, Dict[str, Any]]
+    file_summaries: Dict[str, Dict[str, Any]]
+    category_breakdown: Dict[str, int]
+    timestamp_aggregate: Dict[str, Any]
+    blocking_count: int
+
+
+def process_batch_activities(
+    entries: List[dict],
+    group_by: str = "developer"
+) -> ProcessedBatchResult:
+    """Process and aggregate multiple activity entries.
+
+    Args:
+        entries: List of activity entries to process
+        group_by: Aggregation key ("developer" or "file")
+
+    Returns:
+        ProcessedBatchResult with aggregated metrics
+    """
+    developer_summaries = {}
+    file_summaries = {}
+    category_breakdown = {}
+    blocking_entries = []
+    timestamps = []
+
+    for entry in entries:
+        dev_id = entry.get("developer_id")
+        file_path = entry.get("file_path")
+        category = entry.get("intent_category", "uncategorized")
+        timestamp = entry.get("timestamp", 0)
+
+        # Developer aggregation
+        if dev_id not in developer_summaries:
+            developer_summaries[dev_id] = {
+                "activity_count": 0,
+                "files_touched": set(),
+                "first_activity": timestamp,
+                "last_activity": timestamp,
+                "blocking_count": 0
+            }
+
+        dev_summary = developer_summaries[dev_id]
+        dev_summary["activity_count"] += 1
+        if file_path:
+            dev_summary["files_touched"].add(file_path)
+        dev_summary["last_activity"] = max(dev_summary["last_activity"], timestamp)
+        dev_summary["first_activity"] = min(dev_summary["first_activity"], timestamp)
+
+        if entry.get("blocking_others"):
+            dev_summary["blocking_count"] += 1
+            blocking_entries.append(dev_id)
+
+        # File aggregation
+        if file_path not in file_summaries:
+            file_summaries[file_path] = {
+                "developer_count": set(),
+                "activity_count": 0,
+                "first_activity": timestamp,
+                "last_activity": timestamp
+            }
+
+        file_summary = file_summaries[file_path]
+        file_summary["developer_count"].add(dev_id)
+        file_summary["activity_count"] += 1
+        file_summary["last_activity"] = max(file_summary["last_activity"], timestamp)
+        file_summary["first_activity"] = min(file_summary["first_activity"], timestamp)
+
+        # Category breakdown
+        category_breakdown[category] = category_breakdown.get(category, 0) + 1
+
+        # Timestamps
+        if timestamp:
+            timestamps.append(timestamp)
+
+    # Convert sets to counts in summaries
+    for dev_id in developer_summaries:
+        developer_summaries[dev_id]["files_touched"] = len(
+            developer_summaries[dev_id]["files_touched"]
+        )
+
+    for file_path in file_summaries:
+        file_summaries[file_path]["developer_count"] = len(
+            file_summaries[file_path]["developer_count"]
+        )
+
+    # Calculate timestamp metrics
+    timestamp_aggregate = {}
+    if timestamps:
+        timestamp_aggregate = {
+            "earliest": min(timestamps),
+            "latest": max(timestamps),
+            "range_seconds": max(timestamps) - min(timestamps),
+            "entry_count": len(timestamps)
+        }
+
+    return ProcessedBatchResult(
+        developer_summaries=developer_summaries,
+        file_summaries=file_summaries,
+        category_breakdown=category_breakdown,
+        timestamp_aggregate=timestamp_aggregate,
+        blocking_count=len(set(blocking_entries))
+    )
+
+
+def cleanup_expired_activities(
+    days: int = 7,
+    tenant_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Clean up expired activity log entries.
+
+    Args:
+        days: Remove entries older than this many days
+        tenant_id: Tenant ID for multitenancy mode
+
+    Returns:
+        Dict with cleanup statistics (entries_removed, bytes_freed, etc.)
+    """
+    log_path = get_tenant_log_path(tenant_id)
+
+    if not log_path.exists():
+        return {
+            "total_entries_before": 0,
+            "total_entries_after": 0,
+            "entries_removed": 0,
+            "bytes_freed": 0,
+            "oldest_remaining_entry_age_days": None,
+            "newest_removed_entry_age_days": None,
+            "tenants_cleaned": 0,
+            "empty_tenants_removed": 0
+        }
+
+    # Load current entries
+    entries = []
+    try:
+        with open(log_path, 'r') as f:
+            for line in f:
+                if line.strip():
+                    entries.append(json.loads(line))
+    except (json.JSONDecodeError, IOError):
+        return {
+            "total_entries_before": 0,
+            "total_entries_after": 0,
+            "entries_removed": 0,
+            "bytes_freed": 0,
+            "oldest_remaining_entry_age_days": None,
+            "newest_removed_entry_age_days": None,
+            "tenants_cleaned": 0,
+            "empty_tenants_removed": 0
+        }
+
+    total_before = len(entries)
+    cutoff_time = time.time() - (days * 86400)
+
+    # Filter out expired entries
+    expired_entries = []
+    remaining_entries = []
+
+    for entry in entries:
+        entry_time = entry.get("timestamp", 0)
+        if entry_time < cutoff_time:
+            expired_entries.append(entry)
+        else:
+            remaining_entries.append(entry)
+
+    # Write back remaining entries
+    bytes_before = log_path.stat().st_size if log_path.exists() else 0
+
+    with open(log_path, 'w') as f:
+        for entry in remaining_entries:
+            f.write(json.dumps(entry) + '\n')
+
+    bytes_after = log_path.stat().st_size if log_path.exists() else 0
+    bytes_freed = bytes_before - bytes_after
+
+    # Calculate age metrics
+    oldest_remaining_age = None
+    newest_removed_age = None
+
+    if remaining_entries:
+        oldest_remaining = min(e.get("timestamp", 0) for e in remaining_entries)
+        oldest_remaining_age = (time.time() - oldest_remaining) / 86400
+
+    if expired_entries:
+        newest_removed = max(e.get("timestamp", 0) for e in expired_entries)
+        newest_removed_age = (time.time() - newest_removed) / 86400
+
+    # Clean up empty tenant directories if multitenancy enabled
+    empty_tenants_removed = 0
+    if MULTITENANCY_ENABLED:
+        tenants_dir = ACTIVITY_LOG_DIR / "tenants"
+        if tenants_dir.exists():
+            for tenant_dir in tenants_dir.iterdir():
+                if tenant_dir.is_dir():
+                    try:
+                        if not any(tenant_dir.iterdir()):
+                            tenant_dir.rmdir()
+                            empty_tenants_removed += 1
+                    except OSError:
+                        pass
+
+    return {
+        "total_entries_before": total_before,
+        "total_entries_after": len(remaining_entries),
+        "entries_removed": len(expired_entries),
+        "bytes_freed": bytes_freed,
+        "oldest_remaining_entry_age_days": oldest_remaining_age,
+        "newest_removed_entry_age_days": newest_removed_age,
+        "tenants_cleaned": 1 if tenant_id else 0,
+        "empty_tenants_removed": empty_tenants_removed
+    }

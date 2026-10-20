@@ -1,0 +1,29 @@
+{
+  "name": "neo-dashboard",
+  "version": "1.0.0",
+  "description": "Neo Mission Control Dashboard - Real-time microservices visualization",
+  "private": true,
+  "workspaces": [
+    "api",
+    "ui"
+  ],
+  "scripts": {
+    "dev": "docker-compose up",
+    "dev:down": "docker-compose down",
+    "dev:logs": "docker-compose logs -f",
+    "api:dev": "cd api && npm run dev",
+    "ui:dev": "cd ui && npm start",
+    "build": "npm run build --workspaces",
+    "test": "npm test --workspaces"
+  },
+  "keywords": [
+    "neo",
+    "dashboard",
+    "microservices",
+    "conflict-detection",
+    "coupling-metrics",
+    "entropy-analysis"
+  ],
+  "author": "Jay Krishna",
+  "license": "MIT"
+}
