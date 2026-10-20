@@ -230,7 +230,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             if agent_entry:
                 # Mark work as complete
                 lock_manager = LockManager()
-                lock_manager.release_lock(file_path, None, agent_id)
+                lock_manager.release_lock(agent_id, file_path)
                 lock_released = True
 
                 # Log completion event to activity log (like declare intent does)
