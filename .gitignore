@@ -13,3 +13,5 @@ tests/*_results.json
 src/
 .neo-test*/
 .neo-demo/
+*.whl
+*.tar.gz
