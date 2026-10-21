@@ -74,6 +74,7 @@ Open Terminal 2 and run the commands below, one at a time.
 ```bash
 cd ~/Neo
 source .venv/bin/activate
+python3 -m pip install -r requirements.txt
 ```
 
 ---
