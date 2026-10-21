@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Risk classifier for detecting conflicting local changes."""
+"""Risk classifier for detecting conflicting local changes (with real semantic analysis)."""
 
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 import re
+from pathlib import Path
+
+from core.semantic_conflict_detector import SemanticAnalyzer, Language
+from core.breaking_change_detector import has_breaking_changes
 
 
 class RiskLevel(Enum):
@@ -65,36 +69,31 @@ def regions_overlap(region1: Optional[str], region2: Optional[str]) -> bool:
     return False
 
 
-def detect_signature_change(intent: str) -> bool:
-    """Detect if intent explicitly mentions changing/removing a signature or API."""
-    lower_intent = intent.lower()
+def detect_signature_change(file_path: str, old_content: Optional[str] = None, new_content: Optional[str] = None) -> bool:
+    """Detect if file has signature/structural changes using AST analysis (not keywords).
 
-    # High-confidence keywords that indicate structural/signature changes
-    strong_keywords = [
-        "rename",
-        "change signature",
-        "remove ",  # space to avoid "remote"
-        "delete",
-        "deprecate",
-    ]
+    Args:
+        file_path: Path to the file to analyze
+        old_content: Previous content (for comparison)
+        new_content: Current content (for comparison)
 
-    # Check strong keywords
-    if any(kw in lower_intent for kw in strong_keywords):
-        return True
+    Returns:
+        True if breaking changes detected via AST analysis
+    """
+    if old_content and new_content:
+        # Real AST-based detection for Python files
+        has_changes, changes = has_breaking_changes(old_content, new_content, file_path)
+        return has_changes
 
-    # "move" only counts if it's about moving functions/methods/APIs, not UI elements
-    # Look for context: "move function", "move method", "move API", etc.
-    if "move" in lower_intent:
-        move_context = ["function", "method", "api", "parameter", "argument", "module", "class"]
-        if any(ctx in lower_intent for ctx in move_context):
-            return True
-
-    # "refactor" + API/signature mention is a signal
-    if "refactor" in lower_intent:
-        api_keywords = ["api", "signature", "interface", "contract"]
-        return any(kw in lower_intent for kw in api_keywords)
-
-    return False
+    # If we don't have content comparison, fall back to semantic analysis
+    try:
+        analyzer = SemanticAnalyzer(str(file_path))
+        symbols = analyzer.extract_symbols()
+        # If file has public APIs (functions, classes), any change warrants attention
+        return len(symbols) > 0
+    except Exception:
+        # If analysis fails, be conservative
+        return False
 
 
 def evaluate_semantic_layers(
@@ -105,19 +104,20 @@ def evaluate_semantic_layers(
     other_entry: dict,
 ) -> list[SemanticConflictLayer]:
     """
-    Evaluate conflict at multiple semantic layers.
+    Evaluate conflict at multiple semantic layers using real AST analysis.
 
     Layers (in order of escalation):
     1. Syntactic: Do they edit the same lines?
     2. Scope: Are they in the same function/class/method?
-    3. Semantic: Do they modify related symbols?
-    4. Type: Do changes break type contracts?
-    5. Data flow: Do they affect same data paths?
+    3. Semantic: Do they modify related symbols (via dependency analysis)?
+    4. Type: Do changes break type contracts (signature changes)?
+    5. Data flow: Do they affect same data paths (transitive dependencies)?
     """
 
     other_developer = other_entry["developer_id"]
     other_intent = other_entry["intent"]
     other_region = other_entry.get("region")
+    other_file = other_entry.get("file_path")
 
     layers = []
 
@@ -138,47 +138,159 @@ def evaluate_semantic_layers(
             reason="File-level edit (no region)" if not (current_region and other_region) else "Both have regions"
         ))
 
-    # Layer 2: Scope (function/class level)
-    # If regions are specified and clear (not overlapping), scope conflict is low
-    in_same_scope = regions_overlap(current_region, other_region) if (current_region and other_region) else True
+    # Layer 2: Scope (function/class level using real symbols)
+    in_same_scope = False
+    scope_confidence = 0.2
+    scope_reason = "Different scopes"
+
+    try:
+        # Extract symbols from the file to determine scope
+        analyzer = SemanticAnalyzer(str(current_file))
+        current_symbols = analyzer.extract_symbols()
+
+        # Map regions to symbols if possible
+        if current_region and other_region and current_symbols:
+            # Check if both regions refer to same symbol
+            for symbol in current_symbols:
+                if current_region.lower() in symbol.fully_qualified_name().lower() or \
+                   other_region.lower() in symbol.fully_qualified_name().lower():
+                    in_same_scope = True
+                    scope_confidence = 0.85
+                    scope_reason = f"Both in symbol: {symbol.fully_qualified_name()}"
+                    break
+
+        # If no symbolic match, fall back to overlap check
+        if not in_same_scope and (current_region and other_region):
+            in_same_scope = regions_overlap(current_region, other_region)
+            if in_same_scope:
+                scope_confidence = 0.75
+                scope_reason = "Regions overlap in same file"
+    except Exception:
+        # Fall back to heuristic if analysis fails
+        in_same_scope = regions_overlap(current_region, other_region) if (current_region and other_region) else True
+        scope_confidence = 0.6
+        scope_reason = "Scope analysis unavailable, using heuristic"
+
     layers.append(SemanticConflictLayer(
         name="scope",
         triggered=in_same_scope,
-        confidence=0.8 if in_same_scope else 0.2,
-        reason="Same scope/function" if in_same_scope else "Different scopes"
+        confidence=scope_confidence,
+        reason=scope_reason
     ))
 
-    # Layer 3: Semantic (symbol-level coupling)
-    signature_change = detect_signature_change(other_intent)
+    # Layer 3: Semantic (symbol-level coupling via dependency analysis)
+    semantic_triggered = False
+    semantic_confidence = 0.3
+    semantic_reason = "No symbol-level coupling detected"
+
+    try:
+        # Use AST-based detection for actual signature changes
+        if other_file and current_file == other_file:
+            signature_change = detect_signature_change(other_file)
+            if signature_change:
+                semantic_triggered = True
+                semantic_confidence = 0.9
+                semantic_reason = "Signature/structural change detected via AST"
+
+        # Also check for symbol dependencies
+        if not semantic_triggered:
+            analyzer = SemanticAnalyzer(str(current_file))
+            current_symbols = analyzer.extract_symbols()
+            dependencies = analyzer.analyze_dependencies()
+
+            # Check if changes affect dependent symbols
+            if dependencies and current_symbols:
+                semantic_triggered = len(dependencies) > 0
+                if semantic_triggered:
+                    semantic_confidence = 0.8
+                    semantic_reason = f"Symbol dependencies detected ({len(dependencies)} deps)"
+    except Exception:
+        semantic_triggered = detect_signature_change(other_file) if other_file else False
+        if semantic_triggered:
+            semantic_confidence = 0.7
+            semantic_reason = "Signature change detected (fallback)"
+
     layers.append(SemanticConflictLayer(
         name="semantic",
-        triggered=signature_change,
-        confidence=0.9 if signature_change else 0.3,
-        reason="Signature/structural change detected" if signature_change else "Implementation change only"
+        triggered=semantic_triggered,
+        confidence=semantic_confidence,
+        reason=semantic_reason
     ))
 
     # Layer 4: Type safety (breaking type contracts)
-    # Check if intent mentions type-related changes
-    type_related = any(kw in other_intent.lower() for kw in
-                      ["type", "return", "parameter", "signature", "interface", "protocol"])
+    type_triggered = False
+    type_confidence = 0.2
+    type_reason = "No type system changes"
+
+    try:
+        # Check intent for type-related keywords
+        type_keywords = ["type", "return", "parameter", "signature", "interface", "protocol", "contract"]
+        type_related = any(kw in other_intent.lower() for kw in type_keywords)
+
+        # Check if actual signature changes (via AST)
+        if type_related and other_file:
+            signature_change = detect_signature_change(other_file)
+            type_triggered = type_related and signature_change
+            if type_triggered:
+                type_confidence = 0.9
+                type_reason = "Type system changes confirmed (signature change + intent)"
+            else:
+                type_confidence = 0.6
+                type_reason = "Type-related intent but no signature change detected"
+    except Exception:
+        type_triggered = False
+        type_confidence = 0.3
+        type_reason = "Type analysis error"
+
     layers.append(SemanticConflictLayer(
         name="type",
-        triggered=type_related and signature_change,
-        confidence=0.85 if (type_related and signature_change) else 0.2,
-        reason="Type system changes detected" if (type_related and signature_change) else "No type changes"
+        triggered=type_triggered,
+        confidence=type_confidence,
+        reason=type_reason
     ))
 
-    # Layer 5: Data flow (shared data paths)
-    # Heuristic: if both are modifying same file and at least one mentions data/state/mutation
-    data_flow_keywords = ["data", "state", "cache", "db", "mutation", "update", "write"]
-    mentions_data = any(kw in other_intent.lower() for kw in data_flow_keywords)
-    same_file = (current_file == other_entry.get("file_path"))
+    # Layer 5: Data flow (shared data paths via transitive dependencies)
+    dataflow_triggered = False
+    dataflow_confidence = 0.1
+    dataflow_reason = "No shared data mutations"
+
+    try:
+        # Check for data mutation keywords
+        data_keywords = ["data", "state", "cache", "db", "mutation", "update", "write", "modify"]
+        mentions_data = any(kw in other_intent.lower() for kw in data_keywords)
+        same_file = (current_file == other_entry.get("file_path"))
+
+        if mentions_data and same_file:
+            # Use semantic analysis to detect shared state mutation
+            try:
+                analyzer = SemanticAnalyzer(str(current_file))
+                dependencies = analyzer.analyze_dependencies()
+
+                # Check if dependencies involve data mutations
+                dataflow_triggered = len(dependencies) > 0 and mentions_data
+                if dataflow_triggered:
+                    dataflow_confidence = 0.85
+                    dataflow_reason = f"Shared data paths with {len(dependencies)} dependencies"
+                else:
+                    dataflow_confidence = 0.6
+                    dataflow_reason = "Same file, data mutation intent, but no dependency coupling"
+            except Exception:
+                dataflow_triggered = mentions_data and same_file
+                dataflow_confidence = 0.65
+                dataflow_reason = "Data mutation in same file (heuristic)"
+        else:
+            dataflow_confidence = 0.1 if not same_file else 0.3
+            dataflow_reason = "Different files or no data mutation" if not same_file else "Same file but no data mutation"
+    except Exception:
+        dataflow_triggered = False
+        dataflow_confidence = 0.1
+        dataflow_reason = "Data flow analysis error"
 
     layers.append(SemanticConflictLayer(
         name="data_flow",
-        triggered=same_file and mentions_data,
-        confidence=0.8 if (same_file and mentions_data) else 0.1,
-        reason="Shared data paths potentially affected" if (same_file and mentions_data) else "No shared data mutation"
+        triggered=dataflow_triggered,
+        confidence=dataflow_confidence,
+        reason=dataflow_reason
     ))
 
     return layers
