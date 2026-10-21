@@ -238,16 +238,43 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 lock_manager.release_lock(file_path, None, agent_id)
                 lock_released = True
 
-                # Check if this completion involved a breaking change
+                # Check if this completion involved a breaking change or fix
                 original_intent = agent_entry.get('intent', '')
-                if _detect_breaking_change_intent(original_intent):
+                impact_manager = ImpactAlertManager()
+
+                # Check for FIX keywords (compatibility, wrapper, backward, mitigation, resolve, fix)
+                fix_keywords = ['compatibility', 'wrapper', 'backward', 'mitigation', 'resolve', 'fix']
+                is_fix = any(keyword in original_intent.lower() for keyword in fix_keywords)
+
+                if is_fix:
+                    # This is a fix/mitigation - resolve any impact alerts for this file
+                    try:
+                        print(f"\n✔️ Resolving impact alerts for fix in {file_path}")
+                        alerts = impact_manager.get_alerts_for_file(file_path)
+                        for alert in alerts:
+                            # Find the alert file and resolve it
+                            for alert_file in impact_manager.alerts_dir.glob("alert_*.json"):
+                                with open(alert_file) as f:
+                                    alert_data = json.load(f)
+                                    if (alert_data.get('source_file') == alert.get('source_file') and
+                                        alert_data.get('status') == 'unresolved'):
+                                        print(f"   ✓ Resolved alert from {alert_data.get('source_file')}")
+                                        alert_data['status'] = 'resolved'
+                                        alert_data['resolved_by'] = agent_id
+                                        alert_data['resolved_at'] = datetime.now().isoformat()
+                                        with open(alert_file, 'w') as fw:
+                                            json.dump(alert_data, fw, indent=2)
+                                        break
+                    except Exception as e:
+                        print(f"   ✗ Error resolving alerts: {e}")
+
+                elif _detect_breaking_change_intent(original_intent):
                     # Breaking change was made - create impact alerts for downstream files
                     if _check_downstream_impact(file_path):
                         try:
                             # Find all files that import this file
                             module_name = Path(file_path).stem
                             service_dir = Path("test-scenarios/services")
-                            impact_manager = ImpactAlertManager()
 
                             print(f"\n📢 Creating impact alerts for breaking change in {file_path}")
                             print(f"   Module name: {module_name}")
