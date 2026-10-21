@@ -186,23 +186,24 @@ def check_for_conflicts(
     resolved_tenant = tenant_id or DEFAULT_TENANT_ID
 
     # CHECK 1: Detect breaking changes from intent
-    if _detect_breaking_change_intent(intent):
-        # Check if file has downstream impact
-        if _check_downstream_impact(file_path):
-            lock_manager = LockManager(tenant_id=resolved_tenant)
-            lock_scope = "region" if region else "file"
-            lock_info = lock_manager.acquire_lock(
-                file_path=file_path,
-                region=region,
-                developer_id=agent_id,
-                reason="BREAKING_CHANGE",
-                scope=lock_scope,
-            )
-            return (
-                RiskLevel.HIGH,
-                f"BREAKING CHANGE: Function signature changed - downstream callers affected",
-                lock_info
-            )
+    breaking_change_detected = _detect_breaking_change_intent(intent)
+    downstream_impact = _check_downstream_impact(file_path)
+
+    if breaking_change_detected and downstream_impact:
+        lock_manager = LockManager(tenant_id=resolved_tenant)
+        lock_scope = "region" if region else "file"
+        lock_info = lock_manager.acquire_lock(
+            file_path=file_path,
+            region=region,
+            developer_id=agent_id,
+            reason="BREAKING_CHANGE",
+            scope=lock_scope,
+        )
+        return (
+            RiskLevel.HIGH,
+            f"BREAKING CHANGE: Function signature changed - downstream callers affected",
+            lock_info
+        )
 
     # Get active entries for this tenant only (conflict checks are per-tenant)
     active_entries = get_active_entries(tenant_id=resolved_tenant)
