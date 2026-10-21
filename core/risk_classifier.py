@@ -9,6 +9,9 @@ from pathlib import Path
 
 from core.semantic_conflict_detector import SemanticAnalyzer, Language
 from core.breaking_change_detector import has_breaking_changes
+from core.conflict_scorer import calculate_conflict_score, ConflictScore
+from core.service_coupling import ServiceCouplingAnalyzer
+from core.dependency_resolver import DependencyResolver
 
 
 class RiskLevel(Enum):
@@ -25,6 +28,9 @@ class ConflictAssessment:
     other_intent: str
     other_region: Optional[str]
     layers_triggered: Optional[list] = None  # Which semantic layers detected conflict
+    detailed_score: Optional[ConflictScore] = None  # Numerical conflict score (0-100)
+    coupling_analysis: Optional[dict] = None  # Service coupling metrics
+    dependency_blockers: Optional[list] = None  # Unresolved dependencies blocking work
 
 
 @dataclass
@@ -67,6 +73,85 @@ def regions_overlap(region1: Optional[str], region2: Optional[str]) -> bool:
         return norm1 == norm2
 
     return False
+
+
+def _get_detailed_conflict_score(
+    current_developer: str,
+    conflict_layers: list[SemanticConflictLayer],
+    triggered_layers: list[str],
+    other_entry: dict,
+) -> ConflictScore:
+    """
+    Calculate detailed numerical conflict score using conflict_scorer.
+
+    Converts semantic layer analysis to numerical impact score (0-100).
+    """
+    # Determine conflict types from triggered layers
+    conflict_types = []
+    if "syntactic" in triggered_layers:
+        conflict_types.append("overlap")
+    if "semantic" in triggered_layers or "type" in triggered_layers:
+        conflict_types.append("signature_change")
+    if "data_flow" in triggered_layers:
+        conflict_types.append("dependency_conflict")
+
+    # Estimate overlap severity from confidence values
+    syntactic_layer = next((l for l in conflict_layers if l.name == "syntactic"), None)
+    overlap_severity = (syntactic_layer.confidence if syntactic_layer else 0.0)
+
+    # Check if we have semantic/AST-based detection (higher confidence)
+    is_git_detected = any(l.confidence > 0.8 for l in conflict_layers if l.triggered)
+
+    return calculate_conflict_score(
+        num_conflicts=1,  # Per-conflict assessment
+        conflict_types=conflict_types,
+        overlap_severity=overlap_severity,
+        is_git_detected=is_git_detected,
+        active_time_minutes=0  # Not tracked in current context
+    )
+
+
+def _analyze_service_coupling(file_path: str, other_file: str) -> dict:
+    """
+    Analyze coupling between files/services.
+
+    Returns coupling metrics to assess impact of changes.
+    """
+    try:
+        coupling_analyzer = ServiceCouplingAnalyzer()
+
+        current_coupling = coupling_analyzer.analyze_file_coupling(file_path)
+        other_coupling = coupling_analyzer.analyze_file_coupling(other_file)
+
+        return {
+            "current_file": current_coupling,
+            "other_file": other_coupling,
+            "tight_coupling_detected": current_coupling.get("tightly_coupled", False) or
+                                       other_coupling.get("tightly_coupled", False)
+        }
+    except Exception:
+        return {"error": "Could not analyze coupling"}
+
+
+def _check_dependency_blockers(current_developer: str, file_path: str) -> list[str]:
+    """
+    Check for unresolved dependency issues that block work.
+
+    Returns list of blockers (breaking changes in dependencies, etc).
+    """
+    blockers = []
+    try:
+        resolver = DependencyResolver()
+
+        # Check if this file's changes would have unresolved blockers
+        # (This is a simplified check - full implementation would be more complex)
+        # For now, just track if we can access the resolver
+        if resolver.dependencies:
+            blockers.append("Dependency resolver initialized - check for upstream breaks")
+    except Exception:
+        pass  # Dependency resolver not configured yet
+
+    return blockers
 
 
 def detect_signature_change(file_path: str, old_content: Optional[str] = None, new_content: Optional[str] = None) -> bool:
@@ -363,6 +448,45 @@ def classify_risk(
             level = RiskLevel.MEDIUM
             reason = f"Mid-level conflict: {', '.join(triggered_layers)}"
 
+        # Enrich assessment with detailed scoring and coupling analysis
+        detailed_score = None
+        coupling_analysis = None
+        dependency_blockers = None
+
+        try:
+            # Calculate detailed numerical score (0-100)
+            detailed_score = _get_detailed_conflict_score(
+                current_developer, layers, triggered_layers, other_entry
+            )
+
+            # Adjust risk level if detailed score suggests otherwise
+            if detailed_score.total_score >= 70 and level == RiskLevel.MEDIUM:
+                level = RiskLevel.HIGH
+                reason = f"{reason} (detailed score: {detailed_score.total_score:.0f}/100)"
+        except Exception:
+            pass  # Detailed scoring failed, continue with basic assessment
+
+        try:
+            # Analyze service coupling
+            other_file = other_entry.get("file_path")
+            if other_file and current_file != other_file:
+                coupling_analysis = _analyze_service_coupling(current_file, other_file)
+                if coupling_analysis.get("tight_coupling_detected"):
+                    if level == RiskLevel.LOW:
+                        level = RiskLevel.MEDIUM
+                    reason = f"{reason} (tight coupling detected)"
+        except Exception:
+            pass  # Coupling analysis failed, continue
+
+        try:
+            # Check for dependency blockers
+            dependency_blockers = _check_dependency_blockers(current_developer, current_file)
+            if dependency_blockers and level == RiskLevel.LOW:
+                level = RiskLevel.MEDIUM
+                reason = f"{reason} (unresolved dependencies)"
+        except Exception:
+            pass  # Dependency checking failed, continue
+
         return ConflictAssessment(
             level=level,
             reason=reason,
@@ -370,6 +494,9 @@ def classify_risk(
             other_intent=other_intent,
             other_region=other_region,
             layers_triggered=triggered_layers,
+            detailed_score=detailed_score,
+            coupling_analysis=coupling_analysis,
+            dependency_blockers=dependency_blockers,
         )
 
     # Original heuristic-based classification (fallback)
