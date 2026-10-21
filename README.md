@@ -107,58 +107,60 @@ For a complete coordination flow with staleness detection and impact resolution:
 
 ---
 
-### 🏆 Multi-Service Breaking Change Test: Real Neo API Execution
+### 🏆 Multi-Service Breaking Change Test: Step-by-Step Interactive
 
-**Real test with actual API engagement** (not simulation) demonstrating breaking change coordination across 4 microservices.
+**Real test with manual steps** (like LOCAL_THREE_DEVELOPER_TEST.md) demonstrating breaking change coordination across 4 microservices.
 
-Run the test:
+**Setup**: Open 2 terminals
 
+**Terminal 1 - Start Neo Server**:
 ```bash
-python test-scenarios/multi_service_breaking_change_test.py
+cd ~/Neo
+source .venv/bin/activate
+PYTHONPATH=. python3 -u cli/neo_server.py --clear
 ```
 
-**What Happens** (with real API calls):
+**Terminal 2 - Execute Test Steps**: Follow the 13-step test in the documentation below.
 
-1. **Week 1 - Normal Development**
-   - C1 declares intent on auth-service (OAuth2)
-   - C2 declares intent on payment-service (payment processor)
-   - C3 declares intent on invoice-service (invoicing)
-   - C4 declares intent on notification-service (email)
-   - **All get LOW risk** - different files, no conflicts
+**Test Scenario**:
+- C1 works on auth-service (OAuth2)
+- C2 works on payment-service (calls auth)
+- C3 works on invoice-service (depends on payment)
+- C4 works on notification-service (depends on invoice)
+- **Day 1-4**: All declare intent independently (LOW risk)
+- **Day 8**: C1 refactors `authenticate()` - removes timestamp parameter
+- **Day 9**: C2 attempts to add fraud detection with old signature
+  - **Neo detects HIGH RISK** ⚠️
+  - **C2 gets BLOCKED** (cannot generate breaking code)
+- **Day 11**: C1 adds compatibility wrapper
+- **Day 12**: C2 can now safely integrate
 
-2. **Week 2 - Breaking Change Cascade**
-   - C1 refactors `authenticate()` signature (removes timestamp param)
-   - C2 attempts to add fraud detection with old signature
-   - Neo detects semantic incompatibility
-   - C1 adds compatibility wrapper
-   - C2, C3, C4 cascade fixes through dependency chain
-   - **Result: 0 merge conflicts** - pure semantic coordination
+**What You'll See**:
+```
+Terminal 1 (Server):
+✅ [12:00:05] c1 → auth-service
+   Intent: Implement OAuth2 with JWT tokens
+   Risk: LOW (developers on file: 1)
 
-**Real API Calls Made**:
-- ✅ `check_for_conflicts()` - 7 calls
-- ✅ `log_activity()` - 11 entries recorded
-- ✅ `record_developer_change()` - Coupling metrics tracked
+⚠️  [12:00:45] c2 - Conflict Check
+   Risk: HIGH
+   BREAKING CHANGE detected in upstream dependency
+   📢 Impact Alert: payment-service depends on authenticate()
+```
 
 **Verify Results**:
 ```bash
 cat .devsync/activity-log.json | jq '.'
 ```
 
-You'll see 9 real entries showing:
-- Developer intents
-- Timestamps
-- Refactor → Fix cascade
-- Zero merge conflicts
+See: [MULTI_SERVICE_STEP_BY_STEP_TEST.md](docs/MULTI_SERVICE_STEP_BY_STEP_TEST.md)
 
-**Key Metrics**:
-- Services: 4 (auth → payment → invoice → notification)
-- Developers: 4
-- Activities logged: 11
-- Breaking changes handled: 1
-- Cascading fixes: 3
-- Merge conflicts: **0**
-
-See: [MULTI_SERVICE_BREAKING_CHANGE_TEST.md](docs/MULTI_SERVICE_BREAKING_CHANGE_TEST.md)
+**What This Proves**:
+- ✅ Intent declaration works (all 4 devs independent)
+- ✅ Conflict detection catches breaking changes
+- ✅ Developer gets BLOCKED before wasting tokens on broken code
+- ✅ Sequential coordination through activity log
+- ✅ Zero merge conflicts (semantic, not Git-based)
 
 ---
 
