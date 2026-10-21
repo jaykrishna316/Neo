@@ -18,9 +18,9 @@ from pathlib import Path
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.activity_log import ActivityLogManager
+from core.activity_log import log_activity, read_log
 from core.pre_gen_check import check_for_conflicts
-from core.coupling_metrics import CouplingMetrics, record_change_set
+from core.coupling_metrics import CouplingMetricsCollector, record_developer_change
 from core.entropy_coupling import analyze_entropy_coupling
 from core.impact_alerts import ImpactAlertManager
 
@@ -29,8 +29,7 @@ class MultiServiceCoordinationTest:
     """Orchestrates comprehensive multi-service test scenario"""
 
     def __init__(self):
-        self.activity_log = ActivityLogManager()
-        self.coupling_metrics = CouplingMetrics()
+        self.coupling_metrics = CouplingMetricsCollector()
         self.impact_alerts = ImpactAlertManager()
         self.start_date = datetime.utcnow() - timedelta(days=14)
         self.current_date = self.start_date
@@ -42,31 +41,34 @@ class MultiServiceCoordinationTest:
     def simulate_developer_change(self, developer_id, file_path, intent, change_size="medium"):
         """Simulate a developer making a change"""
         # Check for conflicts before change
-        risk = check_for_conflicts(
+        risk_level, risk_message, lock_info = check_for_conflicts(
             agent_id=developer_id,
             file_path=file_path,
             intent=intent,
             region="function"
         )
 
-        # Record the activity
-        self.activity_log.log_activity(
-            agent_id=developer_id,
+        # Record the activity using the function-based API
+        log_activity(
+            developer_id=developer_id,
             file_path=file_path,
             intent=intent,
-            intent_category="feature",
-            timestamp=self.current_date.isoformat()
+            region="function",
+            intent_category="feature"
         )
 
         # Record coupling change
-        record_change_set(
-            file_path=file_path,
-            changed_functions=["main_function"],
-            changed_lines=50,
-            change_scope="medium"
+        record_developer_change(
+            changed_files=[file_path],
+            developer_id=developer_id,
+            intent=intent
         )
 
-        return risk
+        return {
+            "risk_level": risk_level.value,
+            "message": risk_message,
+            "lock_info": lock_info
+        }
 
     def print_section(self, title):
         """Print formatted section header"""
@@ -348,13 +350,14 @@ class MultiServiceCoordinationTest:
 
         print("Complete Trace of Changes (SOC2/HIPAA Compliant):\n")
 
-        entries = self.activity_log.get_activity_log()
+        entries = read_log()
 
         if entries:
             print(f"Total entries recorded: {len(entries)}\n")
             for i, entry in enumerate(entries[-6:], 1):  # Show last 6
-                print(f"{i}. {entry.get('timestamp', 'N/A')}")
-                print(f"   Developer: {entry.get('agent_id', 'unknown')}")
+                timestamp = datetime.fromtimestamp(entry.get('timestamp', 0)).isoformat() if entry.get('timestamp') else 'N/A'
+                print(f"{i}. {timestamp}")
+                print(f"   Developer: {entry.get('developer_id', 'unknown')}")
                 print(f"   File: {entry.get('file_path', 'unknown')}")
                 print(f"   Intent: {entry.get('intent', 'unknown')}")
                 print(f"   Category: {entry.get('intent_category', 'unknown')}\n")
