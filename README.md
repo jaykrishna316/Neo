@@ -107,60 +107,48 @@ For a complete coordination flow with staleness detection and impact resolution:
 
 ---
 
-### 🏆 Multi-Service Breaking Change Test: Step-by-Step Interactive
+### 💻 Advanced Test: 4-Service Breaking Change Cascade (15 minutes)
 
-**Real test with manual steps** (like LOCAL_THREE_DEVELOPER_TEST.md) demonstrating breaking change coordination across 4 microservices.
+For complete breaking change detection and upstream impact blocking:
 
-**Setup**: Open 2 terminals
-
-**Terminal 1 - Start Neo Server**:
-```bash
-cd ~/Neo
-source .venv/bin/activate
-PYTHONPATH=. python3 -u cli/neo_server.py --clear
-```
-
-**Terminal 2 - Execute Test Steps**: Follow the 13-step test in the documentation below.
+**Setup**: Open 2 terminals and follow [docs/MULTI_SERVICE_STEP_BY_STEP_TEST.md](docs/MULTI_SERVICE_STEP_BY_STEP_TEST.md)
 
 **Test Scenario**:
-- C1 works on auth-service (OAuth2)
-- C2 works on payment-service (calls auth)
+- C1 works on auth-service (OAuth2 implementation)
+- C2 works on payment-service (depends on auth)
 - C3 works on invoice-service (depends on payment)
 - C4 works on notification-service (depends on invoice)
-- **Day 1-4**: All declare intent independently (LOW risk)
-- **Day 8**: C1 refactors `authenticate()` - removes timestamp parameter
-- **Day 9**: C2 attempts to add fraud detection with old signature
-  - **Neo detects HIGH RISK** ⚠️
-  - **C2 gets BLOCKED** (cannot generate breaking code)
-- **Day 11**: C1 adds compatibility wrapper
-- **Day 12**: C2 can now safely integrate
 
-**What You'll See**:
+**What you'll see:**
+- ✅ All 4 developers declare intent independently (LOW risk)
+- ✅ C1 makes breaking change to `authenticate()` signature (HIGH risk)
+- ✅ **Impact alerts created** for all downstream files (payment, invoice, notification)
+- ✅ **C2 gets BLOCKED** when attempting to integrate with broken auth API (HIGH risk)
+- ✅ C1 adds compatibility wrapper to fix the breaking change
+- ✅ **Impact alerts resolved**, C2 unblocked
+- ✅ **Zero merge conflicts** across all 4 services and dependency chain
+
+**Example Output**:
 ```
-Terminal 1 (Server):
-✅ [12:00:05] c1 → auth-service
-   Intent: Implement OAuth2 with JWT tokens
-   Risk: LOW (developers on file: 1)
+📢 Creating impact alerts for breaking change in auth-service/auth_service.py
+   ✓ Found import in payment-service/payment_service.py
+   ✓ Found import in invoice-service/invoice_service.py
 
-⚠️  [12:00:45] c2 - Conflict Check
+⚠️  c2 → payment-service
    Risk: HIGH
-   BREAKING CHANGE detected in upstream dependency
-   📢 Impact Alert: payment-service depends on authenticate()
-```
+   HIGH RISK: Breaking change detected in upstream dependency (auth-service)
+   🔒 Lock Status: BLOCKED until upstream fix
 
-**Verify Results**:
-```bash
-cat .devsync/activity-log.json | jq '.'
+✔️ Resolving impact alerts for fix in auth-service/auth_service.py
+   ✓ Resolved alert from auth-service
 ```
-
-See: [MULTI_SERVICE_STEP_BY_STEP_TEST.md](docs/MULTI_SERVICE_STEP_BY_STEP_TEST.md)
 
 **What This Proves**:
-- ✅ Intent declaration works (all 4 devs independent)
-- ✅ Conflict detection catches breaking changes
-- ✅ Developer gets BLOCKED before wasting tokens on broken code
-- ✅ Sequential coordination through activity log
-- ✅ Zero merge conflicts (semantic, not Git-based)
+- ✅ Upstream breaking changes detected before code generation
+- ✅ Developers blocked from creating broken code
+- ✅ Impact propagation through multi-service dependency chain
+- ✅ Automatic alert resolution when fixes are applied
+- ✅ Zero conflicts in cascading multi-service workflow
 
 ---
 
