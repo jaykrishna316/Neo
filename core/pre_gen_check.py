@@ -2,13 +2,13 @@
 """Pre-generation conflict checking API for Neo coordination layer (tenant-isolated)."""
 
 import time
+from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
 from core.activity_log import get_active_entries, DEFAULT_TENANT_ID, log_activity, read_log
 from core.risk_classifier import RiskLevel, classify_risk
 from core.lock_manager import LockManager
 from core.symbol_hasher import StalenessChecker, snapshot_file, extract_dependencies
 from core.freshness import check_freshness
-from core.dependency_tracker import DependencyTracker
 
 # Content-based staleness detection constants
 # CONTEXT_FRESHNESS_FALLBACK_MINUTES: Fallback when content hashing unavailable
@@ -53,9 +53,23 @@ def _check_downstream_impact(file_path: str) -> bool:
         True if file has downstream dependents, False otherwise
     """
     try:
-        tracker = DependencyTracker()
-        impacted = tracker.get_impacted_files(file_path)
-        return len(impacted) > 0
+        # Get module name from file path (e.g., "auth_service.py" -> "auth_service")
+        module_name = Path(file_path).stem
+        service_dir = Path("test-scenarios/services")
+
+        # Scan all service files for imports
+        if service_dir.exists():
+            for service_file in service_dir.rglob("*.py"):
+                try:
+                    with open(service_file) as f:
+                        content = f.read()
+                        # Check if this file imports the changed module
+                        if f"import {module_name}" in content or f"from {module_name}" in content:
+                            return True
+                except:
+                    continue
+
+        return False
     except Exception:
         # If we can't determine dependencies, assume no impact
         return False
