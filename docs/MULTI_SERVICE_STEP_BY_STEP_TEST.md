@@ -82,6 +82,8 @@ python3 -m pip install -r requirements.txt
 ## STEP 1: C1 declares intent on auth-service
 
 ```bash
+cd ~/Neo
+source .venv/bin/activate
 PYTHONPATH=. python3 cli/neo_client.py declare c1 test-scenarios/services/auth-service/auth_service.py "Implement OAuth2 with JWT tokens"
 ```
 
@@ -99,6 +101,8 @@ PYTHONPATH=. python3 cli/neo_client.py declare c1 test-scenarios/services/auth-s
 ## STEP 2: C2 declares intent on payment-service
 
 ```bash
+cd ~/Neo
+source .venv/bin/activate
 PYTHONPATH=. python3 cli/neo_client.py declare c2 test-scenarios/services/payment-service/payment_service.py "Integrate payment processor with auth"
 ```
 
@@ -116,6 +120,8 @@ PYTHONPATH=. python3 cli/neo_client.py declare c2 test-scenarios/services/paymen
 ## STEP 3: C3 declares intent on invoice-service
 
 ```bash
+cd ~/Neo
+source .venv/bin/activate
 PYTHONPATH=. python3 cli/neo_client.py declare c3 test-scenarios/services/invoice-service/invoice_service.py "Generate invoices from transactions"
 ```
 
@@ -133,6 +139,8 @@ PYTHONPATH=. python3 cli/neo_client.py declare c3 test-scenarios/services/invoic
 ## STEP 4: C4 declares intent on notification-service
 
 ```bash
+cd ~/Neo
+source .venv/bin/activate
 PYTHONPATH=. python3 cli/neo_client.py declare c4 test-scenarios/services/notification-service/notification_service.py "Send invoice emails"
 ```
 
@@ -150,6 +158,8 @@ PYTHONPATH=. python3 cli/neo_client.py declare c4 test-scenarios/services/notifi
 ## STEP 5: C1 completes auth-service (no breaking change yet)
 
 ```bash
+cd ~/Neo
+source .venv/bin/activate
 PYTHONPATH=. python3 cli/neo_client.py complete c1 test-scenarios/services/auth-service/auth_service.py --added 50 --removed 5
 ```
 
@@ -167,6 +177,8 @@ PYTHONPATH=. python3 cli/neo_client.py complete c1 test-scenarios/services/auth-
 ## STEP 6: C1 now refactors auth-service (BREAKING CHANGE!)
 
 ```bash
+cd ~/Neo
+source .venv/bin/activate
 PYTHONPATH=. python3 cli/neo_client.py declare c1 test-scenarios/services/auth-service/auth_service.py "Refactor authenticate() - remove timestamp param for security"
 ```
 
