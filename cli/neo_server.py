@@ -248,6 +248,10 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                             service_dir = Path("test-scenarios/services")
                             impact_manager = ImpactAlertManager()
 
+                            print(f"\n📢 Creating impact alerts for breaking change in {file_path}")
+                            print(f"   Module name: {module_name}")
+                            print(f"   Looking for imports in: {service_dir}")
+
                             if service_dir.exists():
                                 for service_file in service_dir.rglob("*.py"):
                                     try:
@@ -256,16 +260,19 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                                             # Check if this file imports the changed module
                                             if f"import {module_name}" in content or f"from {module_name}" in content:
                                                 # Create alert for this file
+                                                print(f"   ✓ Found import in {service_file}")
                                                 impact_manager.create_alert(
                                                     source_file=file_path,
                                                     target_file=str(service_file),
                                                     changed_by=agent_id,
                                                     change_summary=original_intent,
-                                                    impact_reason=f"Upstream change to {Path(file_path).stem}() - breaking change may affect this file"
+                                                    impact_reason=f"Upstream change to {module_name}() - breaking change may affect this file"
                                                 )
-                                    except:
+                                    except Exception as e:
+                                        print(f"   ✗ Error scanning {service_file}: {e}")
                                         continue
-                        except Exception:
+                        except Exception as e:
+                            print(f"   ✗ Error creating impact alerts: {e}")
                             pass
 
                 # Log completion event to activity log (like declare intent does)
