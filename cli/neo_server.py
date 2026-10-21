@@ -248,24 +248,29 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 is_fix = any(keyword in original_intent.lower() for keyword in fix_keywords)
 
                 if is_fix:
-                    # This is a fix/mitigation - resolve any impact alerts for this file
+                    # This is a fix/mitigation - resolve any impact alerts CAUSED BY this file's breaking change
+                    # (alerts on downstream files that depend on this file)
                     try:
                         print(f"\n✔️ Resolving impact alerts for fix in {file_path}")
-                        alerts = impact_manager.get_alerts_for_file(file_path)
-                        for alert in alerts:
-                            # Find the alert file and resolve it
-                            for alert_file in impact_manager.alerts_dir.glob("alert_*.json"):
-                                with open(alert_file) as f:
-                                    alert_data = json.load(f)
-                                    if (alert_data.get('source_file') == alert.get('source_file') and
-                                        alert_data.get('status') == 'unresolved'):
-                                        print(f"   ✓ Resolved alert from {alert_data.get('source_file')}")
-                                        alert_data['status'] = 'resolved'
-                                        alert_data['resolved_by'] = agent_id
-                                        alert_data['resolved_at'] = datetime.now().isoformat()
-                                        with open(alert_file, 'w') as fw:
-                                            json.dump(alert_data, fw, indent=2)
-                                        break
+
+                        # Find all alerts where source_file == file_path (breaking change in THIS file)
+                        resolved_count = 0
+                        for alert_file in impact_manager.alerts_dir.glob("alert_*.json"):
+                            with open(alert_file) as f:
+                                alert_data = json.load(f)
+                                # Resolve alerts that were created BECAUSE of this file's breaking change
+                                if (alert_data.get('source_file') == file_path and
+                                    alert_data.get('status') == 'unresolved'):
+                                    print(f"   ✓ Resolved alert for {alert_data.get('target_file')}")
+                                    alert_data['status'] = 'resolved'
+                                    alert_data['resolved_by'] = agent_id
+                                    alert_data['resolved_at'] = datetime.now().isoformat()
+                                    with open(alert_file, 'w') as fw:
+                                        json.dump(alert_data, fw, indent=2)
+                                    resolved_count += 1
+
+                        if resolved_count == 0:
+                            print(f"   (No unresolved alerts found for this fix)")
                     except Exception as e:
                         print(f"   ✗ Error resolving alerts: {e}")
 
