@@ -110,9 +110,29 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
+        <!-- Detailed Conflict Analysis -->
+        <div class="card">
+            <h2>🔬 Detailed Conflict Analysis</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Developer</th>
+                        <th>File</th>
+                        <th>Risk Level</th>
+                        <th>Conflict Score</th>
+                        <th>Semantic Layers</th>
+                        <th>Coupling Status</th>
+                        <th>Blockers</th>
+                    </tr>
+                </thead>
+                <tbody id="analysis-table">
+                </tbody>
+            </table>
+        </div>
+
         <!-- Detailed Metrics Table -->
         <div class="card">
-            <h2>📈 Detailed Metrics</h2>
+            <h2>📈 Activity Metrics</h2>
             <table>
                 <thead>
                     <tr>
@@ -138,13 +158,15 @@ HTML_TEMPLATE = """
                 </thead>
                 <tbody>
                     <tr><td>Activity Logging</td><td>developer_id, file_path, intent, region, category, scope, timestamp, agent_metadata</td><td style="color: #34d399;">✅</td></tr>
-                    <tr><td>Conflict Detection</td><td>risk_level, other_dev, reason, layers_triggered</td><td style="color: #34d399;">✅</td></tr>
+                    <tr><td>Conflict Detection</td><td>risk_level, other_dev, reason, layers_triggered, detailed_score, coupling_analysis, dependency_blockers</td><td style="color: #34d399;">✅</td></tr>
+                    <tr><td>Semantic Analysis</td><td>5 layers: syntactic, scope, semantic, type, data_flow with real AST analysis</td><td style="color: #34d399;">✅</td></tr>
+                    <tr><td>Numerical Scoring</td><td>conflict_score (0-100), impact_factors, blockers, warnings, recommendations</td><td style="color: #34d399;">✅</td></tr>
+                    <tr><td>Service Coupling</td><td>coupling_score, tight_coupling_detected, external_dependencies</td><td style="color: #34d399;">✅</td></tr>
+                    <tr><td>Dependency Resolution</td><td>unresolved_blockers, blocking_services, breaking_changes</td><td style="color: #34d399;">✅</td></tr>
                     <tr><td>Context Staleness</td><td>status, stale, changed_symbols, needs_refresh</td><td style="color: #34d399;">✅</td></tr>
                     <tr><td>Impact Analysis</td><td>has_impacts, alert_count, upstream_sources, impact_reasons</td><td style="color: #34d399;">✅</td></tr>
-                    <tr><td>Semantic Analysis</td><td>symbol_count, symbols, dependencies, dependency_types</td><td style="color: #34d399;">✅</td></tr>
                     <tr><td>Agent Execution</td><td>model, tokens_used, confidence, execution_time</td><td style="color: #34d399;">✅</td></tr>
                     <tr><td>Lock Management</td><td>state, holder, scope, queue_position, expires_in</td><td style="color: #fbbf24;">⚠️ Planned</td></tr>
-                    <tr><td>Service Coupling</td><td>coupling_score, tight_coupling_pairs</td><td style="color: #fbbf24;">⚠️ Planned</td></tr>
                 </tbody>
             </table>
         </div>
@@ -202,6 +224,20 @@ HTML_TEMPLATE = """
                 }).join('');
                 document.getElementById('activity').innerHTML = actHtml;
 
+                // Update detailed analysis table
+                const analysisHtml = data.analysis.map(a => `
+                    <tr>
+                        <td>${a.dev}</td>
+                        <td><code>${a.file}</code></td>
+                        <td><span class="risk-${a.risk.toLowerCase()}">${a.risk}</span></td>
+                        <td>${a.score ? a.score.toFixed(1) + '/100 (' + a.score_category + ')' : 'N/A'}</td>
+                        <td>${a.layers ? a.layers.join(', ') : 'N/A'}</td>
+                        <td>${a.coupling ? (a.coupling ? '🔗 Tight' : '✓ Loose') : 'N/A'}</td>
+                        <td>${a.blockers && a.blockers.length > 0 ? '⚠️ ' + a.blockers.length : '✓ None'}</td>
+                    </tr>
+                `).join('');
+                document.getElementById('analysis-table').innerHTML = analysisHtml;
+
                 // Update table
                 const tableHtml = data.metrics.map(m => `
                     <tr>
@@ -245,6 +281,7 @@ def api_dashboard():
 
     activities = []
     metrics = []
+    analysis = []
 
     for entry in active:
         dev_id = entry.get('developer_id', 'unknown')
@@ -265,15 +302,32 @@ def api_dashboard():
         if freshness == "STALE_SOURCE":
             stale_count += 1
 
-        # Check conflicts with others
+        # Check conflicts with others and gather detailed analysis
         risk = "LOW"
+        detailed_score = None
+        score_category = "N/A"
+        layers = []
+        coupling = False
+        blockers = []
+
         for other in active:
             if other['developer_id'] != dev_id and other['file_path'] == file_path:
                 assessment = classify_risk(
-                    dev_id, file_path, intent, entry.get('region'), other
+                    dev_id, file_path, intent, entry.get('region'), other, use_staged_layers=True
                 )
                 risk = assessment.level.value
                 conflict_count += 1
+
+                # Extract detailed analysis data
+                if assessment.detailed_score:
+                    detailed_score = assessment.detailed_score.total_score
+                    score_category = assessment.detailed_score.risk_category
+                if assessment.layers_triggered:
+                    layers = assessment.layers_triggered
+                if assessment.coupling_analysis:
+                    coupling = assessment.coupling_analysis.get('tight_coupling_detected', False)
+                if assessment.dependency_blockers:
+                    blockers = assessment.dependency_blockers
                 break
 
         # Check impacts
@@ -300,6 +354,18 @@ def api_dashboard():
             'time': formatTime(timestamp)
         })
 
+        # Add detailed analysis
+        analysis.append({
+            'dev': dev_id,
+            'file': file_path,
+            'risk': risk,
+            'score': detailed_score,
+            'score_category': score_category if detailed_score else 'N/A',
+            'layers': layers,
+            'coupling': coupling,
+            'blockers': blockers
+        })
+
     return jsonify({
         'active_count': len(developers),
         'conflict_count': conflict_count,
@@ -307,7 +373,8 @@ def api_dashboard():
         'impact_count': impact_count,
         'developers': list(developers.values()),
         'activities': activities[:10],  # Latest 10
-        'metrics': metrics[:20]  # Latest 20
+        'metrics': metrics[:20],  # Latest 20
+        'analysis': analysis[:20]  # Latest 20 with detailed scoring
     })
 
 def formatTime(ts):
