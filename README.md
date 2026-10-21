@@ -107,6 +107,51 @@ For a complete coordination flow with staleness detection and impact resolution:
 
 ---
 
+### 💻 Advanced Test: 4-Service Breaking Change Cascade (15 minutes)
+
+For complete breaking change detection and upstream impact blocking:
+
+**Setup**: Open 2 terminals and follow [docs/MULTI_SERVICE_STEP_BY_STEP_TEST.md](docs/MULTI_SERVICE_STEP_BY_STEP_TEST.md)
+
+**Test Scenario**:
+- C1 works on auth-service (OAuth2 implementation)
+- C2 works on payment-service (depends on auth)
+- C3 works on invoice-service (depends on payment)
+- C4 works on notification-service (depends on invoice)
+
+**What you'll see:**
+- ✅ All 4 developers declare intent independently (LOW risk)
+- ✅ C1 makes breaking change to `authenticate()` signature (HIGH risk)
+- ✅ **Impact alerts created** for all downstream files (payment, invoice, notification)
+- ✅ **C2 gets BLOCKED** when attempting to integrate with broken auth API (HIGH risk)
+- ✅ C1 adds compatibility wrapper to fix the breaking change
+- ✅ **Impact alerts resolved**, C2 unblocked
+- ✅ **Zero merge conflicts** across all 4 services and dependency chain
+
+**Example Output**:
+```
+📢 Creating impact alerts for breaking change in auth-service/auth_service.py
+   ✓ Found import in payment-service/payment_service.py
+   ✓ Found import in invoice-service/invoice_service.py
+
+⚠️  c2 → payment-service
+   Risk: HIGH
+   HIGH RISK: Breaking change detected in upstream dependency (auth-service)
+   🔒 Lock Status: BLOCKED until upstream fix
+
+✔️ Resolving impact alerts for fix in auth-service/auth_service.py
+   ✓ Resolved alert from auth-service
+```
+
+**What This Proves**:
+- ✅ Upstream breaking changes detected before code generation
+- ✅ Developers blocked from creating broken code
+- ✅ Impact propagation through multi-service dependency chain
+- ✅ Automatic alert resolution when fixes are applied
+- ✅ Zero conflicts in cascading multi-service workflow
+
+---
+
 ### 🧠 IDE: Claude Code + MCP Server (10-20 minutes)
 
 Run the two-developer coordination test with Neo MCP integration:

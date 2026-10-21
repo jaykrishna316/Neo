@@ -2,18 +2,72 @@
 """Pre-generation conflict checking API for Neo coordination layer (tenant-isolated)."""
 
 import time
+from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
 from core.activity_log import get_active_entries, DEFAULT_TENANT_ID, log_activity, read_log
 from core.risk_classifier import RiskLevel, classify_risk
 from core.lock_manager import LockManager
 from core.symbol_hasher import StalenessChecker, snapshot_file, extract_dependencies
 from core.freshness import check_freshness
+from core.impact_alerts import ImpactAlertManager
+from core.breaking_change_intent_analyzer import BreakingIntentAnalyzer, detect_breaking_change_intent
 
 # Content-based staleness detection constants
 # CONTEXT_FRESHNESS_FALLBACK_MINUTES: Fallback when content hashing unavailable
 #   - Only used if file cannot be read/parsed
 #   - Otherwise relies on semantic content comparison
 CONTEXT_FRESHNESS_FALLBACK_MINUTES = 30
+
+
+def _detect_breaking_change_intent(intent: str) -> bool:
+    """
+    Detect if intent describes a breaking change (smart semantic analysis).
+
+    Uses semantic intent analysis to distinguish between:
+    - Developer INTRODUCING breaking changes (refactor API, remove params)
+    - Developer ADAPTING to upstream changes (update calls, migrate)
+
+    Args:
+        intent: Developer's intent description
+
+    Returns:
+        True if intent describes introducing breaking changes, False if adapting or other
+    """
+    is_breaking, reason, _ = detect_breaking_change_intent(intent)
+    return is_breaking
+
+
+def _check_downstream_impact(file_path: str) -> bool:
+    """
+    Check if file has downstream dependencies.
+
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        True if file has downstream dependents, False otherwise
+    """
+    try:
+        # Get module name from file path (e.g., "auth_service.py" -> "auth_service")
+        module_name = Path(file_path).stem
+        service_dir = Path("test-scenarios/services")
+
+        # Scan all service files for imports
+        if service_dir.exists():
+            for service_file in service_dir.rglob("*.py"):
+                try:
+                    with open(service_file) as f:
+                        content = f.read()
+                        # Check if this file imports the changed module
+                        if f"import {module_name}" in content or f"from {module_name}" in content:
+                            return True
+                except:
+                    continue
+
+        return False
+    except Exception:
+        # If we can't determine dependencies, assume no impact
+        return False
 
 
 def _check_developer_context_freshness(developer_id: str, file_path: str) -> Tuple[str, Optional[str]]:
@@ -125,6 +179,52 @@ def check_for_conflicts(
     """
     # Resolve tenant context
     resolved_tenant = tenant_id or DEFAULT_TENANT_ID
+
+    # CHECK 1: Detect breaking changes from intent
+    breaking_change_detected = _detect_breaking_change_intent(intent)
+    downstream_impact = _check_downstream_impact(file_path)
+
+    if breaking_change_detected and downstream_impact:
+        lock_manager = LockManager(tenant_id=resolved_tenant)
+        lock_scope = "region" if region else "file"
+        lock_info = lock_manager.acquire_lock(
+            file_path=file_path,
+            region=region,
+            developer_id=agent_id,
+            reason="BREAKING_CHANGE",
+            scope=lock_scope,
+        )
+        return (
+            RiskLevel.HIGH,
+            f"BREAKING CHANGE: Function signature changed - downstream callers affected",
+            lock_info
+        )
+
+    # CHECK 2: Detect if this file has unresolved upstream impacts (breaking changes in dependencies)
+    try:
+        impact_manager = ImpactAlertManager()
+        unresolved_impacts = impact_manager.get_alerts_for_file(file_path)
+
+        if unresolved_impacts:
+            # This file has upstream dependencies with breaking changes
+            affected_sources = [alert.get('source_file', 'unknown') for alert in unresolved_impacts]
+            lock_manager = LockManager(tenant_id=resolved_tenant)
+            lock_scope = "region" if region else "file"
+            lock_info = lock_manager.acquire_lock(
+                file_path=file_path,
+                region=region,
+                developer_id=agent_id,
+                reason="UPSTREAM_BREAKING_CHANGE",
+                scope=lock_scope,
+            )
+            return (
+                RiskLevel.HIGH,
+                f"HIGH RISK: Breaking change detected in upstream dependency ({', '.join(affected_sources)}). Coordinate with upstream developer before proceeding.",
+                lock_info
+            )
+    except Exception:
+        # If impact alert checking fails, continue to other checks
+        pass
 
     # Get active entries for this tenant only (conflict checks are per-tenant)
     active_entries = get_active_entries(tenant_id=resolved_tenant)

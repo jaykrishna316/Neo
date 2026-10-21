@@ -18,9 +18,11 @@ import sys
 import threading
 from datetime import datetime
 from core.activity_log import log_activity, get_active_entries, read_log, clear_log
-from core.pre_gen_check import check_for_conflicts
+from core.pre_gen_check import check_for_conflicts, _detect_breaking_change_intent, _check_downstream_impact
 from core.risk_classifier import RiskLevel
 from core.lock_manager import LockManager
+from core.impact_alerts import ImpactAlertManager
+from core.breaking_change_intent_analyzer import BreakingIntentAnalyzer, detect_breaking_change_intent
 
 
 class NeoServerHandler(BaseHTTPRequestHandler):
@@ -145,8 +147,11 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             }
 
             # Show appropriate status message
-            if risk_level in (RiskLevel.MEDIUM, RiskLevel.HIGH):
-                # Print full conflict check message with lock status
+            if risk_level == RiskLevel.HIGH:
+                # Print HIGH risk with intent and breaking change details
+                self._print_high_risk_conflict(agent_id, file_path, intent, conflict_msg, lock_info)
+            elif risk_level == RiskLevel.MEDIUM:
+                # Print MEDIUM risk conflict check message with lock status
                 self._print_conflict_check(agent_id, risk_level, conflict_msg, lock_info)
             else:
                 # No conflict - just log activity
@@ -216,13 +221,14 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {'error': 'Missing required fields'})
                 return
 
-            # Find active entry for this developer
+            # Find active entry for this developer (get the LATEST one if multiple exist)
             entries = get_active_entries()
             agent_entry = None
             for entry in entries:
                 if entry.get('developer_id') == agent_id and entry.get('file_path') == file_path:
-                    agent_entry = entry
-                    break
+                    # Keep the most recent entry (highest timestamp)
+                    if agent_entry is None or entry.get('timestamp', 0) > agent_entry.get('timestamp', 0):
+                        agent_entry = entry
 
             lock_released = False
             next_developer = None
@@ -232,6 +238,76 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 lock_manager = LockManager()
                 lock_manager.release_lock(file_path, None, agent_id)
                 lock_released = True
+
+                # Check if this completion involved a breaking change or fix
+                original_intent = agent_entry.get('intent', '')
+                impact_manager = ImpactAlertManager()
+
+                # Check for FIX keywords (compatibility, wrapper, backward, mitigation, resolve, fix)
+                fix_keywords = ['compatibility', 'wrapper', 'backward', 'mitigation', 'resolve', 'fix']
+                is_fix = any(keyword in original_intent.lower() for keyword in fix_keywords)
+
+                if is_fix:
+                    # This is a fix/mitigation - resolve any impact alerts CAUSED BY this file's breaking change
+                    # (alerts on downstream files that depend on this file)
+                    try:
+                        print(f"\n✔️ Resolving impact alerts for fix in {file_path}")
+
+                        # Find all alerts where source_file == file_path (breaking change in THIS file)
+                        resolved_count = 0
+                        for alert_file in impact_manager.alerts_dir.glob("alert_*.json"):
+                            with open(alert_file) as f:
+                                alert_data = json.load(f)
+                                # Resolve alerts that were created BECAUSE of this file's breaking change
+                                if (alert_data.get('source_file') == file_path and
+                                    alert_data.get('status') == 'unresolved'):
+                                    print(f"   ✓ Resolved alert for {alert_data.get('target_file')}")
+                                    alert_data['status'] = 'resolved'
+                                    alert_data['resolved_by'] = agent_id
+                                    alert_data['resolved_at'] = datetime.now().isoformat()
+                                    with open(alert_file, 'w') as fw:
+                                        json.dump(alert_data, fw, indent=2)
+                                    resolved_count += 1
+
+                        if resolved_count == 0:
+                            print(f"   (No unresolved alerts found for this fix)")
+                    except Exception as e:
+                        print(f"   ✗ Error resolving alerts: {e}")
+
+                elif _detect_breaking_change_intent(original_intent):
+                    # Breaking change was made - create impact alerts for downstream files
+                    if _check_downstream_impact(file_path):
+                        try:
+                            # Find all files that import this file
+                            module_name = Path(file_path).stem
+                            service_dir = Path("test-scenarios/services")
+
+                            print(f"\n📢 Creating impact alerts for breaking change in {file_path}")
+                            print(f"   Module name: {module_name}")
+                            print(f"   Looking for imports in: {service_dir}")
+
+                            if service_dir.exists():
+                                for service_file in service_dir.rglob("*.py"):
+                                    try:
+                                        with open(service_file) as f:
+                                            content = f.read()
+                                            # Check if this file imports the changed module
+                                            if f"import {module_name}" in content or f"from {module_name}" in content:
+                                                # Create alert for this file
+                                                print(f"   ✓ Found import in {service_file}")
+                                                impact_manager.create_alert(
+                                                    source_file=file_path,
+                                                    target_file=str(service_file),
+                                                    changed_by=agent_id,
+                                                    change_summary=original_intent,
+                                                    impact_reason=f"Upstream change to {module_name}() - breaking change may affect this file"
+                                                )
+                                    except Exception as e:
+                                        print(f"   ✗ Error scanning {service_file}: {e}")
+                                        continue
+                        except Exception as e:
+                            print(f"   ✗ Error creating impact alerts: {e}")
+                            pass
 
                 # Log completion event to activity log (like declare intent does)
                 log_activity(
@@ -325,6 +401,19 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                     print(f"      Queue Position: {queue_position}")
                 if waiting_for:
                     print(f"      Waiting For: {waiting_for}")
+
+    def _print_high_risk_conflict(self, agent_id: str, file_path: str, intent: str, message: str, lock_info: Optional[Dict]):
+        """Print HIGH risk breaking change conflict"""
+        print(f"\n⚠️  [{datetime.now().strftime('%H:%M:%S')}] {agent_id} → {file_path}")
+        print(f"   Intent: {intent}")
+        print(f"   Risk: HIGH")
+        print(f"   {message}")
+
+        if lock_info:
+            print(f"   🔒 Lock Status:")
+            print(f"      Holder: {lock_info.get('lock_holder')}")
+            print(f"      Queue Position: {lock_info.get('queue_position')}")
+            print(f"      Waiting For: {lock_info.get('waiting_for')}")
 
     def _print_conflict_check(self, agent_id: str, risk_level: RiskLevel, message: str, lock_info: Optional[Dict]):
         """Print conflict check result to terminal"""
