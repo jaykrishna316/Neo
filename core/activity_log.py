@@ -10,6 +10,7 @@ Enhanced with support for:
 
 import json
 import os
+import shutil
 import time
 from pathlib import Path
 from dataclasses import dataclass, asdict
@@ -281,6 +282,15 @@ def clear_log(tenant_id: Optional[str] = None) -> None:
     """
     log_file = ensure_log_exists(tenant_id)
     log_file.write_text("")
+
+    # Clean up impact alerts directory
+    impacts_dir = ACTIVITY_LOG_DIR / "impacts"
+    if impacts_dir.exists():
+        try:
+            shutil.rmtree(impacts_dir)
+            impacts_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass  # If cleanup fails, continue anyway
 
     # Clean up empty tenant directory if multitenancy enabled
     if MULTITENANCY_ENABLED and tenant_id:
