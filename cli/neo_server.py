@@ -18,9 +18,10 @@ import sys
 import threading
 from datetime import datetime
 from core.activity_log import log_activity, get_active_entries, read_log, clear_log
-from core.pre_gen_check import check_for_conflicts
+from core.pre_gen_check import check_for_conflicts, _detect_breaking_change_intent, _check_downstream_impact
 from core.risk_classifier import RiskLevel
 from core.lock_manager import LockManager
+from core.impact_alerts import ImpactAlertManager
 
 
 class NeoServerHandler(BaseHTTPRequestHandler):
@@ -235,6 +236,37 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 lock_manager = LockManager()
                 lock_manager.release_lock(file_path, None, agent_id)
                 lock_released = True
+
+                # Check if this completion involved a breaking change
+                original_intent = agent_entry.get('intent', '')
+                if _detect_breaking_change_intent(original_intent):
+                    # Breaking change was made - create impact alerts for downstream files
+                    if _check_downstream_impact(file_path):
+                        try:
+                            # Find all files that import this file
+                            module_name = Path(file_path).stem
+                            service_dir = Path("test-scenarios/services")
+                            impact_manager = ImpactAlertManager()
+
+                            if service_dir.exists():
+                                for service_file in service_dir.rglob("*.py"):
+                                    try:
+                                        with open(service_file) as f:
+                                            content = f.read()
+                                            # Check if this file imports the changed module
+                                            if f"import {module_name}" in content or f"from {module_name}" in content:
+                                                # Create alert for this file
+                                                impact_manager.create_alert(
+                                                    source_file=file_path,
+                                                    target_file=str(service_file),
+                                                    changed_by=agent_id,
+                                                    change_summary=original_intent,
+                                                    impact_reason=f"Upstream change to {Path(file_path).stem}() - breaking change may affect this file"
+                                                )
+                                    except:
+                                        continue
+                        except Exception:
+                            pass
 
                 # Log completion event to activity log (like declare intent does)
                 log_activity(

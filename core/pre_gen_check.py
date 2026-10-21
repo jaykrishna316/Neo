@@ -9,6 +9,7 @@ from core.risk_classifier import RiskLevel, classify_risk
 from core.lock_manager import LockManager
 from core.symbol_hasher import StalenessChecker, snapshot_file, extract_dependencies
 from core.freshness import check_freshness
+from core.impact_alerts import ImpactAlertManager
 
 # Content-based staleness detection constants
 # CONTEXT_FRESHNESS_FALLBACK_MINUTES: Fallback when content hashing unavailable
@@ -204,6 +205,32 @@ def check_for_conflicts(
             f"BREAKING CHANGE: Function signature changed - downstream callers affected",
             lock_info
         )
+
+    # CHECK 2: Detect if this file has unresolved upstream impacts (breaking changes in dependencies)
+    try:
+        impact_manager = ImpactAlertManager()
+        unresolved_impacts = impact_manager.get_alerts_for_file(file_path)
+
+        if unresolved_impacts:
+            # This file has upstream dependencies with breaking changes
+            affected_sources = [alert.get('source_file', 'unknown') for alert in unresolved_impacts]
+            lock_manager = LockManager(tenant_id=resolved_tenant)
+            lock_scope = "region" if region else "file"
+            lock_info = lock_manager.acquire_lock(
+                file_path=file_path,
+                region=region,
+                developer_id=agent_id,
+                reason="UPSTREAM_BREAKING_CHANGE",
+                scope=lock_scope,
+            )
+            return (
+                RiskLevel.HIGH,
+                f"HIGH RISK: Breaking change detected in upstream dependency ({', '.join(affected_sources)}). Coordinate with upstream developer before proceeding.",
+                lock_info
+            )
+    except Exception:
+        # If impact alert checking fails, continue to other checks
+        pass
 
     # Get active entries for this tenant only (conflict checks are per-tenant)
     active_entries = get_active_entries(tenant_id=resolved_tenant)
