@@ -22,6 +22,7 @@ from core.pre_gen_check import check_for_conflicts, _detect_breaking_change_inte
 from core.risk_classifier import RiskLevel
 from core.lock_manager import LockManager
 from core.impact_alerts import ImpactAlertManager
+from core.breaking_change_intent_analyzer import BreakingIntentAnalyzer, detect_breaking_change_intent
 
 
 class NeoServerHandler(BaseHTTPRequestHandler):

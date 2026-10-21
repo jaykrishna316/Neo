@@ -10,6 +10,7 @@ from core.lock_manager import LockManager
 from core.symbol_hasher import StalenessChecker, snapshot_file, extract_dependencies
 from core.freshness import check_freshness
 from core.impact_alerts import ImpactAlertManager
+from core.breaking_change_intent_analyzer import BreakingIntentAnalyzer, detect_breaking_change_intent
 
 # Content-based staleness detection constants
 # CONTEXT_FRESHNESS_FALLBACK_MINUTES: Fallback when content hashing unavailable
@@ -17,30 +18,23 @@ from core.impact_alerts import ImpactAlertManager
 #   - Otherwise relies on semantic content comparison
 CONTEXT_FRESHNESS_FALLBACK_MINUTES = 30
 
-# Breaking change detection keywords
-BREAKING_CHANGE_KEYWORDS = [
-    'remove', 'breaking', 'refactor', 'signature', 'api',
-    'deprecated', 'incompatible', 'migrate', 'upgrade',
-    'rename', 'delete', 'breaking change', 'incompatible change'
-]
-
 
 def _detect_breaking_change_intent(intent: str) -> bool:
     """
-    Detect if intent describes a breaking change.
+    Detect if intent describes a breaking change (smart semantic analysis).
+
+    Uses semantic intent analysis to distinguish between:
+    - Developer INTRODUCING breaking changes (refactor API, remove params)
+    - Developer ADAPTING to upstream changes (update calls, migrate)
 
     Args:
         intent: Developer's intent description
 
     Returns:
-        True if intent contains breaking change keywords, False otherwise
+        True if intent describes introducing breaking changes, False if adapting or other
     """
-    intent_lower = intent.lower()
-    # Check for breaking change keywords
-    for keyword in BREAKING_CHANGE_KEYWORDS:
-        if keyword in intent_lower:
-            return True
-    return False
+    is_breaking, reason, _ = detect_breaking_change_intent(intent)
+    return is_breaking
 
 
 def _check_downstream_impact(file_path: str) -> bool:
