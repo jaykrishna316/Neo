@@ -8,12 +8,57 @@ from core.risk_classifier import RiskLevel, classify_risk
 from core.lock_manager import LockManager
 from core.symbol_hasher import StalenessChecker, snapshot_file, extract_dependencies
 from core.freshness import check_freshness
+from core.dependency_tracker import DependencyTracker
 
 # Content-based staleness detection constants
 # CONTEXT_FRESHNESS_FALLBACK_MINUTES: Fallback when content hashing unavailable
 #   - Only used if file cannot be read/parsed
 #   - Otherwise relies on semantic content comparison
 CONTEXT_FRESHNESS_FALLBACK_MINUTES = 30
+
+# Breaking change detection keywords
+BREAKING_CHANGE_KEYWORDS = [
+    'remove', 'breaking', 'refactor', 'signature', 'api',
+    'deprecated', 'incompatible', 'migrate', 'upgrade',
+    'rename', 'delete', 'breaking change', 'incompatible change'
+]
+
+
+def _detect_breaking_change_intent(intent: str) -> bool:
+    """
+    Detect if intent describes a breaking change.
+
+    Args:
+        intent: Developer's intent description
+
+    Returns:
+        True if intent contains breaking change keywords, False otherwise
+    """
+    intent_lower = intent.lower()
+    # Check for breaking change keywords
+    for keyword in BREAKING_CHANGE_KEYWORDS:
+        if keyword in intent_lower:
+            return True
+    return False
+
+
+def _check_downstream_impact(file_path: str) -> bool:
+    """
+    Check if file has downstream dependencies.
+
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        True if file has downstream dependents, False otherwise
+    """
+    try:
+        tracker = DependencyTracker()
+        impacted = tracker.get_impacted_files(file_path)
+        return len(impacted) > 0
+    except Exception:
+        # If we can't determine dependencies, assume no impact
+        return False
 
 
 def _check_developer_context_freshness(developer_id: str, file_path: str) -> Tuple[str, Optional[str]]:
@@ -125,6 +170,25 @@ def check_for_conflicts(
     """
     # Resolve tenant context
     resolved_tenant = tenant_id or DEFAULT_TENANT_ID
+
+    # CHECK 1: Detect breaking changes from intent
+    if _detect_breaking_change_intent(intent):
+        # Check if file has downstream impact
+        if _check_downstream_impact(file_path):
+            lock_manager = LockManager(tenant_id=resolved_tenant)
+            lock_scope = "region" if region else "file"
+            lock_info = lock_manager.acquire_lock(
+                file_path=file_path,
+                region=region,
+                developer_id=agent_id,
+                reason="BREAKING_CHANGE",
+                scope=lock_scope,
+            )
+            return (
+                RiskLevel.HIGH,
+                f"BREAKING CHANGE: Function signature changed - downstream callers affected",
+                lock_info
+            )
 
     # Get active entries for this tenant only (conflict checks are per-tenant)
     active_entries = get_active_entries(tenant_id=resolved_tenant)

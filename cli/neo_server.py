@@ -145,8 +145,11 @@ class NeoServerHandler(BaseHTTPRequestHandler):
             }
 
             # Show appropriate status message
-            if risk_level in (RiskLevel.MEDIUM, RiskLevel.HIGH):
-                # Print full conflict check message with lock status
+            if risk_level == RiskLevel.HIGH:
+                # Print HIGH risk with intent and breaking change details
+                self._print_high_risk_conflict(agent_id, file_path, intent, conflict_msg, lock_info)
+            elif risk_level == RiskLevel.MEDIUM:
+                # Print MEDIUM risk conflict check message with lock status
                 self._print_conflict_check(agent_id, risk_level, conflict_msg, lock_info)
             else:
                 # No conflict - just log activity
@@ -325,6 +328,19 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                     print(f"      Queue Position: {queue_position}")
                 if waiting_for:
                     print(f"      Waiting For: {waiting_for}")
+
+    def _print_high_risk_conflict(self, agent_id: str, file_path: str, intent: str, message: str, lock_info: Optional[Dict]):
+        """Print HIGH risk breaking change conflict"""
+        print(f"\n⚠️  [{datetime.now().strftime('%H:%M:%S')}] {agent_id} → {file_path}")
+        print(f"   Intent: {intent}")
+        print(f"   Risk: HIGH")
+        print(f"   {message}")
+
+        if lock_info:
+            print(f"   🔒 Lock Status:")
+            print(f"      Holder: {lock_info.get('lock_holder')}")
+            print(f"      Queue Position: {lock_info.get('queue_position')}")
+            print(f"      Waiting For: {lock_info.get('waiting_for')}")
 
     def _print_conflict_check(self, agent_id: str, risk_level: RiskLevel, message: str, lock_info: Optional[Dict]):
         """Print conflict check result to terminal"""
