@@ -220,13 +220,14 @@ class NeoServerHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {'error': 'Missing required fields'})
                 return
 
-            # Find active entry for this developer
+            # Find active entry for this developer (get the LATEST one if multiple exist)
             entries = get_active_entries()
             agent_entry = None
             for entry in entries:
                 if entry.get('developer_id') == agent_id and entry.get('file_path') == file_path:
-                    agent_entry = entry
-                    break
+                    # Keep the most recent entry (highest timestamp)
+                    if agent_entry is None or entry.get('timestamp', 0) > agent_entry.get('timestamp', 0):
+                        agent_entry = entry
 
             lock_released = False
             next_developer = None
