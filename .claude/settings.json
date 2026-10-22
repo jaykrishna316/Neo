@@ -16,8 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import sys; sys.path.insert(0, '.'); from core.activity_log import get_active_entries; from core.freshness import check_freshness; import json; data = json.loads(sys.stdin.read() or '{}'); file_path = data.get('tool_input', {}).get('file_path'); print('\\\\n🔍 NEO PRE-GENERATION CHECK') if file_path else None; active = get_active_entries(file_path=file_path, expiry_minutes=30) if file_path else []; print(f'⚠️  CONFLICT WARNING: {len(active)} developer(s) on {file_path}') if active and file_path else print(f'✅ No conflicts detected') if file_path else None; [print(f'   • {e[\\\"developer_id\\\"]}: {e.get(\\\"intent\\\", \\\"N/A\\\")[:70]}...') for e in active]; status = check_freshness('claude-code', file_path) if file_path else None; print(f'🔄 Context: {status}\\\\n') if status else None\" 2>/dev/null || true",
-            "timeout": 5
+            "command": "python3 scripts/neo_hook.py pre",
+            "timeout": 10
           }
         ]
       }
@@ -28,8 +28,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import sys; import json; sys.path.insert(0, '.'); from core.activity_log import log_activity; from core.freshness import record_read; data = json.loads(sys.stdin.read() or '{}'); file_path = data.get('tool_input', {}).get('file_path') or data.get('tool_response', {}).get('filePath'); record_read('claude-code', file_path) if file_path else None; log_activity(developer_id='claude-code', file_path=file_path, intent='Code generated/modified', intent_category='code-generation') if file_path else None; print(f'\\\\n📝 Neo: Activity logged for {file_path}\\\\n') if file_path else None\" 2>/dev/null || true",
-            "timeout": 5
+            "command": "python3 scripts/neo_hook.py post",
+            "timeout": 10
           }
         ]
       }

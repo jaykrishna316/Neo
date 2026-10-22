@@ -239,7 +239,12 @@ def check_for_conflicts(
             if dev_id not in same_file_entries_by_dev or entry.get('timestamp', 0) > same_file_entries_by_dev[dev_id].get('timestamp', 0):
                 same_file_entries_by_dev[dev_id] = entry
 
-    same_file_entries = list(same_file_entries_by_dev.values())
+    # A developer whose latest entry on this file is a completion has finished that work,
+    # so it is no longer a conflict.
+    same_file_entries = [
+        e for e in same_file_entries_by_dev.values()
+        if e.get('intent_category') != 'completion'
+    ]
 
     # Optimization: If current developer holds the lock, exclude waiting developers from conflicts
     # Lock holders shouldn't see waiting developers as conflicts - they're already queued properly
