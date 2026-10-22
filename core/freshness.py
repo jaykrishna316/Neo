@@ -40,7 +40,7 @@ class FreshnessTracker:
             "timestamp": snap.timestamp,
             "content_hash": snap.content_hash,
             "symbols": {n: {"name": s.name, "type": s.type, "lineno": s.lineno, "body_hash": s.body_hash} for n, s in snap.symbols.items()},
-            "file_content": snap.file_content
+            "file_content": getattr(snap, "file_content", None)
         }
         snap_file.write_text(json.dumps(data))
     

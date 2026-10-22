@@ -21,7 +21,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from core.activity_log import log_activity  # noqa: E402
-from core.freshness import record_read  # noqa: E402
+from core.freshness import check_freshness, record_read  # noqa: E402
 from core.lock_manager import LockManager  # noqa: E402
 from core.pre_gen_check import check_for_conflicts  # noqa: E402
 
@@ -37,6 +37,16 @@ def _relative_file_path(hook_input):
 
 
 def pre(developer, file_path):
+    # The file changed after this developer last read it: their context is stale.
+    # They must read it again (which refreshes their context) before editing.
+    if check_freshness(developer, file_path) == "STALE_SOURCE":
+        print(
+            f"Neo: {file_path} changed after you last read it. Read the file again to "
+            f"refresh your context, then retry the edit.",
+            file=sys.stderr,
+        )
+        return 2
+
     intent = os.environ.get("NEO_INTENT") or f"Edit {file_path}"
     _risk, _msg, lock_info = check_for_conflicts(
         agent_id=developer, file_path=file_path, intent=intent, region=None
@@ -71,6 +81,8 @@ def read(developer, file_path):
 
 def post(developer, file_path):
     release = LockManager().release_lock(file_path, None, developer)
+    # Your own edit is now the baseline, so it does not make your context stale.
+    record_read(developer, file_path)
     log_activity(
         developer_id=developer, file_path=file_path,
         intent=f"Work completed on {file_path}", intent_category="completion",
