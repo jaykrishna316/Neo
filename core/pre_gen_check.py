@@ -282,19 +282,6 @@ def check_for_conflicts(
 
         # Only treat as active conflict if context is fresh or unverifiable (conservative)
         # If context is provably stale, it's not a real conflict (they're out of date)
-        if freshness_status == "STALE":
-            # Developer's context is stale - they're not actually in sync with current file
-            # This is not a conflict in the traditional sense, but informational
-            conflict_details.append({
-                'agent': developer_id,
-                'intent': entry.get('intent', 'unknown'),
-                'region': entry.get('region'),
-                'risk': RiskLevel.LOW,
-                'reason': f"Developer has stale context on file ({freshness_detail})",
-                'context_freshness': "STALE"
-            })
-            continue
-
         # Use the risk classifier to assess this conflict
         assessment = classify_risk(
             current_developer=agent_id,
@@ -303,6 +290,16 @@ def check_for_conflicts(
             current_region=region,
             other_entry=entry
         )
+
+        # A stale context is still an active claim on the file. The developer has to
+        # refresh, so it is at least a MEDIUM conflict, not "no conflict".
+        if freshness_status == "STALE":
+            if assessment.level == RiskLevel.LOW:
+                assessment.level = RiskLevel.MEDIUM
+            assessment.reason = (
+                f"{assessment.reason}; {developer_id}'s context is stale "
+                f"({freshness_detail}), refresh required"
+            )
 
         # Track highest risk
         level_order = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
@@ -367,7 +364,13 @@ def check_for_conflicts(
     if highest_risk == RiskLevel.HIGH:
         msg = f"HIGH RISK: {conflict_info}. This may cause a merge conflict. Coordinate with the other agent."
     elif highest_risk == RiskLevel.MEDIUM:
-        msg = f"MEDIUM RISK: {conflict_info}. Overlapping regions detected. Proceed with caution."
+        stale = [d for d in conflict_details if d.get('context_freshness') == "STALE"]
+        if stale:
+            names = ", ".join(d['agent'] for d in stale)
+            msg = (f"MEDIUM RISK: {conflict_info}. {names}'s context is stale: "
+                   f"refresh required before editing this file.")
+        else:
+            msg = f"MEDIUM RISK: {conflict_info}. Overlapping regions detected. Proceed with caution."
     else:
         msg = f"LOW RISK: {conflict_info}. Different regions in same file. Safe to proceed."
 
