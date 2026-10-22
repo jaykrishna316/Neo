@@ -88,9 +88,29 @@ class LockManager:
                 "lock_acquired_at": now,
                 "lock_expires_at": lock_expires_at,
             }
+        elif current_lock["lock_holder"] == developer_id:
+            # Already the holder: nothing to acquire
+            return {
+                "success": True,
+                "lock_holder": developer_id,
+                "queue_position": None,
+                "waiting_for": None,
+                "lock_acquired_at": current_lock.get("lock_acquired_at"),
+                "lock_expires_at": current_lock.get("lock_expires_at"),
+            }
         else:
-            # Lock is held - queue developer
-            queue_position = self._get_next_queue_position(lock_key)
+            # Lock is held. A developer already in line keeps their place; don't add another.
+            queue = self._get_queue(lock_key)
+            if developer_id in queue:
+                return {
+                    "success": False,
+                    "lock_holder": current_lock["lock_holder"],
+                    "queue_position": queue.index(developer_id),
+                    "waiting_for": current_lock["lock_holder"],
+                    "lock_acquired_at": None,
+                    "lock_expires_at": None,
+                }
+            queue_position = len(queue)
 
             log_activity(
                 developer_id=developer_id,
@@ -401,9 +421,13 @@ class LockManager:
                 queue_pos = entry.get("queue_position", 999)
                 queue.append((queue_pos, entry["developer_id"]))
 
-        # Sort by queue position
+        # Sort by queue position; each developer appears once, at their first position
         queue.sort(key=lambda x: x[0])
-        return [dev_id for _, dev_id in queue]
+        ordered = []
+        for _, dev_id in queue:
+            if dev_id not in ordered:
+                ordered.append(dev_id)
+        return ordered
 
     def _get_next_queue_position(self, lock_key: str) -> int:
         """Get next position in queue.
