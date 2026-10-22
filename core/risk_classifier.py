@@ -448,6 +448,12 @@ def classify_risk(
             level = RiskLevel.MEDIUM
             reason = f"Mid-level conflict: {', '.join(triggered_layers)}"
 
+        # A missing region means the whole file may be in play. "No overlap" cannot be
+        # shown without regions, so it must not come back as LOW.
+        if level == RiskLevel.LOW and (current_region is None or other_region is None):
+            level = RiskLevel.MEDIUM
+            reason = "One or both developers editing entire file (no region specified)"
+
         # Enrich assessment with detailed scoring and coupling analysis
         detailed_score = None
         coupling_analysis = None
