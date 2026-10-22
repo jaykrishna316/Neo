@@ -3,6 +3,7 @@
 
   python3 scripts/neo_hook.py pre    # PreToolUse for Edit/Write: declare intent, block if queued
   python3 scripts/neo_hook.py post   # PostToolUse for Edit/Write: complete work, release the lock
+  python3 scripts/neo_hook.py read   # PostToolUse for Read: save what this session saw
 
 Each Claude Code session names itself with the NEO_DEVELOPER environment variable.
 Without it the hook does nothing, so other sessions are unaffected.
@@ -20,6 +21,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from core.activity_log import log_activity  # noqa: E402
+from core.freshness import record_read  # noqa: E402
 from core.lock_manager import LockManager  # noqa: E402
 from core.pre_gen_check import check_for_conflicts  # noqa: E402
 
@@ -62,6 +64,11 @@ def pre(developer, file_path):
     return 0
 
 
+def read(developer, file_path):
+    record_read(developer, file_path)
+    return 0
+
+
 def post(developer, file_path):
     release = LockManager().release_lock(file_path, None, developer)
     log_activity(
@@ -82,8 +89,10 @@ def main(argv):
     except json.JSONDecodeError:
         return 0
     file_path = _relative_file_path(hook_input)
-    if not developer or not file_path or mode not in ("pre", "post"):
+    if not developer or not file_path or mode not in ("pre", "post", "read"):
         return 0
+    if mode == "read":
+        return read(developer, file_path)
     return pre(developer, file_path) if mode == "pre" else post(developer, file_path)
 
 

@@ -1,5 +1,5 @@
 import ast
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Dict, List, Optional
 from core.symbol_hasher import FileSnapshot
 
@@ -15,6 +15,21 @@ class FileDelta:
     delta_type: str
     symbol_deltas: List[SymbolDelta] = None
     changed_symbols: List[str] = None
+    removed_symbols: List[str] = None
+
+    @property
+    def added_symbols(self) -> List[str]:
+        return [d.name for d in (self.symbol_deltas or []) if d.type == "added"]
+
+    def to_dict(self) -> Dict:
+        return {
+            "file_path": self.file_path,
+            "delta_type": self.delta_type,
+            "added_symbols": self.added_symbols,
+            "changed_symbols": self.changed_symbols or [],
+            "removed_symbols": self.removed_symbols or [],
+            "symbol_deltas": [asdict(d) for d in (self.symbol_deltas or [])],
+        }
 
 class DeltaGenerator:
     @staticmethod
@@ -48,7 +63,8 @@ class DeltaGenerator:
                 deltas.append(SymbolDelta(sym, "changed", body))
                 changed.append(sym)
 
-        return FileDelta(current_file_path, "symbols", deltas, changed)
+        removed = [sym for sym in base_snap.symbols if sym not in current_snap.symbols]
+        return FileDelta(current_file_path, "symbols", deltas, changed, removed)
 
     @staticmethod
     def _extract_body(tree, sym_name: str, source: str) -> Optional[str]:
@@ -73,3 +89,10 @@ class ContextRefreshBuilder:
     @staticmethod
     def build_message(deltas: List[FileDelta], agent_id: str, file_path: str) -> str:
         return f"Context refresh for {agent_id}: {len(deltas)} changes"
+
+    @staticmethod
+    def estimate_tokens(delta: FileDelta) -> int:
+        """Rough token estimate for a delta, using about 4 characters per token."""
+        parts = [(d.body or d.name) for d in (delta.symbol_deltas or [])]
+        parts += list(delta.removed_symbols or [])
+        return max(1, len("\n".join(parts)) // 4)

@@ -32,6 +32,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/neo_hook.py read",
+            "timeout": 10
+          }
+        ]
       }
     ]
   },

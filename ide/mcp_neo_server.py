@@ -26,6 +26,7 @@ from core.activity_log import ActivityEntry
 from core.pre_gen_check import check_for_conflicts, check_source_staleness
 from core.delta_refresh import DeltaGenerator, ContextRefreshBuilder
 from core.symbol_hasher import snapshot_file
+from core.freshness import get_base_snapshot
 from core.blast_radius import BlastRadiusCalculator
 from core.coupling_metrics import CouplingMetricsCollector
 from core.entropy_coupling import EntropyCouplingDetector, analyze_entropy_coupling
@@ -362,7 +363,14 @@ def neo_get_context_refresh(
 
     try:
         # Create base snapshot from when file was originally read
-        base_snap = snapshot_file(file_path, agent_id, base_snapshot_time)
+        base_snap = get_base_snapshot(agent_id, file_path)
+        if base_snap is None:
+            return {
+                "success": False,
+                "error": "No read recorded for this developer on this file. Read the file first.",
+                "status_code": 400,
+                "tenant_id": final_tenant,
+            }
 
         if base_snap.parse_error:
             return {

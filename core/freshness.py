@@ -67,6 +67,10 @@ def _get_tracker():
 def record_read(agent_id: str, file_path: str, symbols: Optional[List[str]] = None) -> None:
     _get_tracker().record_read(agent_id, file_path, symbols)
 
+def get_base_snapshot(agent_id: str, file_path: str) -> Optional[FileSnapshot]:
+    """The snapshot saved when this developer last read the file, or None."""
+    return _get_tracker()._load_snapshot(agent_id, file_path)
+
 def check_freshness(agent_id: str, file_path: str) -> str:
     return _get_tracker().check_freshness(agent_id, file_path)
 

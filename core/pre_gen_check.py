@@ -8,7 +8,7 @@ from core.activity_log import get_active_entries, DEFAULT_TENANT_ID, log_activit
 from core.risk_classifier import RiskLevel, classify_risk
 from core.lock_manager import LockManager
 from core.symbol_hasher import StalenessChecker, snapshot_file, extract_dependencies
-from core.freshness import check_freshness
+from core.freshness import check_freshness, get_base_snapshot
 from core.impact_alerts import ImpactAlertManager
 from core.breaking_change_intent_analyzer import BreakingIntentAnalyzer, detect_breaking_change_intent
 
@@ -128,8 +128,13 @@ def check_source_staleness(
         and report contains details about what changed
     """
     try:
-        # Create a snapshot from the read time
-        base_snap = snapshot_file(file_path, agent_id, read_time)
+        # The base is what the developer saw when they read the file. Without a recorded
+        # read there is nothing to compare against, so the state is unknown, not CURRENT.
+        base_snap = get_base_snapshot(agent_id, file_path)
+        if base_snap is None:
+            return "UNVERIFIABLE", {
+                "reason": "No read recorded for this developer on this file",
+            }
 
         if base_snap.parse_error:
             # If we couldn't parse at read time, be conservative
