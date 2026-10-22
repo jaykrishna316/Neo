@@ -53,6 +53,7 @@ class FreshnessTracker:
             data = json.loads(snap_file.read_text())
             symbols = {n: SymbolHash(s["name"], s["type"], s["body_hash"], s["lineno"]) for n, s in data.get("symbols", {}).items()}
             snap = FileSnapshot(data["file_path"], data["content_hash"], symbols, data["timestamp"], data["agent_id"], None)
+            snap.file_content = data.get("file_content")
             if agent_id not in self.snapshots: self.snapshots[agent_id] = {}
             self.snapshots[agent_id][file_path] = snap
             return snap
