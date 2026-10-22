@@ -376,7 +376,7 @@ def neo_get_context_refresh(
         delta = DeltaGenerator.generate(
             base_snap,
             file_path,
-            dependency_symbols=dependency_symbols
+            dep_syms=dependency_symbols
         )
 
         # Build human-readable message
