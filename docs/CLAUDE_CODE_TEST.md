@@ -50,6 +50,8 @@ Expect in terminal A:
 
 ### Phase 2: bob tries to edit while alice is waiting (terminal B)
 
+Bob's edits to src/auth.py are blocked by three things, in this order: a stale read, the downstream breakage alice left in payment.py, then the lock.
+
 **2a.** Send:
 
 > Add a JWT fallback to authenticate() in src/auth.py.
@@ -67,7 +69,22 @@ Expect: `Neo: bob read src/auth.py; baseline saved for the staleness check`
 
 > Add a JWT fallback to authenticate() in src/auth.py.
 
-Expect: blocked by the lock (check 1 and check 2):
+Expect: blocked by the downstream breakage (check 5), before the lock is checked:
+- `Neo: downstream breakage on src/auth.py: callers do not match the current signature`
+- `Neo: test-scenarios/services/payment.py line 4: authenticate(user) is missing 'password'`
+- `Neo: Fix the calling file first, then retry the edit.`
+
+**2d.** Bob fixes the caller. Send:
+
+> Update test-scenarios/services/payment.py so pay() takes a password and passes it to authenticate().
+
+Expect in terminal B after the edit: `Neo: downstream breakage resolved: test-scenarios/services/payment.py now matches src/auth.py`
+
+**2e.** Send:
+
+> Add a JWT fallback to authenticate() in src/auth.py.
+
+Expect: the breakage is gone, so the lock check runs (check 1 and check 2):
 - `Neo: intent set for bob: "Add a JWT fallback to authenticate() in src/auth.py."`
 - `Neo: freshness check on src/auth.py: CURRENT`
 - `Neo: conflict check: MEDIUM` or `HIGH`, naming alice
@@ -95,6 +112,7 @@ Expect: `Neo: lock on src/auth.py taken by bob; held until the task ends`. Bob i
 | 2. Lock and queue | Bob is blocked and queued with alice named; after alice's turn, bob is promoted and then allowed |
 | 3. Stale context | Bob's edit after alice's change is blocked with `changed after you last read it`, and allowed after re-reading |
 | 4. Breaking change | Alice's post-edit output names the changed signature and lists `payment.py` as importing it |
+| 5. Downstream gate | Bob's edit to src/auth.py is blocked by `downstream breakage` until payment.py is fixed, and the lock message only appears after that |
 
 ## Known wording issue
 

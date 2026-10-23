@@ -17,4 +17,6 @@ def test_showcase_shows_lock_queue_stale_block_and_breaking_change():
     assert "Breaking change in" in out and "payment.py" in out, out
     assert "bob is next in the queue" in out, out
     assert "changed after you last read it" in out, out
+    assert "downstream breakage: payment.py will break" in out, out
+    assert "downstream breakage resolved" in out, out
     assert "bob edit attempt -> ALLOWED" in out, out

@@ -67,7 +67,8 @@ def main():
         auth = Path(workdir) / "src" / "auth.py"
         auth.parent.mkdir()
         auth.write_text("def authenticate(user):\n    return False\n")
-        (Path(workdir) / "payment.py").write_text(
+        payment = Path(workdir) / "payment.py"
+        payment.write_text(
             "from auth import authenticate\n\ndef pay(user):\n    return authenticate(user)\n")
         alice, bob = Session("alice", workdir), Session("bob", workdir)
 
@@ -92,8 +93,14 @@ def main():
         say("\n5. bob retries without re-reading")
         say(f"   bob edit attempt -> {outcome(bob.send('pre', edit_payload(auth)))}")
 
-        say("\n6. bob re-reads, then retries")
+        say("\n6. bob re-reads, then retries: blocked until payment.py matches the new signature")
         bob.send("read", {"tool_input": {"file_path": str(auth)}})
+        say(f"   bob edit attempt -> {outcome(bob.send('pre', edit_payload(auth)))}")
+        bob.send("read", {"tool_input": {"file_path": str(payment)}})
+        say(f"   bob fixes payment.py -> {outcome(bob.send('pre', edit_payload(payment)))}")
+        payment.write_text("from auth import authenticate\n\ndef pay(user, password):\n"
+                           "    return authenticate(user, password)\n")
+        say(f"   payment.py edit completed -> {outcome(bob.send('post', edit_payload(payment)))}")
         say(f"   bob edit attempt -> {outcome(bob.send('pre', edit_payload(auth)))}")
         auth.write_text("def authenticate(user, password):\n    return password == 'ok'\n")
         bob.send("post", edit_payload(auth))

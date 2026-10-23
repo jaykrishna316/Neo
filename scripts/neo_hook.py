@@ -30,6 +30,7 @@ from core import activity_log  # noqa: E402
 from core.activity_log import log_activity  # noqa: E402
 from core.blast_radius import BlastRadiusCalculator  # noqa: E402
 from core.breaking_change_detector import has_breaking_changes  # noqa: E402
+from core.call_compat import broken_calls  # noqa: E402
 from core.freshness import check_freshness, get_base_snapshot, record_read  # noqa: E402
 from core.lock_manager import LockManager  # noqa: E402
 from core.pre_gen_check import check_for_conflicts  # noqa: E402
@@ -137,6 +138,70 @@ def analyze_change(file_path, old_content, new_content):
     return breaking, dependents, lines
 
 
+def _breaks_path():
+    return _state_dir() / "breakages.json"
+
+
+def _load_breaks():
+    path = _breaks_path()
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+def _save_breaks(records):
+    path = _breaks_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(records, indent=2))
+
+
+def _same_file(a, b):
+    return os.path.normpath(os.path.abspath(a)) == os.path.normpath(os.path.abspath(b))
+
+
+def _problems_for(source, importer, symbols):
+    """Calls in importer that no longer match source's current signatures."""
+    try:
+        new_source = Path(source).read_text()
+        importer_text = Path(importer).read_text()
+    except (OSError, UnicodeDecodeError):
+        return []
+    return [f"line {line}: {call} {problem}"
+            for line, call, problem in broken_calls(importer_text, Path(source).stem,
+                                                    new_source, symbols)]
+
+
+def refresh_breakages(file_path, breaking, dependents):
+    """Record the downstream breakages this edit causes, and resolve the ones it fixes.
+
+    Returns the steps to show in the terminal.
+    """
+    steps = []
+    records = _load_breaks()
+    if breaking:
+        symbols = {c.symbol for c in breaking}
+        for record in records:
+            if _same_file(record["source"], file_path):
+                symbols.update(record["symbols"])
+        records = [r for r in records if not _same_file(r["source"], file_path)]
+        for dependent in dependents:
+            problems = _problems_for(file_path, dependent, symbols)
+            if problems:
+                records.append({"source": file_path, "importer": dependent,
+                                "symbols": sorted(symbols), "problems": problems})
+                steps.append(f"downstream breakage: {dependent} will break - " + "; ".join(problems))
+
+    kept = []
+    for record in records:
+        if _same_file(record["source"], file_path) or _same_file(record["importer"], file_path):
+            problems = _problems_for(record["source"], record["importer"], record["symbols"])
+            if not problems:
+                steps.append(f"downstream breakage resolved: {record['importer']} now matches {record['source']}")
+                continue
+            record["problems"] = problems
+        kept.append(record)
+    _save_breaks(kept)
+    return steps
+
+
 def _log_breaking(developer, file_path, breaking):
     details = "; ".join(change.details for change in breaking)
     log_activity(developer_id=developer, file_path=file_path,
@@ -150,6 +215,13 @@ def pre(developer, file_path):
     if freshness == "STALE_SOURCE":
         return _block(steps + [f"{file_path} changed after you last read it. "
                                f"Read the file again, then retry the edit."])
+
+    blocking = [r for r in _load_breaks() if _same_file(r["source"], file_path)]
+    if blocking:
+        steps.append(f"downstream breakage on {file_path}: callers do not match the current signature")
+        lines = [f"{r['importer']} {problem}" for r in blocking for problem in r["problems"]]
+        return _block(steps + [f"{file_path} has a downstream breakage. Fix these callers before editing it:"]
+                      + lines + ["Fix the calling file first, then retry the edit."])
 
     intent = os.environ.get("NEO_INTENT") or _saved_intent(developer) or f"Edit {file_path}"
     steps.append(f"intent for this edit: \"{intent[:120]}\"")
@@ -213,6 +285,7 @@ def post(developer, file_path):
         steps.append(f"files that import {file_path}: {', '.join(dependents)}")
     elif not breaking:
         steps.append(f"no breaking change; no files import {file_path}")
+    steps.extend(refresh_breakages(file_path, breaking, dependents))
     extra = {"hookSpecificOutput": {"hookEventName": "PostToolUse",
                                     "additionalContext": "\n".join(lines)}} if lines else None
     _notify(steps, extra)
