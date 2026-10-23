@@ -43,10 +43,18 @@ def say(text):
 def outcome(result):
     if result.returncode == 2:
         return "BLOCKED: " + result.stderr.strip()
-    if result.stdout.strip():
-        reason = json.loads(result.stdout)["hookSpecificOutput"]
-        return "ALLOWED: " + reason.get("permissionDecisionReason", reason.get("additionalContext", ""))
-    return "ALLOWED" + (f" ({result.stderr.strip()})" if result.stderr.strip() else "")
+    shown = system_message(result)
+    if shown:
+        return "ALLOWED: " + shown
+    return "ALLOWED"
+
+
+def system_message(result):
+    """The steps Neo showed in the terminal for this hook call."""
+    if not result.stdout.strip():
+        return ""
+    data = json.loads(result.stdout)
+    return data.get("systemMessage", "").replace("\n", " | ")
 
 
 def edit_payload(path):
@@ -79,7 +87,7 @@ def main():
 
         say("\n4. alice's task ends")
         stop = alice.send("stop")
-        say(f"   released -> {stop.stderr.strip() or 'nothing to release'}")
+        say(f"   released -> {system_message(stop) or 'nothing to release'}")
 
         say("\n5. bob retries without re-reading")
         say(f"   bob edit attempt -> {outcome(bob.send('pre', edit_payload(auth)))}")

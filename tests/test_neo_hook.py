@@ -44,7 +44,7 @@ def test_two_sessions_queue_and_hand_off():
         # alice's task ends: her lock is released and bob is promoted
         done = _run("stop", "alice", workdir)
         assert done.returncode == 0, done.stderr
-        assert "bob is next" in done.stderr
+        assert "bob is next" in done.stdout
 
         # bob can now edit
         assert _run("pre", "bob", workdir).returncode == 0

@@ -70,14 +70,14 @@ def test_stop_releases_every_lock_and_promotes_the_next():
         assert _hook("pre", "alice", workdir, file_path).returncode == 0
         assert _hook("pre", "bob", workdir, file_path).returncode == 2
         stop = _hook("stop", "alice", workdir)
-        assert stop.returncode == 0 and "bob is next" in stop.stderr
+        assert stop.returncode == 0 and "bob is next" in stop.stdout
         assert _hook("pre", "bob", workdir, file_path).returncode == 0
 
 
 def test_stop_with_nothing_locked_does_nothing():
     with tempfile.TemporaryDirectory() as workdir:
         result = _hook("stop", "alice", workdir)
-        assert result.returncode == 0 and result.stderr.strip() == ""
+        assert result.returncode == 0 and result.stdout.strip() == "" and result.stderr.strip() == ""
 
 
 def test_stop_without_developer_name_does_nothing():
