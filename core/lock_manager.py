@@ -361,9 +361,12 @@ class LockManager:
         log = read_log(self.tenant_id)
         now = time.time()
 
-        # Find most recent ACQUIRED or WAITING entry for this lock
+        # Walk back from the newest entry. A release ends the lock, so an older
+        # ACQUIRED entry must not be read as the current holder.
         for entry in reversed(log):
             if self._matches_lock_key(entry, lock_key):
+                if entry.get("lock_state") == "RELEASED":
+                    return None
                 if entry.get("lock_state") in ("ACQUIRED", "WAITING"):
                     # Check expiration
                     expires_at = entry.get("lock_expires_at")
