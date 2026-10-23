@@ -64,6 +64,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/neo_hook.py stop",
+            "timeout": 20
+          }
+        ]
+      }
     ]
   },
   "env": {

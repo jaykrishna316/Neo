@@ -29,7 +29,7 @@ def _run(mode, developer, workdir, file_path=FILE):
 
 def test_two_sessions_queue_and_hand_off():
     with tempfile.TemporaryDirectory() as workdir:
-        # alice declares and edits
+        # alice's first edit attempt takes the lock
         assert _run("pre", "alice", workdir).returncode == 0
 
         # bob is queued and his edit is blocked
@@ -37,8 +37,12 @@ def test_two_sessions_queue_and_hand_off():
         assert blocked.returncode == 2, blocked.stderr
         assert "locked by alice" in blocked.stderr
 
-        # alice finishes; bob is promoted
-        done = _run("post", "alice", workdir)
+        # alice's edit does not release the lock: the task is still running
+        assert _run("post", "alice", workdir).returncode == 0
+        assert _run("pre", "bob", workdir).returncode == 2
+
+        # alice's task ends: her lock is released and bob is promoted
+        done = _run("stop", "alice", workdir)
         assert done.returncode == 0, done.stderr
         assert "bob is next" in done.stderr
 
