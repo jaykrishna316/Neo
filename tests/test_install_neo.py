@@ -21,7 +21,7 @@ def _install(target):
 
 def _hook_commands(settings):
     return [h["command"] for groups in settings["hooks"].values()
-            for g in groups for h in g["hooks"] if "neo_hook.py" in h["command"]]
+            for g in groups for h in g["hooks"] if h["command"].startswith("python3 .neo/scripts/")]
 
 
 def test_install_copies_hook_and_wires_all_six_modes():
@@ -37,10 +37,11 @@ def test_install_copies_hook_and_wires_all_six_modes():
 
         settings = json.loads((target / ".claude" / "settings.json").read_text())
         commands = _hook_commands(settings)
-        assert len(commands) == 6, commands
+        assert len(commands) == 7, commands
         for mode in ("pre", "post", "read", "bash", "prompt", "stop"):
             assert any(c.endswith(f"neo_hook.py {mode}") for c in commands), mode
-        assert all(c.startswith("python3 .neo/scripts/neo_hook.py") for c in commands)
+        assert any(c.endswith("neo_update_check.py") for c in commands)
+        assert (target / ".neo" / "scripts" / "neo_update_check.py").is_file()
 
         ignored = (target / ".gitignore").read_text().splitlines()
         assert ignored.count(".neo_state/") == 1 and ignored.count(".devsync/") == 1
@@ -53,7 +54,7 @@ def test_rerun_refreshes_without_duplicating():
         _install(target)
         _install(target)
         settings = json.loads((target / ".claude" / "settings.json").read_text())
-        assert len(_hook_commands(settings)) == 6
+        assert len(_hook_commands(settings)) == 7
         assert (target / ".gitignore").read_text().count(".neo_state/") == 1
 
 
@@ -106,3 +107,72 @@ def test_non_git_target_is_refused():
     with tempfile.TemporaryDirectory() as tmp:
         result = _install(Path(tmp))
         assert result.returncode == 1 and "not a git repo" in result.stderr
+
+
+def _bare_remote_with_main(tmp, commit_message):
+    """A bare repo whose main branch has one commit. Returns (path, commit sha)."""
+    seed = Path(tmp) / "seed"
+    seed.mkdir()
+    remote = Path(tmp) / "neo-remote.git"
+    subprocess.run(["git", "init", "-q", "-b", "main", str(seed)], check=True)
+    (seed / "README.md").write_text(commit_message)
+    subprocess.run(["git", "-C", str(seed), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(seed), "-c", "user.email=t@example.com", "-c", "user.name=t",
+                    "commit", "-q", "-m", commit_message], check=True)
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "-C", str(seed), "push", "-q", str(remote), "main"], check=True,
+                   capture_output=True)
+    sha = subprocess.run(["git", "-C", str(seed), "rev-parse", "HEAD"],
+                         capture_output=True, text=True, check=True).stdout.strip()
+    return remote, sha
+
+
+def _run_update_check(target, url, version=None):
+    if version is not None:
+        (target / ".neo" / "VERSION").write_text(version + "\n")
+    env = {**os.environ, "NEO_REPO_URL": str(url)}
+    env.pop("NEO_DEVELOPER", None)
+    return subprocess.run(["python3", ".neo/scripts/neo_update_check.py"], text=True,
+                          capture_output=True, cwd=target, env=env, timeout=60)
+
+
+def test_update_check_reports_a_newer_main():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "braxis"
+        _git_repo(target)
+        _install(target)
+        remote, main_sha = _bare_remote_with_main(tmp, "first")
+        result = _run_update_check(target, remote, version="0" * 40)
+        assert result.returncode == 0, result.stderr
+        message = json.loads(result.stdout)["systemMessage"]
+        assert "update available on main" in message and main_sha[:7] in message
+
+
+def test_update_check_is_silent_when_up_to_date():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "braxis"
+        _git_repo(target)
+        _install(target)
+        remote, main_sha = _bare_remote_with_main(tmp, "first")
+        result = _run_update_check(target, remote, version=main_sha)
+        assert result.returncode == 0 and result.stdout.strip() == ""
+
+
+def test_update_check_is_silent_when_offline():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "braxis"
+        _git_repo(target)
+        _install(target)
+        result = _run_update_check(target, Path(tmp) / "no-such-remote.git", version="0" * 40)
+        assert result.returncode == 0 and result.stdout.strip() == ""
+
+
+def test_update_check_writes_a_daily_cache_in_state_not_in_git():
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "braxis"
+        _git_repo(target)
+        _install(target)
+        remote, main_sha = _bare_remote_with_main(tmp, "first")
+        _run_update_check(target, remote, version="0" * 40)
+        cache = json.loads((target / ".neo_state" / "update_check.json").read_text())
+        assert cache["latest"] == main_sha

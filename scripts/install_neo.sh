@@ -29,9 +29,9 @@ fi
 DEST="$TARGET/.neo"
 rm -rf "$DEST/scripts" "$DEST/core"
 mkdir -p "$DEST/scripts" "$DEST/core"
-cp "$NEO/scripts/neo_hook.py" "$DEST/scripts/"
+cp "$NEO/scripts/neo_hook.py" "$NEO/scripts/neo_update_check.py" "$DEST/scripts/"
 cp "$NEO"/core/*.py "$DEST/core/"
-git -C "$NEO" rev-parse --short HEAD > "$DEST/VERSION" 2>/dev/null || echo "unknown" > "$DEST/VERSION"
+git -C "$NEO" rev-parse HEAD > "$DEST/VERSION" 2>/dev/null || echo "unknown" > "$DEST/VERSION"
 
 # 2. Add the hook entries to .claude/settings.json, keeping any hooks already there.
 python3 - "$TARGET/.claude/settings.json" <<'PY'
@@ -44,13 +44,15 @@ path.parent.mkdir(parents=True, exist_ok=True)
 data = json.loads(path.read_text()) if path.exists() else {}
 hooks = data.setdefault("hooks", {})
 
+NEO_CMD = "python3 .neo/scripts/"
 WANTED = {
-    "PreToolUse": [("Write|Edit|MultiEdit|Update", "pre", 10)],
-    "PostToolUse": [("Write|Edit|MultiEdit|Update", "post", 20),
-                    ("Read", "read", 10),
-                    ("Bash", "bash", 20)],
-    "UserPromptSubmit": [(None, "prompt", 10)],
-    "Stop": [(None, "stop", 20)],
+    "PreToolUse": [("Write|Edit|MultiEdit|Update", f"{NEO_CMD}neo_hook.py pre", 10)],
+    "PostToolUse": [("Write|Edit|MultiEdit|Update", f"{NEO_CMD}neo_hook.py post", 20),
+                    ("Read", f"{NEO_CMD}neo_hook.py read", 10),
+                    ("Bash", f"{NEO_CMD}neo_hook.py bash", 20)],
+    "UserPromptSubmit": [(None, f"{NEO_CMD}neo_hook.py prompt", 10)],
+    "Stop": [(None, f"{NEO_CMD}neo_hook.py stop", 20)],
+    "SessionStart": [(None, f"{NEO_CMD}neo_update_check.py", 10)],
 }
 
 
@@ -58,7 +60,7 @@ def without_neo(groups):
     """Drop Neo's own entries, so a re-run replaces them instead of adding copies."""
     kept = []
     for group in groups:
-        inner = [h for h in group.get("hooks", []) if "neo_hook.py" not in h.get("command", "")]
+        inner = [h for h in group.get("hooks", []) if not h.get("command", "").startswith(NEO_CMD)]
         if inner:
             kept.append({**group, "hooks": inner})
     return kept
@@ -66,10 +68,8 @@ def without_neo(groups):
 
 for event, entries in WANTED.items():
     groups = without_neo(hooks.get(event, []))
-    for matcher, mode, timeout in entries:
-        group = {"hooks": [{"type": "command",
-                            "command": f"python3 .neo/scripts/neo_hook.py {mode}",
-                            "timeout": timeout}]}
+    for matcher, command, timeout in entries:
+        group = {"hooks": [{"type": "command", "command": command, "timeout": timeout}]}
         if matcher:
             group["matcher"] = matcher
         groups.append(group)
@@ -88,7 +88,7 @@ for entry in ".neo_state/" ".devsync/"; do
     grep -qxF "$entry" "$GITIGNORE" || echo "$entry" >> "$GITIGNORE"
 done
 
-echo "Neo hooks installed in $TARGET (Neo $(cat "$DEST/VERSION"))."
+echo "Neo hooks installed in $TARGET (Neo $(cut -c1-7 "$DEST/VERSION"))."
 echo
 echo "Next:"
 echo "  1. Review: git -C \"$TARGET\" status"
