@@ -150,6 +150,45 @@ For complete breaking change detection and upstream impact blocking:
 - ✅ Automatic alert resolution when fixes are applied
 - ✅ Zero conflicts in cascading multi-service workflow
 
+### 💻 Claude Code Terminal Test: Breaking Change and Downstream Gate (10 minutes)
+
+For the real Claude Code flow, with prompts only in two terminals:
+
+**Setup**: Open 2 Claude Code terminals and follow [docs/CLAUDE_CODE_TEST.md](docs/CLAUDE_CODE_TEST.md)
+
+**Test Scenario**:
+- alice changes `authenticate(user)` to `authenticate(user, password)` and does not touch `payment.py`
+- bob reads the file, then tries to add a JWT fallback to `authenticate()`
+- bob must fix `payment.py` before he can edit `src/auth.py`
+
+**What you'll see:**
+- ✅ Alice's prompt is saved as her intent, and each step shows in her terminal
+- ✅ Alice's edit is reported as a breaking change, and `payment.py` is listed as an importer
+- ✅ **Downstream breakage recorded** for `payment.py`, which still calls `authenticate(user)`
+- ✅ Bob is **blocked as stale** when he edits without re-reading the file
+- ✅ Bob is **blocked by the downstream breakage** before the lock is checked
+- ✅ Bob fixes `payment.py`, and the breakage is **resolved**
+- ✅ Bob's edit to `src/auth.py` is allowed once the caller matches
+
+**Example Output** (trimmed from the hook output):
+```
+Neo: downstream breakage: test-scenarios/services/payment.py will break - line 4: authenticate(user) is missing 'password'
+
+Neo: src/auth.py has a downstream breakage. Fix these callers before editing it:
+Neo: test-scenarios/services/payment.py line 4: authenticate(user) is missing 'password'
+Neo: Fix the calling file first, then retry the edit.
+
+Neo: downstream breakage resolved: test-scenarios/services/payment.py now matches src/auth.py
+```
+
+**What This Proves**:
+- ✅ Breaking changes are caught in the Claude Code session, before the next developer edits
+- ✅ A developer cannot change a function while its callers are broken
+- ✅ Stale context blocks edits made from an out-of-date read
+- ✅ The breakage clears when the caller is fixed, with no manual step
+
+**Not covered here**: the lock queue. A lock lasts until its holder's turn ends, so the terminal test can't reliably hold one. The hook tests (`tests/test_intent_lock.py`, `tests/test_neo_hook.py`) cover the queue and hand-off.
+
 ---
 
 ### 🧠 IDE: Claude Code + MCP Server (10-20 minutes)
