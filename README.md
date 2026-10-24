@@ -76,6 +76,29 @@ Choose between:
 
 ---
 
+### 🔌 Use Neo in Any Repo (2 minutes)
+
+Open the repo you want to coordinate in Claude Code and paste this prompt:
+
+```
+Install Neo's coordination hooks in this repo. Clone https://github.com/jaykrishna316/Neo
+into a temporary folder, run its scripts/install_neo.sh with this repo as the target,
+then show me git status.
+```
+
+The installer copies Neo's hook into the repo's `.neo/` folder and adds the hook entries to
+`.claude/settings.json`. Commit those and `.gitignore`, and teammates get the hooks when they
+pull. Each developer sets a name before starting Claude Code:
+
+```bash
+NEO_DEVELOPER=alice claude
+```
+
+Run the installer again to refresh the copy. It doesn't duplicate entries or remove hooks
+the repo already has.
+
+---
+
 ### 💻 Manual Test: 2-Developer Coordination (10 minutes)
 
 For hands-on experience with real terminals:
