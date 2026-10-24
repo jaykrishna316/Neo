@@ -1,7 +1,12 @@
-# Claude Code test: intent, lock, stale context, breaking change
+# Claude Code test: intent, stale context, breaking change, downstream gate
 
 Two Claude Code sessions, alice and bob, in the same repo folder. You send prompts only.
 Neo's steps appear in each terminal as `Neo: ...` lines.
+
+This terminal test does not check the lock queue. A lock lasts only until its holder's
+turn ends, and a Claude turn can't be held open for a fixed time, so Bob can't reliably
+attempt an edit while Alice still holds the lock. The lock queue and hand-off are covered
+by the hook tests: `tests/test_intent_lock.py` and `tests/test_neo_hook.py`.
 
 ## Setup
 
@@ -25,10 +30,6 @@ NEO_DEVELOPER=bob claude
 
 Start both before sending any prompt.
 
-## Why alice runs `sleep`
-
-The lock is released when a session's turn ends. Bob's attempt to edit has to happen while alice's turn is still running, so alice's prompt tells her to wait with `sleep`. Without it, bob's edit will not be blocked.
-
 ## Steps
 
 ### Phase 0: bob reads the file (terminal B)
@@ -37,27 +38,34 @@ The lock is released when a session's turn ends. Bob's attempt to edit has to ha
 
 Expect: `Neo: bob read src/auth.py; baseline saved for the staleness check`
 
-### Phase 1: alice edits and waits (terminal A)
+### Phase 1: alice changes the signature (terminal A)
 
-> In src/auth.py, change authenticate(user) so it is authenticate(user, password) and returns whether password equals 'ok'. Don't change any other file. Then run `sleep 120` in bash, and tell me when it finishes.
+> In src/auth.py, change authenticate(user) so it is authenticate(user, password) and returns whether password equals 'ok'. Don't change any other file.
 
 Expect in terminal A:
 - `Neo: intent set for alice: "In src/auth.py, change authenticate(user)..."` (check 1)
 - `Neo: freshness check on src/auth.py: CURRENT`
-- `Neo: conflict check: LOW`
-- `Neo: lock on src/auth.py taken by alice; held until the task ends` (check 2)
-- After the edit: `Neo: Breaking change in src/auth.py: ...` naming the changed signature, and `Neo: files that import src/auth.py: test-scenarios/services/payment.py` (check 4)
+- `Neo: conflict check: HIGH` or `MEDIUM`, with the breaking-change reason
+- `Neo: lock on src/auth.py taken by alice; held until the task ends`
+- After the edit: `Neo: Breaking change in src/auth.py` naming the signature change (check 4)
+- `Neo: files that import src/auth.py: test-scenarios/services/payment.py`
+- `Neo: downstream breakage: test-scenarios/services/payment.py will break - line 4: authenticate(user) is missing 'password'`
+- Then `Neo: task ended: lock on src/auth.py released by alice` when her turn ends
 
-### Phase 2: bob tries to edit while alice is waiting (terminal B)
+Alice does not fix payment.py. That's the point of the test.
 
-Bob's edits to src/auth.py are blocked by three things, in this order: a stale read, the downstream breakage alice left in payment.py, then the lock.
+### Phase 2: bob tries to edit src/auth.py (terminal B)
+
+Bob's edits are checked in this order: stale read, downstream breakage, then the lock.
 
 **2a.** Send:
 
-> Add a JWT fallback to authenticate() in src/auth.py.
+> Without reading src/auth.py again, add a JWT fallback to authenticate() in src/auth.py.
 
 Expect: blocked as stale (check 3):
 `Neo: src/auth.py changed after you last read it. Read the file again, then retry the edit.`
+
+If Claude reports `Error editing file` and no Neo line, Claude's copy of the file is out of date and the hook never ran. Send 2b anyway, then go on. Check 3 then needs another attempt.
 
 **2b.** Send:
 
@@ -65,54 +73,39 @@ Expect: blocked as stale (check 3):
 
 Expect: `Neo: bob read src/auth.py; baseline saved for the staleness check`
 
-**2c.** Send the same prompt again:
+**2c.** Send the same prompt as 2a:
 
-> Add a JWT fallback to authenticate() in src/auth.py.
+> Without reading src/auth.py again, add a JWT fallback to authenticate() in src/auth.py.
 
-Expect: blocked by the downstream breakage (check 5), before the lock is checked:
+Expect: blocked by the downstream breakage (check 5):
 - `Neo: downstream breakage on src/auth.py: callers do not match the current signature`
 - `Neo: test-scenarios/services/payment.py line 4: authenticate(user) is missing 'password'`
-- `Neo: Fix the calling file first, then retry the edit.`
 
-**2d.** Bob fixes the caller. Send:
+**2d.** Send:
 
-> Update test-scenarios/services/payment.py so pay() takes a password and passes it to authenticate().
+> Update test-scenarios/services/payment.py so pay() takes a password and passes it to authenticate(). Don't change any other file.
 
-Expect in terminal B after the edit: `Neo: downstream breakage resolved: test-scenarios/services/payment.py now matches src/auth.py`
+Expect: `Neo: downstream breakage resolved: test-scenarios/services/payment.py now matches src/auth.py`
 
 **2e.** Send:
 
 > Add a JWT fallback to authenticate() in src/auth.py.
 
-Expect: the breakage is gone, so the lock check runs (check 1 and check 2):
-- `Neo: intent set for bob: "Add a JWT fallback to authenticate() in src/auth.py."`
+Expect: allowed, with the lock now taken by bob because alice's turn ended:
 - `Neo: freshness check on src/auth.py: CURRENT`
-- `Neo: conflict check: MEDIUM` or `HIGH`, naming alice
-- `Neo: src/auth.py is locked by alice. bob is queued behind them.`
+- `Neo: lock on src/auth.py taken by bob; held until the task ends`
 
-### Phase 3: alice's turn ends (terminal A)
-
-Let alice's `sleep` finish and her turn end.
-
-Expect in terminal A:
-- `Neo: task ended: lock on src/auth.py released by alice`
-- `Neo: bob is next in the queue and now holds the lock on src/auth.py` (check 2)
-
-### Phase 4: bob edits (terminal B)
-
-> Add a JWT fallback to authenticate() in src/auth.py.
-
-Expect: `Neo: lock on src/auth.py taken by bob; held until the task ends`. Bob is not blocked as stale, because his re-read in 2b came after alice's edit. The code itself doesn't matter for this check.
+Stop after 2e. Bob's JWT code is only for this test. Don't keep it.
 
 ## Pass / fail
 
 | Check | Pass when |
 |---|---|
-| 1. Intent and conflict | Each prompt shows `intent set for <name>`, and bob's blocked attempt shows a conflict level other than LOW |
-| 2. Lock and queue | Bob is blocked and queued with alice named; after alice's turn, bob is promoted and then allowed |
-| 3. Stale context | Bob's edit after alice's change is blocked with `changed after you last read it`, and allowed after re-reading |
+| 1. Intent and conflict | Alice's prompt shows `intent set for alice`, and her edit shows a conflict level other than LOW |
+| 2. Lock | Alice's lock is taken and released at the end of her turn; bob takes the lock after it (2e). Queueing is covered by the hook tests |
+| 3. Stale context | Bob's edit after alice's change is blocked with `changed after you last read it` (2a) |
 | 4. Breaking change | Alice's post-edit output names the changed signature and lists `payment.py` as importing it |
-| 5. Downstream gate | Bob's edit to src/auth.py is blocked by `downstream breakage` until payment.py is fixed, and the lock message only appears after that |
+| 5. Downstream gate | Bob is blocked by `downstream breakage` before any lock message (2c), and the block clears after `payment.py` is fixed (2d) |
 
 ## Known wording issue
 
@@ -121,7 +114,7 @@ Check 4 reports the change as `Parameter order changed` even when a parameter wa
 ## After the test
 
 ```bash
-git checkout -- src/auth.py
+git checkout -- src/auth.py test-scenarios/services/payment.py
 ```
 
-This restores the repo's version of `src/auth.py`. `scripts/reset_claude_test.sh` overwrites `test-scenarios/services/payment.py` on the next run.
+`scripts/reset_claude_test.sh` rewrites both files at the start of each run.
