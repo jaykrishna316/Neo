@@ -102,17 +102,22 @@ def scan_dependents(file_path):
         rf"^\s*(from\s+{re.escape(module)}\s+import|import\s+{re.escape(module)}\b)", re.M
     )
     found = []
-    for path in root.rglob("*.py"):
-        if any(part in SKIP_DIRS for part in path.relative_to(root).parts):
-            continue
-        if path.resolve() == target:
-            continue
-        try:
-            text = path.read_text()
-        except (OSError, UnicodeDecodeError):
-            continue
-        if pattern.search(text):
-            found.append(str(path.relative_to(root)))
+    # Prune skipped folders while walking. Listing every file first (rglob) took
+    # about 18 seconds on a repo with a large .venv, past the hook's time limit.
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for name in filenames:
+            if not name.endswith(".py"):
+                continue
+            path = Path(dirpath) / name
+            if path.resolve() == target:
+                continue
+            try:
+                text = path.read_text()
+            except (OSError, UnicodeDecodeError):
+                continue
+            if pattern.search(text):
+                found.append(str(path.relative_to(root)))
     return sorted(found)
 
 
