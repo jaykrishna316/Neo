@@ -46,7 +46,7 @@ hooks = data.setdefault("hooks", {})
 
 NEO_CMD = "python3 .neo/scripts/"
 WANTED = {
-    "PreToolUse": [("Write|Edit|MultiEdit|Update", f"{NEO_CMD}neo_hook.py pre", 10)],
+    "PreToolUse": [("Write|Edit|MultiEdit|Update", f"{NEO_CMD}neo_hook.py pre", 150)],
     "PostToolUse": [("Write|Edit|MultiEdit|Update", f"{NEO_CMD}neo_hook.py post", 20),
                     ("Read", f"{NEO_CMD}neo_hook.py read", 10),
                     ("Bash", f"{NEO_CMD}neo_hook.py bash", 20)],
