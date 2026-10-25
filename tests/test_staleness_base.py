@@ -5,10 +5,25 @@ import os
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 HOOK = REPO / "scripts" / "neo_hook.py"
+
+
+@contextmanager
+def _state_dir(path):
+    """Point NEO_STATE_DIR at path for one test, and put back whatever was set before."""
+    previous = os.environ.get("NEO_STATE_DIR")
+    os.environ["NEO_STATE_DIR"] = path
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("NEO_STATE_DIR", None)
+        else:
+            os.environ["NEO_STATE_DIR"] = previous
 
 
 def _hook_read(developer, file_path, workdir):
@@ -21,8 +36,7 @@ def _hook_read(developer, file_path, workdir):
 
 
 def test_staleness_uses_the_read_snapshot():
-    with tempfile.TemporaryDirectory() as workdir:
-        os.environ["NEO_STATE_DIR"] = str(Path(workdir) / ".neo_state")
+    with tempfile.TemporaryDirectory() as workdir, _state_dir(str(Path(workdir) / ".neo_state")):
         sys.path.insert(0, str(REPO))
         import core.freshness as freshness
         from core.pre_gen_check import check_source_staleness
@@ -44,8 +58,7 @@ def test_staleness_uses_the_read_snapshot():
 
 
 def test_no_change_after_read_is_current():
-    with tempfile.TemporaryDirectory() as workdir:
-        os.environ["NEO_STATE_DIR"] = str(Path(workdir) / ".neo_state")
+    with tempfile.TemporaryDirectory() as workdir, _state_dir(str(Path(workdir) / ".neo_state")):
         sys.path.insert(0, str(REPO))
         import core.freshness as freshness
         from core.pre_gen_check import check_source_staleness

@@ -37,7 +37,7 @@ def test_install_copies_hook_and_wires_all_six_modes():
 
         settings = json.loads((target / ".claude" / "settings.json").read_text())
         commands = _hook_commands(settings)
-        assert len(commands) == 7, commands
+        assert len(commands) == 8, commands
         for mode in ("pre", "post", "read", "bash", "prompt", "stop"):
             assert any(c.endswith(f"neo_hook.py {mode}") for c in commands), mode
         assert any(c.endswith("neo_update_check.py") for c in commands)
@@ -55,7 +55,7 @@ def test_rerun_refreshes_without_duplicating():
         _install(target)
         _install(target)
         settings = json.loads((target / ".claude" / "settings.json").read_text())
-        assert len(_hook_commands(settings)) == 7
+        assert len(_hook_commands(settings)) == 8
         assert (target / ".gitignore").read_text().count(".neo_state/") == 1
 
 

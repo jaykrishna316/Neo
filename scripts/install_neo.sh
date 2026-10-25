@@ -52,7 +52,8 @@ WANTED = {
                     ("Bash", f"{NEO_CMD}neo_hook.py bash", 20)],
     "UserPromptSubmit": [(None, f"{NEO_CMD}neo_hook.py prompt", 10)],
     "Stop": [(None, f"{NEO_CMD}neo_hook.py stop", 20)],
-    "SessionStart": [(None, f"{NEO_CMD}neo_update_check.py", 10)],
+    "SessionStart": [(None, f"{NEO_CMD}neo_update_check.py", 10),
+                     (None, f"{NEO_CMD}neo_hook.py start", 60)],
 }
 
 

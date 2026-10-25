@@ -15,6 +15,7 @@ NEO_INTENT overrides the intent saved from the prompt.
 Exit code 2 blocks the tool call and shows the message to the session.
 """
 
+import ast
 import hashlib
 import json
 import os
@@ -37,7 +38,7 @@ from core.lock_manager import LockManager  # noqa: E402
 from core.pre_gen_check import check_for_conflicts  # noqa: E402
 from core.risk_classifier import RiskLevel  # noqa: E402
 
-MODES = ("prompt", "pre", "post", "read", "bash", "stop")
+MODES = ("prompt", "pre", "post", "read", "bash", "stop", "start")
 SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".devsync", ".neo_state"}
 
 
@@ -108,31 +109,49 @@ def _saved_intent(developer):
     return path.read_text().strip() if path.exists() else None
 
 
+def _python_paths(root):
+    """Every .py file in the project, as resolved paths, skipping excluded folders."""
+    return [path.resolve() for path in _python_files(root)]
+
+
+def _bound_module(importer, stem, repo_files):
+    """The file that `import <stem>` in importer refers to, or None.
+
+    A module name can be shared by files in different folders (code/pricing.py and
+    neo_demo/pricing.py). An import binds to the file in its own folder, or else the
+    nearest parent folder that has one. A name used only once binds to that file.
+    """
+    matches = [path for path in repo_files if path.stem == stem]
+    if len(matches) <= 1:
+        return matches[0] if matches else None
+    for folder in [importer.parent, *importer.parents]:
+        for path in matches:
+            if path.parent == folder:
+                return path
+    return None
+
+
 def scan_dependents(file_path):
     """Files in the project that import this file's module."""
-    root = Path.cwd()
-    module = Path(file_path).stem
+    root = Path.cwd().resolve()
     target = Path(file_path).resolve()
+    module = target.stem
     pattern = re.compile(
         rf"^\s*(from\s+{re.escape(module)}\s+import|import\s+{re.escape(module)}\b)", re.M
     )
+    repo_files = _python_paths(root)
     found = []
     # Prune skipped folders while walking. Listing every file first (rglob) took
     # about 18 seconds on a repo with a large .venv, past the hook's time limit.
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for name in filenames:
-            if not name.endswith(".py"):
-                continue
-            path = Path(dirpath) / name
-            if path.resolve() == target:
-                continue
-            try:
-                text = path.read_text()
-            except (OSError, UnicodeDecodeError):
-                continue
-            if pattern.search(text):
-                found.append(str(path.relative_to(root)))
+    for path in repo_files:
+        if path == target:
+            continue
+        try:
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if pattern.search(text) and _bound_module(path, module, repo_files) == target:
+            found.append(str(path.relative_to(root)))
     return sorted(found)
 
 
@@ -247,6 +266,73 @@ def _wait_for_lock(file_path, developer, limit):
         if remaining <= 0:
             return False
         time.sleep(min(2, remaining))
+
+
+def _python_files(root):
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for name in filenames:
+            if name.endswith(".py"):
+                yield Path(dirpath) / name
+
+
+def scan_repo_breaks(root):
+    """Callers anywhere in the repo that no longer match their function's current signature."""
+    files = {}
+    for path in _python_files(root):
+        try:
+            if path.stat().st_size <= 300_000:
+                files[path] = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+    found = []
+    for source_path, source_text in files.items():
+        try:
+            tree = ast.parse(source_text)
+        except SyntaxError:
+            continue
+        symbols = {node.name for node in tree.body
+                   if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        if not symbols:
+            continue
+        stem = re.escape(source_path.stem)
+        importing = re.compile(rf"^\s*(from\s+{stem}\s+import|import\s+{stem}\b)", re.M)
+        for importer_path, importer_text in files.items():
+            if importer_path == source_path or not importing.search(importer_text):
+                continue
+            if _bound_module(importer_path, source_path.stem, list(files)) != source_path:
+                continue
+            problems = broken_calls(importer_text, source_path.stem, source_text, symbols)
+            if problems:
+                found.append({
+                    "source": str(source_path.relative_to(root)),
+                    "importer": str(importer_path.relative_to(root)),
+                    "symbols": sorted(symbols),
+                    "problems": [f"line {line}: {call} {problem}" for line, call, problem in problems],
+                    "origin": "scan",
+                })
+    return found
+
+
+def start(developer):
+    """At session start: record and report callers in this repo that don't match their functions."""
+    found = scan_repo_breaks(Path.cwd())
+    kept = [r for r in _load_breaks() if r.get("origin") != "scan"]
+    _save_breaks(kept + found)
+    if not found:
+        _notify([f"no broken callers found for {developer} in this repo"])
+        return 0
+    lines = [f"{r['importer']} {problem}" for r in found for problem in r["problems"]]
+    steps = [f"found {len(lines)} call(s) that no longer match their function's signature:"] + lines[:10]
+    context = "\n".join(
+        ["Neo found calls in this repo that don't match their function's current signature."]
+        + lines
+        + ["Fix these calls before starting the task. Edits to the changed files stay blocked until they match."])
+    print(json.dumps({
+        "systemMessage": "\n".join(f"Neo: {step}" for step in steps),
+        "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context},
+    }))
+    return 0
 
 
 def pre(developer, file_path):
@@ -446,6 +532,8 @@ def main(argv):
         return prompt(developer, hook_input)
     if mode == "bash":
         return bash(developer)
+    if mode == "start":
+        return start(developer)
     if mode == "stop":
         return stop(developer)
     file_path = _relative_file_path(hook_input)
