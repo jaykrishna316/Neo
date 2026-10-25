@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 # Single-developer Neo demo for a repo where Neo is installed (.neo/).
 #
-#   scripts/braxis_demo.sh <repo> setup     add neo_demo/ with a breaking change left open
-#                                           by a previous developer
-#   scripts/braxis_demo.sh <repo> teammate  a teammate adds a function to pricing.py after
-#                                           you have read it (run after you fix checkout.py)
-#   scripts/braxis_demo.sh <repo> cleanup   delete neo_demo/ and the demo's Neo state
+#   .neo/scripts/braxis_demo.sh setup     add neo_demo/ with a breaking change left open
+#                                         by a previous developer
+#   .neo/scripts/braxis_demo.sh teammate  a teammate adds a function to pricing.py after
+#                                         you have read it (run after you fix checkout.py)
+#   .neo/scripts/braxis_demo.sh cleanup   delete neo_demo/ and the demo's Neo state
+#
+# Run from the repo root, where Neo is installed. The copy in .neo/ is the one installed
+# by scripts/install_neo.sh.
 set -euo pipefail
 
-if [ $# -ne 2 ]; then
-    echo "usage: $0 <repo> setup|teammate|cleanup" >&2
-    exit 2
-fi
-REPO="$(cd "$1" && pwd)"
-MODE="$2"
+case $# in
+    1) REPO="$(pwd)"; MODE="$1" ;;
+    2) REPO="$(cd "$1" && pwd)"; MODE="$2" ;;
+    *)
+        echo "usage: $0 setup|teammate|cleanup" >&2
+        exit 2
+        ;;
+esac
 HOOK="$REPO/.neo/scripts/neo_hook.py"
 DEMO="neo_demo"
 

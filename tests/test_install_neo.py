@@ -42,6 +42,7 @@ def test_install_copies_hook_and_wires_all_six_modes():
             assert any(c.endswith(f"neo_hook.py {mode}") for c in commands), mode
         assert any(c.endswith("neo_update_check.py") for c in commands)
         assert (target / ".neo" / "scripts" / "neo_update_check.py").is_file()
+        assert (target / ".neo" / "scripts" / "braxis_demo.sh").is_file()
 
         ignored = (target / ".gitignore").read_text().splitlines()
         assert ignored.count(".neo_state/") == 1 and ignored.count(".devsync/") == 1
