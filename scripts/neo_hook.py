@@ -44,12 +44,26 @@ def _state_dir():
     return Path(os.environ.get("NEO_STATE_DIR", ".neo_state"))
 
 
+def _repo_root_of(file_path):
+    """The top of the git worktree that holds this file, or None outside git."""
+    folder = file_path.parent
+    while not folder.is_dir() and folder != folder.parent:
+        folder = folder.parent
+    result = subprocess.run(["git", "-C", str(folder), "rev-parse", "--show-toplevel"],
+                            capture_output=True, text=True)
+    top = result.stdout.strip()
+    return Path(top) if result.returncode == 0 and top else None
+
+
 def _relative_file_path(hook_input):
+    """The file's path inside its own worktree, so every worktree of one repo agrees on it."""
     path = (hook_input.get("tool_input") or {}).get("file_path")
     if not path:
         return None
+    absolute = Path(path).resolve()
+    root = _repo_root_of(absolute) or REPO
     try:
-        return str(Path(path).resolve().relative_to(REPO))
+        return str(absolute.relative_to(root))
     except ValueError:
         return path
 
