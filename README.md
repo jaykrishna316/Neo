@@ -38,17 +38,26 @@
 
 ---
 
-## How It Works (5 Phases)
+## How It Works
 
-| Phase | What | Benefit |
-|-------|------|---------|
-| **1: Lock-Only-When-Needed** | Applies sequential lock at 2+ developers | Prevents simultaneous edits |
-| **2: Temporal Handoff** | Auto-queues next developer on same file | Fair, sequential workflow |
-| **3: Context Invalidation** | Detects staleness >1000ms (C1), auto-refreshes delta (C2) | 96% token reduction per refresh |
-| **4: Reviewer Provenance** | Routes to developer with deepest expertise | Better conflict resolution |
-| **5: Agent Autonomy** | Multi-agent coordination (Claude + others) | Scalable to any team |
+Neo runs as Claude Code hooks. Every prompt, read, edit and shell command goes through Neo, which keeps a shared record in `.devsync/` and `.neo_state/` in the repo.
 
-**Key Insight**: All operations are **local** (`.devsync/activity-log.json`) — no network calls, no external dependencies.
+| Capability | What it does | When you see it |
+|---|---|---|
+| Intent capture | Saves your prompt as the intent for your edits | On every prompt |
+| Conflict check | Rates each edit LOW, MEDIUM or HIGH against other developers' work | Before each edit |
+| Lock and queue | The first edit takes the file's lock. Others are queued, and the next one is promoted when the holder's task ends | Before each edit, and at the end of a task |
+| Stale context | Blocks an edit when the file changed after you last read it | Before each edit |
+| Breaking changes | Reports changed function signatures | After each edit |
+| Downstream impact | Lists the files that import the changed file, with a blast-radius estimate | After each edit |
+| Downstream breakage gate | Blocks edits to a changed file while a caller no longer matches its signature, and clears the block once the caller is fixed | Before each edit, and after the caller is fixed |
+| Shell edits | Treats changes made through Bash as edits | After each Bash command |
+| Update check | Notes when a newer Neo is on `main`, at most once a day | At session start |
+
+Key points:
+- The hooks run on your machine and change only files in your repo. The one network call is the daily update check, which reads the latest commit on `main` and changes no files.
+- Neo records about 65 distinct fields across eight kinds of records: activity log entries, locks, file snapshots, symbols, breaking changes, downstream breakages, file contexts and inbox events. The field definitions are in `core/`.
+- Coordination covers developers on the same machine. The coordination server (`cli/neo_server.py`) is for several machines and is separate from the hooks.
 
 ---
 
