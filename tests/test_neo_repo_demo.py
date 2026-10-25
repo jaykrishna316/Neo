@@ -1,6 +1,6 @@
-"""The Braxis demo: intent, inherited breakage, lock, teammate change, stale context, cleanup.
+"""The repo demo: intent, inherited breakage, lock, teammate change, stale context, cleanup.
 
-Runs against a repo with Neo installed by scripts/install_neo.sh, the way Braxis does.
+Runs against a repo with Neo installed by scripts/install_neo.sh, the way a real repo does.
 """
 
 import json
@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-DEMO = REPO / "scripts" / "braxis_demo.sh"
+DEMO = REPO / "scripts" / "neo_repo_demo.sh"
 INSTALL = REPO / "scripts" / "install_neo.sh"
 
 
@@ -32,9 +32,9 @@ def _message(result):
     return json.loads(result.stdout)["systemMessage"] if result.stdout.strip() else ""
 
 
-def test_braxis_demo_walks_through_every_check():
+def test_repo_demo_walks_through_every_check():
     with tempfile.TemporaryDirectory() as tmp:
-        target = Path(tmp) / "braxis"
+        target = Path(tmp) / "my-repo"
         target.mkdir()
         subprocess.run(["git", "init", "-q", str(target)], check=True)
         assert _run(["bash", str(INSTALL), str(target)]).returncode == 0

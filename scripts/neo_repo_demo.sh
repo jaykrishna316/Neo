@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Single-developer Neo demo for a repo where Neo is installed (.neo/).
 #
-#   .neo/scripts/braxis_demo.sh setup     add neo_demo/ with a breaking change left open
+#   .neo/scripts/neo_repo_demo.sh setup     add neo_demo/ with a breaking change left open
 #                                         by a previous developer
-#   .neo/scripts/braxis_demo.sh teammate  a teammate adds a function to pricing.py after
+#   .neo/scripts/neo_repo_demo.sh teammate  a teammate adds a function to pricing.py after
 #                                         you have read it (run after you fix checkout.py)
-#   .neo/scripts/braxis_demo.sh cleanup   delete neo_demo/ and the demo's Neo state
+#   .neo/scripts/neo_repo_demo.sh cleanup   delete neo_demo/ and the demo's Neo state
 #
 # Run from the repo root, where Neo is installed. The copy in .neo/ is the one installed
 # by scripts/install_neo.sh.

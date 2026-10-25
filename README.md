@@ -52,6 +52,24 @@
 
 ---
 
+## Use Neo in Your Own Repo
+
+Neo's coordination hooks work in any git repo. Install them with one script, then start Claude Code with a developer name.
+
+```bash
+git clone --depth 1 https://github.com/jaykrishna316/Neo ~/neo-src
+bash ~/neo-src/scripts/install_neo.sh ~/path/to/your-repo
+cd ~/path/to/your-repo && NEO_DEVELOPER=alice claude
+```
+
+The installer copies the hook into `.neo/` and adds its entries to `.claude/settings.json`, keeping any hooks you already have. Commit `.neo/`, `.claude/settings.json` and `.gitignore`, and teammates get the hooks when they pull.
+
+Neo does nothing unless `NEO_DEVELOPER` is set. For the full step-by-step test in your repo, including a demo that runs the coordination checks, see **[docs/TEST_NEO_IN_YOUR_REPO.md](docs/TEST_NEO_IN_YOUR_REPO.md)**.
+
+Limits: coordination works between Claude Code sessions on the same machine, and the hook needs `python3` on the PATH.
+
+---
+
 ## Quick Start
 
 ### 🎬 Terminal Demo (3 minutes)
@@ -73,78 +91,6 @@ Choose between:
 - ✅ Fresh context flowing between developers
 - ✅ Zero conflicts, automatic coordination
 - ✅ Token savings: 97% reduction
-
----
-
-### 🔌 Use Neo in Any Repo (2 minutes)
-
-Open the repo you want to coordinate in Claude Code and paste this prompt:
-
-```
-Install Neo's coordination hooks in this repo. Clone https://github.com/jaykrishna316/Neo
-into a temporary folder, run its scripts/install_neo.sh with this repo as the target,
-then show me git status.
-```
-
-The installer copies Neo's hook into the repo's `.neo/` folder and adds the hook entries to
-`.claude/settings.json`. Commit those and `.gitignore`, and teammates get the hooks when they
-pull. Each developer sets a name before starting Claude Code:
-
-```bash
-NEO_DEVELOPER=alice claude
-```
-
-Run the installer again to refresh the copy. It doesn't duplicate entries or remove hooks
-the repo already has.
-
----
-
-### 🚀 Try Neo in Your Project (15 minutes)
-
-Install Neo into a project you already have, then check that its hooks run in Claude Code.
-
-**1. Get Neo (terminal)**
-```bash
-git clone --depth 1 https://github.com/jaykrishna316/Neo ~/neo-src
-```
-
-**2. Install into your project (terminal)**
-```bash
-bash ~/neo-src/scripts/install_neo.sh ~/path/to/your-project
-```
-This copies the hook into `.neo/`, adds its entries to `.claude/settings.json` (keeping any hooks you already have), and ignores Neo's state folders in `.gitignore`. Run it again any time to update.
-
-**3. Review and commit (terminal)**
-```bash
-cd ~/path/to/your-project
-git status
-```
-Commit `.neo/`, `.claude/settings.json` and `.gitignore`. Teammates get the hooks when they pull.
-
-**4. Start Claude Code with a developer name**
-```bash
-cd ~/path/to/your-project && NEO_DEVELOPER=alice claude
-```
-Neo does nothing unless `NEO_DEVELOPER` is set.
-
-**5. Check the hooks run (in Claude Code)**
-
-Type `/hooks`. Neo's entries should be listed. Then send `What is 2 + 2?`. You should see `Neo: intent set for alice`.
-
-In another terminal, `ls .neo_state/` in your project should show `intent_alice.txt`.
-
-**6. Try a coordination demo (terminal, in your project)**
-```bash
-.neo/scripts/braxis_demo.sh setup
-```
-This adds a small `neo_demo/` folder with a breaking change left open. Then follow the prompts in `docs/CLAUDE_CODE_TEST.md`, using `NEO_DEVELOPER=me` for your session. When you're done:
-```bash
-.neo/scripts/braxis_demo.sh cleanup
-```
-
-**Limits**
-- Coordination works between Claude Code sessions on the same machine. Developers on different machines need the coordination server, which the hooks don't use yet.
-- The hook needs `python3` on the PATH.
 
 ---
 

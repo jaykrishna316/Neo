@@ -29,7 +29,7 @@ fi
 DEST="$TARGET/.neo"
 rm -rf "$DEST/scripts" "$DEST/core"
 mkdir -p "$DEST/scripts" "$DEST/core"
-cp "$NEO/scripts/neo_hook.py" "$NEO/scripts/neo_update_check.py" "$NEO/scripts/braxis_demo.sh" "$DEST/scripts/"
+cp "$NEO/scripts/neo_hook.py" "$NEO/scripts/neo_update_check.py" "$NEO/scripts/neo_repo_demo.sh" "$DEST/scripts/"
 cp "$NEO"/core/*.py "$DEST/core/"
 git -C "$NEO" rev-parse HEAD > "$DEST/VERSION" 2>/dev/null || echo "unknown" > "$DEST/VERSION"
 
