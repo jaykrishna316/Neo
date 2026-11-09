@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f438fdb1
 """
 Realistic Multi-Developer Git Conflict Test
 Simulates 3 developers cloning the repo, making concurrent changes, and pushing

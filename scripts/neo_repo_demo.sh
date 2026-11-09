@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-adca866c
 # Single-developer Neo demo for a repo where Neo is installed (.neo/).
 #
 #   .neo/scripts/neo_repo_demo.sh setup     add neo_demo/ with a breaking change left open

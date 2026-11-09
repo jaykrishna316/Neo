@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-8a69c99e
 """
 Scenario 3: Non-Overlapping Regions
 Both agents modify same file but different functions

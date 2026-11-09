@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c9e83e7b
 """The quick showcase runs end to end and shows each capability."""
 
 import subprocess

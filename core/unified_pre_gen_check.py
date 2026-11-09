@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-982485bd
 """
 Unified pre-generation check combining conflict detection with impact alerts
 Runs both checks without interfering with staleness detection or context refresh

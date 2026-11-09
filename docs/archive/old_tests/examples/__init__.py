@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-acbb079d
 """Neo Coordination Examples
 
 This package contains working examples demonstrating Neo's coordination capabilities

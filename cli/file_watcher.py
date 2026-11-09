@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f043b4a1
 """File watcher for Neo - detects code changes and logs to server.
 
 SECURITY: Requires explicit developer context via:

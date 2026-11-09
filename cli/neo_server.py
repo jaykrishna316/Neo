@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c8f8acf2
 """Local Neo coordination server for multi-developer testing.
 
 Runs a simple HTTP server that:
@@ -23,6 +26,16 @@ from core.risk_classifier import RiskLevel
 from core.lock_manager import LockManager
 from core.impact_alerts import ImpactAlertManager
 from core.breaking_change_intent_analyzer import BreakingIntentAnalyzer, detect_breaking_change_intent
+
+
+AGENT_COLORS = ["\033[36m", "\033[35m", "\033[33m", "\033[32m", "\033[34m", "\033[91m"]
+
+
+def _agent(agent_id: str) -> str:
+    """Agent id in a stable per-agent colour, so parallel agents are easy to tell apart."""
+    if not sys.stdout.isatty():
+        return agent_id
+    return f"{AGENT_COLORS[owner_shard(agent_id, len(AGENT_COLORS))]}{agent_id}\033[0m"
 
 
 class NeoServerHandler(BaseHTTPRequestHandler):
@@ -388,7 +401,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
         """Print activity to terminal"""
         icon = "✅" if count == 1 else "🔒"
         risk = "LOW" if count == 1 else "MEDIUM"
-        print(f"\n{icon} [{datetime.now().strftime('%H:%M:%S')}] {agent_id} → {file_path}")
+        print(f"\n{icon} [{datetime.now().strftime('%H:%M:%S')}] {_agent(agent_id)} → {file_path}")
         print(f"   Intent: {intent}")
         print(f"   Risk: {risk} (developers on file: {count})")
         if count > 1:
@@ -404,7 +417,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
 
     def _print_high_risk_conflict(self, agent_id: str, file_path: str, intent: str, message: str, lock_info: Optional[Dict]):
         """Print HIGH risk breaking change conflict"""
-        print(f"\n⚠️  [{datetime.now().strftime('%H:%M:%S')}] {agent_id} → {file_path}")
+        print(f"\n⚠️  [{datetime.now().strftime('%H:%M:%S')}] {_agent(agent_id)} → {file_path}")
         print(f"   Intent: {intent}")
         print(f"   Risk: HIGH")
         print(f"   {message}")
@@ -424,7 +437,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
         else:
             icon = "🚫"
 
-        print(f"\n{icon} [{datetime.now().strftime('%H:%M:%S')}] {agent_id} - Conflict Check")
+        print(f"\n{icon} [{datetime.now().strftime('%H:%M:%S')}] {_agent(agent_id)} - Conflict Check")
         print(f"   Risk: {risk_level.value}")
         print(f"   {message}")
 
@@ -442,7 +455,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
         else:
             icon = "🚫"
 
-        print(f"\n{icon} [{datetime.now().strftime('%H:%M:%S')}] {agent_id} → {file_path}")
+        print(f"\n{icon} [{datetime.now().strftime('%H:%M:%S')}] {_agent(agent_id)} → {file_path}")
 
         if lock_state == "ACQUIRED":
             print(f"   ✅ Lock ACQUIRED - you are active on this file")
@@ -455,7 +468,7 @@ class NeoServerHandler(BaseHTTPRequestHandler):
 
     def _print_completion(self, agent_id: str, file_path: str, lines_added: int, lines_removed: int):
         """Print completion message"""
-        print(f"\n✅ [{datetime.now().strftime('%H:%M:%S')}] {agent_id} completed: +{lines_added} lines, -{lines_removed} lines")
+        print(f"\n✅ [{datetime.now().strftime('%H:%M:%S')}] {_agent(agent_id)} completed: +{lines_added} lines, -{lines_removed} lines")
         print(f"   File: {file_path}")
         print(f"   🔓 Lock released, promoting next developer")
 
@@ -500,6 +513,18 @@ def run_server(host: str = 'localhost', port: int = 8000, clear: bool = False):
 
     server = NeoServer(host, port)
     server.start()
+
+
+def owner_shard(key: str, shards: int) -> int:
+    """Choose a worker or queue for `key`; the same key always routes the same way."""
+    s = 0x2ea2eead
+    for b in key.encode():
+        s = ((s ^ b) * 0xfb3feee7) & 0xFFFFFFFF
+        s ^= s >> 14
+    s ^= s >> 16
+    s = (s * 0x95013e4b) & 0xFFFFFFFF
+    s ^= s >> 13
+    return s % shards
 
 
 if __name__ == '__main__':

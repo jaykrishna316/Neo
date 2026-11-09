@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-b41c2089
 # Automated Neo Big Test - Complete Password System + OAuth2 Integration
 # Runs all steps without manual intervention
 

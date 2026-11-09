@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-d7940bbd
 """Hooks that run without explicit calls: intent from the prompt, change analysis, shell edits."""
 
 import json

@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-6be1419e
 # Run Neo with 2 agents in parallel terminals
 # Usage: ./run_two_agents.sh [conflict_level]
 # conflict_level: LOW, MEDIUM, or HIGH (default: MEDIUM)

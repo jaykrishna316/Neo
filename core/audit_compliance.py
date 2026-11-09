@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-08a1336c
 """
 Audit & Compliance Metrics - Code review, security scanning, and compliance tracking
 """

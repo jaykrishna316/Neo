@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-cdc96d87
 # Watcher Bob - Monitors Bob's conflicts and queue position
 # This script runs in its own Terminal window
 

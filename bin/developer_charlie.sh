@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c67490b7
 # Developer Charlie - 3-Developer Workflow
 # This script runs in its own Terminal window
 

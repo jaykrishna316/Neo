@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-b9db7953
 """
 Direct Neo Coordination Demo - Alice and Bob working on same file
 No MCP needed - pure Python demonstration of Neo's coordination layer

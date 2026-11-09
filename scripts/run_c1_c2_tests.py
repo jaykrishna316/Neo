@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-1be9516d
 """Manual test runner for C1/C2 claims (no pytest dependency)."""
 
 import sys

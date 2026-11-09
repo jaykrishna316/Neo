@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-e1d699f4
 """
 Real File Editing Test - Dev1 and Dev2 both want to edit test2devs.py
 Demonstrates lock mechanism preventing concurrent editing

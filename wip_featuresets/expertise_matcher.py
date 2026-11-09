@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-da23ab6d
 """Developer expertise matching - recommend best developer for task.
 
 Uses historical patterns to match developers/agents to change types and code regions.

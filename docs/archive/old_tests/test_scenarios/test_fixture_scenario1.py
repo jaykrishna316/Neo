@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-b6f8537f
 """
 Scenario 1: Same Function, Overlapping Regions
 Both agents modify authenticate() function (lines 8-15)

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-883874d6
 """Tests for cloud storage backends (Supabase, MongoDB).
 
 Tests storage adapter pattern for file-based and cloud-based backends.

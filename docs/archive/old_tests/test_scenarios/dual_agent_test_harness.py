@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-e24b7cdf
 """
 Dual-Agent Test Harness for IDE Integration Testing
 Orchestrates simultaneous testing of Devin and Claude Code with Neo coordination

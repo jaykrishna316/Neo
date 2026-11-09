@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-41607cf7
 """
 Phase 3: GitHub PR Auto-Comments - Post dependency analysis and test results to PRs
 Integrates with GitHub API to automatically comment on PRs with dependency status

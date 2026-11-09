@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-afaf85e3
 """
 Test suite for Neo Dependency Tracker
 Tests cross-repository dependency detection, logging, and impact analysis

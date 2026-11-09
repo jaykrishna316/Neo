@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-2f34c03e
 """Lock management for explicit lock tracking in Neo coordination.
 
 Provides LockManager class for acquiring, releasing, and tracking locks

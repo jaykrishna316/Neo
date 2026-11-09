@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f473a77f
 """
 Optimized Pre-generation Conflict Checking with File-based Caching
 (Optimization 4: Cache active entries by file path for O(1) lookups)

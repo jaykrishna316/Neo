@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-dc4ea162
 """A breaking signature change that leaves a caller broken blocks edits to the changed file.
 
 Alice changes authenticate(user) to authenticate(user, password) and does not touch

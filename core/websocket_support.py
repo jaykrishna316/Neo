@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-b1451f26
 """WebSocket support for real-time conflict detection updates.
 
 Enables agents to receive instant notifications instead of polling.

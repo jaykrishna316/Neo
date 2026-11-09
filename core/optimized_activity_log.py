@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-58a49753
 """
 Optimized Activity Log with Real Token Counting & Context Staleness
 (Optimizations 1, 3, 5)

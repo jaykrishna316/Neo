@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-8ade8150
 """
 COMPREHENSIVE STATE MACHINE TEST - All 10 States
 Real 3-developer scenario with actual state machine transitions

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-5f006b09
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import api from '../services/api';

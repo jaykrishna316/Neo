@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-0de92368
 """
 Neo 3.0 Understanding Layer Tests (2A-2C)
 

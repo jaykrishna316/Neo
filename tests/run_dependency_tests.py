@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-67dbc12b
 """
 Manual test runner for dependency tracker (no pytest required)
 Run with: python tests/run_dependency_tests.py

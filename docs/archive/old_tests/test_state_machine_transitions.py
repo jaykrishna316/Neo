@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-63f1d93d
 """Test Neo State Machine Transitions with Timestamps
 
 This test demonstrates the complete state machine of Neo's multi-developer coordination:

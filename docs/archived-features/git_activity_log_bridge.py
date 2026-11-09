@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-1ecd7b63
 """
 Git Activity Log Bridge - Connects Git workflow with Activity Log
 Automatically adds required approvers to PRs based on conflicts

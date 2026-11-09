@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-468da2d2
 #
 # Neo Interactive Demo - Real Terminal Simulation
 # Spawns actual terminals for developers, watchers, and activity log

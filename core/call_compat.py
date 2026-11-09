@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-a1703f5b
 """Find calls in an importing file that no longer match a changed function's signature."""
 
 import ast

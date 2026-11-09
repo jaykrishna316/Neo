@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-cd16a19d
 """
 Test Optimization 3: Update Token Counting Formula
 - Validates formula: 7 + (7+7) * (N-1) for N developers

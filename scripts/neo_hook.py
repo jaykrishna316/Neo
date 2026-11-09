@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-a30368e2
 """Claude Code hook for Neo coordination.
 
   prompt  UserPromptSubmit: save the prompt as this session's intent.

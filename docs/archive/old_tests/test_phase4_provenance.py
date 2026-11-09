@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-8029d11c
 """
 Test Neo 2.0 Phase 4: Reviewer Provenance Engine
 Verifies reviewer candidate generation and relevance explanation

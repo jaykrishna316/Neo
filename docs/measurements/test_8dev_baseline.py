@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-b75d46cd
 """
 8-Developer Baseline Test: Comprehensive scalability validation
 Tests Neo's ability to handle 8 concurrent developers with real Git operations.

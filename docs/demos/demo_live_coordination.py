@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-98e59119
 """
 Neo Live Coordination Demo
 Shows real-time 2-3 developer coordination without manual terminal setup.

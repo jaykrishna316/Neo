@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-38943e1d
 # Resets the Claude Code Neo test: starting files and Neo state.
 set -euo pipefail
 cd "$(dirname "$0")/.."

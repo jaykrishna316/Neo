@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c1fb6dfb
 """
 Integration Test: All Neo 2.0 Phases Working Together
 Tests complete workflows using all 5 phases together

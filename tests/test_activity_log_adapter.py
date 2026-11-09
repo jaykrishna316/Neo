@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-26f3467b
 """Test Activity Log Adapter - Verify abstraction works for file storage."""
 
 import sys

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-625318f0
 """
 Test Workflow State Machine with Neo 2.0 Integration
 Verifies state transitions and HANDOFF_PENDING state
