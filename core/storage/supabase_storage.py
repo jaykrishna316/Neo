@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f725f922
 """Supabase cloud storage adapter for Neo activity log.
 
 Implements StorageAdapter interface using Supabase PostgreSQL backend.

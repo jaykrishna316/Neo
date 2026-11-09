@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-12830478
 #
 # Neo 3-Developer Demo Launcher
 # Opens 7 Terminal windows for real-time coordination demo

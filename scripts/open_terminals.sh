@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f247a558
 #
 # Neo Multi-Terminal Demo (macOS)
 # Opens actual separate Terminal windows for each actor

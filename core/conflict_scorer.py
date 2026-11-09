@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-63c7b1a7
 """Conflict scoring system - numerical impact assessment beyond LOW/MEDIUM/HIGH.
 
 Provides granular scoring (0-100) for conflict impact, considering multiple factors.

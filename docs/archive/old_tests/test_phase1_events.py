@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f068e3cb
 """
 Test Neo 2.0 Phase 1: Event Model & Development Memory
 Verifies event emission and queries work correctly

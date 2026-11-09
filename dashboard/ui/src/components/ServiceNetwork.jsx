@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-7bab6439
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import '../styles/components.css';

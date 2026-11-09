@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-aa5fa15c
 # Sets up the single-developer Neo showcase in this repo.
 #
 #   scripts/showcase_single_dev.sh setup     reset the files and leave a breaking change

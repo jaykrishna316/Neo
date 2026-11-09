@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-40efb882
 """Git integration for real conflict detection from staged changes.
 
 Analyzes actual git staged changes (diffs) to detect real function-level

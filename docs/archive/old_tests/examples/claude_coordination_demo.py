@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-e3cb71ff
 """
 Neo Coordination Demo: Real-World Agent Coordination with Claude SDK
 

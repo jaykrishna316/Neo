@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-cb3f26f2
 """
 8-Developer High-Conflict Test: Worst-case merge scenario
 All 8 developers edit the SAME lines of the SAME file.

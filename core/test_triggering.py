@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f34dfca9
 """
 Phase 2: Test Triggering - Auto-trigger tests in dependent repositories
 Handles CI integration for dependent repos via webhooks and GitHub Actions

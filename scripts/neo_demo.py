@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-47161952
 """Quick showcase of Neo with two developers, run against a scratch project.
 
 It sends the same hook events a Claude Code session sends (prompt, read, edit, stop),

@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-19468b99
 # Activity Log Viewer - Real-time activity monitor
 # This script runs in its own Terminal window
 

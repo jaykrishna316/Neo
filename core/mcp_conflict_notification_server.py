@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-0736fe4b
 """
 MCP Conflict Notification Server for Neo Coordination Layer
 Sends real-time conflict warnings to IDEs via MCP protocol

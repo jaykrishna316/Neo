@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-2f9a3b5d
 """Setup configuration for Neo agent coordination package."""
 
 from setuptools import setup, find_packages

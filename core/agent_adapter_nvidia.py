@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-21492f7b
 """NVIDIA NIM Agent Adapter for Neo Coordination.
 
 This adapter enables NVIDIA NIM agents to coordinate with Neo, ensuring

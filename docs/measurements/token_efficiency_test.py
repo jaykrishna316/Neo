@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-3ea769cb
 """
 Neo 4.0 Token Efficiency Test - Empirical Data Collection
 Measures actual token consumption for traditional Git vs Neo coordination

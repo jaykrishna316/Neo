@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-db7183bf
 """The first edit attempt on a file takes its lock. The lock is released when the task ends."""
 
 import json

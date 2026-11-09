@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-2c4657d1
 """
 Lock Management - File-level locking and coordination between developers
 Tracks lock state, queue, wait times, and lock conflicts

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-21d72529
 """
 MCP tools for Neo dependency tracking
 Provides neo_* tools for checking and managing cross-repo dependencies

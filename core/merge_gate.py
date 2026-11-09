@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-770efff7
 """
 Phase 4: Merge Gate - Enforce dependency test requirements before merge
 Blocks or warns about merging when dependent repo tests haven't passed

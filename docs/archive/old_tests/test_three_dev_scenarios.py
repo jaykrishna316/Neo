@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-779d525b
 """
 Three-Developer Scenario Testing
 Tests linear, non-linear, and context-updated workflows with full change log tracking

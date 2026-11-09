@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-15d5daa1
 """An edit needs a fresh context: a file that changed since the last read blocks the edit."""
 
 import json

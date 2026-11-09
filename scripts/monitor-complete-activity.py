@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-edb054f2
 """
 Complete Neo Activity Monitor - displays ALL Neo metrics and data points
 Shows: conflicts, impacts, staleness, locks, dependencies, and all other Neo capabilities

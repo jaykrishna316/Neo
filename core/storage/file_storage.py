@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-95c4e9b0
 """File-based storage adapter for Neo activity log.
 
 Implements StorageAdapter interface using local .devsync/activity-log.json.

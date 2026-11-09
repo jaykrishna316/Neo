@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-646f48e8
 """
 Error & Exception Tracking - Monitor errors, test failures, and exception handling
 """

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-38fb1072
 """
 Scenario 4: Sequential Work with Activity Expiry
 Devin completes work, Claude Code checks later (after expiry window)

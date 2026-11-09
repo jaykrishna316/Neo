@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-e810a3c6
 """
 Complete End-to-End Test - Full workflow from editing to main branch merge
 Shows activity log updating, notifications, review options, and auto-approver assignment

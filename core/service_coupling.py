@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-adcb5f50
 """
 Service Coupling Analysis - Track inter-service dependencies and coupling
 """

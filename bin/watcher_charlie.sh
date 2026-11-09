@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-8fbd1892
 # Watcher Charlie - Monitors Charlie's conflicts and queue position
 # This script runs in its own Terminal window
 

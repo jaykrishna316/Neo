@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c49ae528
 """
 Neo 3.0 Resolution Layer Tests (3A-3C)
 

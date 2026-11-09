@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-d838cf43
 """
 End-to-End Deployment Test for Neo MCP Multitenancy
 
@@ -26,6 +29,7 @@ from typing import List, Dict, Any, Tuple
 
 # Setup path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+from core.hashing import bucket_of  # noqa: E402
 
 # Enable multitenancy
 os.environ["NEO_MULTITENANCY"] = "true"
@@ -38,7 +42,8 @@ class ManagedServer:
         self.tenant_id = tenant_id
         self.verbose = verbose
         self.process = None
-        self.port = 5000 + hash(tenant_id) % 1000  # Pseudo-random port
+        # bucket_of is stable across runs; hash() of a str is re-salted every process
+        self.port = 5000 + bucket_of(tenant_id, 1000)
 
     def __enter__(self):
         """Start MCP server process."""

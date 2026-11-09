@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c0606ea5
 """
 Devin Staleness Detection Test
 Demonstrates Neo's temporal awareness and stale context detection.

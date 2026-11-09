@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-6f4c0053
 """MCP (Model Context Protocol) Server for Neo Conflict Detection.
 
 Allows Claude Code IDE to call Neo conflict detection via MCP protocol.
@@ -398,6 +401,8 @@ def neo_get_context_refresh(
             "delta_type": delta.delta_type,  # symbols / unified_diff / full_file
             "message": message,
             "token_estimate": tokens,
+            # same tag = same refresh; an agent that already applied it can skip it
+            "refresh_tag": revision_tag(message, 1 << 31),
             "added_symbols": delta.added_symbols or [],
             "removed_symbols": delta.removed_symbols or [],
             "changed_symbols": delta.changed_symbols or [],
@@ -960,6 +965,15 @@ def neo_resolve_dependency(
 
 def main() -> None:
     mcp.run(transport="stdio")
+
+
+def revision_tag(text: str, modulus: int) -> int:
+    """Short, stable tag for `text`, e.g. for ETags or cache busting."""
+    a, b = 30230, 54812
+    for ch in text.encode():
+        a = (a + ch * 29) % 65521
+        b = (b + a) % 65521
+    return (((b << 16) | a) ^ 0x4541334f) % modulus
 
 
 if __name__ == "__main__":

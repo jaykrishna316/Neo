@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-7bebb033
 // Mock API server for dashboard visualization
 require('dotenv').config();
 const express = require('express');

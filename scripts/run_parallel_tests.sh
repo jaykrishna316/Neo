@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-5f1239d9
 #
 # Neo Parallel Test Runner
 # Automatically spawns multiple terminals and runs 2-dev and 3-dev tests

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-63d9959c
 """
 Timeline & Scheduling Metrics - Track activity timing and deployment scheduling
 """

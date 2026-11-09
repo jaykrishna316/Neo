@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-4ec2bc9f
 """
 2-Developer Workflow Simulation
 Simulates two developers working on the same file with Neo coordination

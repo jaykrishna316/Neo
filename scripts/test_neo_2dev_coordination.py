@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-87baf255
 """
 Neo 2-Developer Coordination Test
 Demonstrates semantic conflict detection before code generation

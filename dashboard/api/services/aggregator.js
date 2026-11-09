@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-5a6aa255
 /**
  * Aggregator Service
  * Combines data from Neo, activity log, and cache to create dashboard snapshots

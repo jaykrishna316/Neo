@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-5188696d
 """
 Performance Benchmarks for State Machine v1 vs v2
 Measures lock acquisition, queue operations, and memory usage

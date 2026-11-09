@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c8edf92c
 # Neo 2-Developer Coordination Demo
 # This script demonstrates Neo's semantic conflict detection before code generation
 

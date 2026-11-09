@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-dd36a5df
 """A developer waiting for a lock keeps one place in the queue, however often they ask."""
 
 import os

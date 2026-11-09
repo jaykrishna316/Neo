@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-0f187df0
 """
 Scenario 2: Function Signature Change (Transitive Conflict)
 Devin changes hash_password() signature, Claude Code calls old signature
