@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-cad35e26
 import React from 'react';
 import '../styles/components.css';
 

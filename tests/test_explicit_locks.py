@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-457e49b5
 """Comprehensive tests for explicit lock mechanism in Neo.
 
 Tests lock acquisition, queue tracking, auto-promotion, expiration, and

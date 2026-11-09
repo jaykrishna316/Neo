@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-a2b5866c
 """Test script to verify Neo pre-generation checks work.
 
 Run this to simulate what the hooks should do:

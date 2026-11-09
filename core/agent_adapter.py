@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-bf220ea7
 """Agent adapters for cross-agent orchestration.
 
 Different AI agents (Claude, Devin, OpenAI) connect to Neo via different

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-5dc8d30f
 """Storage factory for selecting appropriate backend based on configuration.
 
 Provides a factory function to create storage adapters based on environment

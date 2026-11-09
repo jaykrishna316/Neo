@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-4157b168
 """
 Neo 4.0 Baseline Comparison Test: 3-Developer Scenario
 Compares traditional Git workflow vs Neo coordination with 3 developers

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-5d50db8d
 """Extended Neo 3-Developer Test: Intent + Locking + Staleness + Impact"""
 
 import sys

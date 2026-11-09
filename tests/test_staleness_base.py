@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-377b413f
 """Stale-context detection compares against what the developer read, not against the present."""
 
 import json

@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-a84e0a3d
 
 # Mock Dashboard Startup Script
 # Starts both the mock API server and React UI with mock data

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-74212a13
 """At session start, Neo finds callers that no longer match their function, however they got that way."""
 
 import json

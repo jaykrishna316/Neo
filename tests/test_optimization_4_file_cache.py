@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-957d8ced
 """
 Test Optimization 4: Cache Active Entries by File Path
 - Validates O(1) file-based lookups vs O(n) full scan

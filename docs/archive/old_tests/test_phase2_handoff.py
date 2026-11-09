@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c4c630e2
 """
 Test Neo 2.0 Phase 2: Temporal Handoff Engine
 Verifies handoff creation, discovery, and consumption

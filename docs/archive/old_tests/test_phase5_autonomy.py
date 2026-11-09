@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-eaa778e4
 """
 Test Neo 2.0 Phase 5: Agent Autonomy Engine
 Verifies autonomous workflow execution and policy enforcement

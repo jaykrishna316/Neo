@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-addb5517
 /**
  * WebSocket Handler
  * Manages real-time event broadcasting via Socket.io

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-09c119ff
 """
 Neo 3.0 Prevention Layer Tests (1A-1E)
 

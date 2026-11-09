@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-a9be9b78
 """Test MCP Server Connectivity - 5-10 Scenarios"""
 
 import asyncio

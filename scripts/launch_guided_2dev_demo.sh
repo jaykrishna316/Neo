@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-2e5ca8f0
 #
 # Neo Guided 2-Developer Demo
 # Opens numbered Terminal windows with step-by-step guidance

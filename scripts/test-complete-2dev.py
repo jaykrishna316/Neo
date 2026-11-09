@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-cb26a795
 """
 Complete 2-Developer Neo Test
 Shows ALL conflict detection, impact analysis, staleness checks, and other Neo capabilities

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-6060c37b
 """
 Neo 4.0: Phase 2-3 Integration - Lite Test
 Tests core integration points added to activity_log_server.py

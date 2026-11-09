@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-ecf0e213
 # Developer Alice - 2-Developer Workflow
 # This script runs in its own Terminal window
 

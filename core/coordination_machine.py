@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-1562cf32
 """
 Event-Driven Coordination State Machine for Multi-Agent File Access
 

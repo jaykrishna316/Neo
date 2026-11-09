@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-01c000e4
 """Tests for Phase 5: Cross-Agent Orchestration.
 
 Tests multiple different AI agents (Claude, Devin, OpenAI) coordinating

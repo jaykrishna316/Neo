@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-81cbb637
 """
 Test Scenarios for Dual-Agent IDE Integration Testing
 

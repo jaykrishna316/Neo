@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c8f8acf2
 """Local Neo coordination server for multi-developer testing.
 
 Runs a simple HTTP server that:

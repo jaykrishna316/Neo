@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-ef8efcd4
 """
 Test Suite for Workflow State Machine v2
 Tests concurrent resources, timeout recovery, and N-developer scalability

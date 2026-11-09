@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-cc721a82
 """
 Manual test runner for all Neo Extension phases (1-4)
 No pytest required - uses only Python stdlib

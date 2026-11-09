@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-aabc2f84
 """scripts/install_neo.sh copies the hook into a repo and wires it up, safely and repeatably."""
 
 import json

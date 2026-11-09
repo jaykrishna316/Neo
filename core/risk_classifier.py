@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-fe8f68a1
 """Risk classifier for detecting conflicting local changes (with real semantic analysis)."""
 
 from dataclasses import dataclass

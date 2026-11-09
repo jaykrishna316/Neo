@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-bab5a9aa
 """
 Deployment & Release Metrics - Track release readiness and deployment status
 """

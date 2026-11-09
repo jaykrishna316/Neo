@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f264c532
 # Watcher Alice - Monitors Alice's conflicts
 # This script runs in its own Terminal window
 

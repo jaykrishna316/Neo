@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-81c78844
 # Installs Neo's Claude Code hooks into another git repo.
 #
 #   scripts/install_neo.sh <target-repo>

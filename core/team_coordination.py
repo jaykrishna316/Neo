@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-9ea6c239
 """
 Team Coordination Metrics - Track multi-developer collaboration patterns
 """

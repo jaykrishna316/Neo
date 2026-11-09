@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-b783fa7c
 # Quick start script for Neo live coordination demo
 
 NEO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

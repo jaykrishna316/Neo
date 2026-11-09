@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-e5ffa042
 """Unit tests for Phase 1: Multitenancy infrastructure in activity_log.py"""
 
 import json

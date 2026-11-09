@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-941674f5
 """
 Test Optimization 1: Reduce Delta Refresh Size
 - Validates delta refresh tokens reduced from 50 to 7 (85% reduction)

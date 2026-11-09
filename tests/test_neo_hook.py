@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-de394eb7
 """Two Claude Code sessions (alice, bob) on one laptop, driven through the Neo hook.
 
 Each hook call runs as a separate process, the way Claude Code runs hooks.

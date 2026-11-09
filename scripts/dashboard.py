@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-fd66d1c8
 """
 Neo Local Dashboard - Real-time web UI for Neo activity monitoring
 Serves on http://localhost:5555

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-4a8b4788
 """
 Neo 4.0 Baseline Comparison Test
 Compares traditional Git workflow (conflicts) vs Neo coordination (no conflicts)

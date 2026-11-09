@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-e191a4e5
 """
 Test Optimization 5: Increase Context Staleness Threshold
 - Validates 1000ms threshold (up from 300ms)

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-ff7a21a5
 """
 Impact Alerts - Track unresolved dependency impacts across files
 Detects when upstream changes impact downstream files but haven't been addressed yet

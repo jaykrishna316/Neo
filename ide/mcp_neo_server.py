@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-6f4c0053
 """MCP (Model Context Protocol) Server for Neo Conflict Detection.
 
 Allows Claude Code IDE to call Neo conflict detection via MCP protocol.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-4df635e6
 """The single-developer showcase: inherited breakage, fix, stale context, then a change."""
 
 import json

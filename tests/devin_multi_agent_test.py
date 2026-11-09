@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-2646a9b4
 """
 Devin Multi-Agent Test for Neo
 Run this in TWO separate Devin instances to test Neo's coordination.

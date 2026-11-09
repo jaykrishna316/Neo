@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-9e8ec834
 """Tell the session when a newer Neo is on main. Changes no files and never blocks.
 
 Runs as a SessionStart hook in a repo that has Neo installed. It compares the

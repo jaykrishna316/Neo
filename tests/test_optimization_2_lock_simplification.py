@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-aad91103
 """
 Test Optimization 2: Simplify Lock Mechanism
 - Validates RiskLevel directly acts as lock signal

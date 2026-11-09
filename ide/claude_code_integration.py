@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-751bd2ea
 """Claude Code IDE Integration for Neo Conflict Detection
 
 Automatically runs conflict checks before code generation.

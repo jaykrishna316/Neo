@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-605cbdce
 /**
  * API Service
  * Handles all HTTP requests to the dashboard API

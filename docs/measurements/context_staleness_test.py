@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-fcf7fec9
 """
 Neo 4.0 Context Staleness Test (Phase 3 Validation)
 Validates context invalidation: staleness detection >300ms threshold

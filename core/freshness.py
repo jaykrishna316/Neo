@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f1933308
 import json, os, time
 from pathlib import Path
 from typing import Optional, Dict, List

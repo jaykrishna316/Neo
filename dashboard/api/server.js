@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-59d2b2a5
 /**
  * Neo Dashboard API Server
  * Aggregates MCP tool calls and real-time data for the dashboard

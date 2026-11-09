@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-72a852b5
 """
 Test Neo 2.0 Phase 3: Context Invalidation Engine
 Verifies context snapshots and invalidation detection

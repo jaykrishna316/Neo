@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-59dd78c0
 """Neo C1/C2 claim tests. Neo only, no external baselines.
 
 Tests that depend on core/freshness.py skip until it exists.

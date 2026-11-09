@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f91dd886
 """
 Comprehensive test suite for Neo Extension Phases 1-4
 Tests all dependency tracking, test triggering, auto-comments, and merge gates

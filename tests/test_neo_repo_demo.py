@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-313310a9
 """The repo demo: intent, inherited breakage, lock, teammate change, stale context, cleanup.
 
 Runs against a repo with Neo installed by scripts/install_neo.sh, the way a real repo does.

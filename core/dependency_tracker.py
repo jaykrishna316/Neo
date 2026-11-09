@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-cf1c4479
 """
 Neo Dependency Tracker - Cross-repository dependency management and impact analysis
 Tracks which repos depend on code changes and triggers tests in dependent repos

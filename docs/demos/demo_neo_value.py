@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-3c378c34
 """
 Neo Value Showcase: Visual demonstration of token savings through delta refresh.
 Run this to see Neo's value in action with clear before/after comparisons.
