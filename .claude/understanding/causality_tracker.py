@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-3f228302
 """
 2C: Conflict Causality Tracking
 Root cause analysis of conflicts to prevent recurrence.

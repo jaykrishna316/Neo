@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-4af8bf4d
 """
 Workflow State Machine - Manages complete lifecycle of collaborative edits
 Tracks state from intent to merge, prevents invalid transitions

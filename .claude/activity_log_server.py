@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-1dd1e7d4
 """
 Activity Log Server - REST API for distributed activity log management
 Run this server locally and expose via ngrok for multi-dev testing

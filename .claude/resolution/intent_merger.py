@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-4d113cab
 """
 3B: Intent-Based Conflict Merging
 Auto-merge conflicts when intents are orthogonal (non-conflicting).

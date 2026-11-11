@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-76daa049
 """
 1E: Knowledge Gap Detection
 Detect when developers silently work on code without consulting experts.

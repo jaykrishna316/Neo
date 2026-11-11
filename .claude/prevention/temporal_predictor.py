@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-9e93edf4
 """
 1C: Temporal Conflict Prediction
 Predict conflicts before they happen based on time and context invalidation.

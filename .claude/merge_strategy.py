@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-b1f51e69
 """
 Merge Strategy Generator - Suggests merge approach and generates commit messages
 Surfaces both auto-merge (suggested) and manual merge options

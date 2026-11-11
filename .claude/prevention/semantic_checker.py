@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-0d9e09e8
 """
 1D: Semantic Invariant Checking
 Detect logical conflicts that git can't see (invariant violations).

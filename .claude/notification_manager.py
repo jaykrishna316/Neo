@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-29d2699a
 """
 Notification Manager - Handles notifications for workflow state changes
 Supports: Webhooks, Email, Slack, and in-app polling

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-5f2adfbb
 """
 1B: Concurrent Work Detection
 Track developers' current working sets in real-time.

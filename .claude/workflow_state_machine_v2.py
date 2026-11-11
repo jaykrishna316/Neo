@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-66d36a8a
 """
 Workflow State Machine v2 - Scalable Multi-Developer Support
 Supports N developers, per-resource locking, timeout recovery, and concurrent editing

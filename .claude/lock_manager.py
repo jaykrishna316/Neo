@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-7e71bf88
 """
 Lock Manager - Prevents concurrent edits on HIGH conflict functions
 Implements hard locking for HIGH conflicts, soft warning for MEDIUM
