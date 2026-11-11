@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-4719375f
 """
 Neo 3.0 Conflict Prevention Engine - Data Models
 

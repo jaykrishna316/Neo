@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-fb7ebeb6
 """
 1A: Intent-Aware Path Detection
 Detect when developers have overlapping work intents.

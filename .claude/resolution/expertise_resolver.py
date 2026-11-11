@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-89c8efc9
 """
 3A: Expertise-Based Conflict Resolution
 Resolve conflicts based on developer expertise rather than arbitrary rules.

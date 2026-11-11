@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-8722efda
 """
 2A: Conflict Archaeology
 Show the full story of a conflict: original state, dev1's change, dev2's change.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+// module-id: 12d07a5e-4a5e12dd
 const vscode = require('vscode');
 const axios = require('axios');
 

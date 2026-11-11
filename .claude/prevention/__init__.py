@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-d2df4db7
 """Prevention Layer - Neo 3.0 Conflict Prevention Engine"""
 
 from .intent_detection import IntentDetector

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-541fb348
 """
 3C: Multi-Agent Negotiation
 Have autonomous agents negotiate when they disagree.

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-929bb8a4
 """
 Shared Service for Multi-Developer Coordination
 Manages context sharing, change summaries, and developer notifications

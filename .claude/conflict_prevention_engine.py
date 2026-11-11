@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-7a7741a5
 """
 Neo 3.0 Conflict Prevention Engine - Core Orchestrator
 
