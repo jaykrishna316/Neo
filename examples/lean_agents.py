@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-373a32cb
 """
 Lean Agent Implementations for Neo MVP Validation
 - LocalAgent: Ollama (free, local)

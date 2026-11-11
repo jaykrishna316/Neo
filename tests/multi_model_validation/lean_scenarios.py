@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-150286d9
 """
 Neo MVP Validation Test Scenarios
 100 realistic conflict scenarios for testing coordination

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-7d476ad1
 """Agent integration for pre-generation conflict detection and guidance.
 
 Provides hooks for Claude, Devin, and other AI agents to:

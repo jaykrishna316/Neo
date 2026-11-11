@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-779b37d9
 """
 Enhanced Activity Log Manager - Full implementation with all features
 Integrates: locking, downstream detection, merge strategies, approval tracking, escalation

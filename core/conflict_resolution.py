@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-a3832a73
 """Conflict resolution suggestions and merge strategies.
 
 Recommends optimal resolution paths when conflicts are detected.

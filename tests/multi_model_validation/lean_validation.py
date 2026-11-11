@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-f907d6c6
 """
 Neo MVP Validation Test Harness
 Run with: python3 lean_validation.py

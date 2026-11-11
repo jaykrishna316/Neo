@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-047ea14a
 """Intent classifier for categorizing developer/agent changes.
 
 Classifies change descriptions into categories (feature/bugfix/refactor/chore)

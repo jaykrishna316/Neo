@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-c1aeb25d
 """Developer pattern learning for smarter conflict detection.
 
 Tracks how long developers typically take for different types of changes,

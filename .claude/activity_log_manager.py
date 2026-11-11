@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-6bd0816b
 """
 Activity Log Manager - POC Implementation
 Stores activity log in Git (.activity_log/ directory as JSON)

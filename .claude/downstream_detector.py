@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2026 Jayakrishna Ichapurapu
+# module-id: 12d07a5e-84b47efd
 """
 Downstream Impact Detector - Finds functions that depend on conflicting changes
 Helps identify secondary impacts of PRIMARY conflicts
